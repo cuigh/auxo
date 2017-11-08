@@ -111,6 +111,16 @@ func (f *Form) Logout(ctx web.Context) error {
 
 // Apply implements `web.Filter` interface.
 func (f *Form) Apply(next web.HandlerFunc) web.HandlerFunc {
+	if f.CookieName == "" {
+		f.CookieName = "_u"
+	}
+	if f.CookiePath == "" {
+		f.CookiePath = "/"
+	}
+	if f.DefaultUrl == "" {
+		f.DefaultUrl = "/"
+	}
+
 	//logger := log.Get(PkgName)
 	return func(ctx web.Context) error {
 		//logger.Debug("form-auth:", ctx.Request().RequestURI)
@@ -131,7 +141,7 @@ func (f *Form) Apply(next web.HandlerFunc) web.HandlerFunc {
 
 func (f *Form) renewTicket(ctx web.Context, ticket string) {
 	c := &http.Cookie{
-		Name:  "_u",
+		Name:  f.CookieName,
 		Value: ticket,
 		Path:  f.CookiePath,
 	}
