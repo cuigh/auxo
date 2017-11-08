@@ -1,0 +1,10 @@
+name: 'auxo'
+debug: false
+
+web:
+  address: ':8001'
+  authorize_mode: '*'
+
+test:
+  id: 10
+  name: test

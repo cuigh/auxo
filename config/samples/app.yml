@@ -1,0 +1,44 @@
+name: 'auxo'
+debug: true
+banner: true
+
+log:
+  loggers:
+  - level: info
+    writers: json
+  - name: 'auxo.net.web'
+    level: debug
+    writers: text
+  - name: 'benchmark1'
+    level: debug
+    writers: drop1
+  - name: 'benchmark2'
+    level: debug
+    writers: drop2
+  writers:
+  - name: drop1
+    layout: '[{L}]{T}: {M}{N}'
+  - name: drop2
+    layout: '{level: a=b},{time: 2006-01-02T15:04:05.000Z07:00},{msg}'
+    format: json
+  - name: text
+    type: console
+    layout: '[{L}]{T}: {M} - {F:S}{N}'
+    options:
+      colorized: true
+  - name: json
+    type: console
+    layout: '{level: a=b},{time: 2006-01-02T15:04:05.000Z07:00},{msg},{file: short},{text->tag: test}'
+    format: json
+    options:
+      colorized: true
+
+web:
+  address: ':80,:443'
+  authorize: '*'
+  read_timeout: 5s
+  time: "s"
+  max_body_size: 2 M
+
+yaml:
+  name: yaml
