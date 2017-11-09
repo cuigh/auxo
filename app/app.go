@@ -100,14 +100,14 @@ func Start() {
 			Name:     Name,
 			Desc:     Desc,
 			Action:   Action,
-			flags:    flags,
+			Flags:    Flags,
 			children: children,
 		}
 		i   int
 		arg string
 	)
 
-	cmd.flags.Desc = Desc
+	cmd.Flags.Desc = Desc
 
 	for i, arg = range args {
 		if c := cmd.children[arg]; c == nil {
@@ -117,9 +117,9 @@ func Start() {
 		}
 	}
 
-	if cmd.flags != nil {
-		cmd.flags.Parse(args[i:])
-		config.BindFlags(cmd.flags.Inner())
+	if cmd.Flags != nil {
+		cmd.Flags.Parse(args[i:])
+		config.BindFlags(cmd.Flags.Inner())
 	}
 	if cmd.Action != nil {
 		ctx := &Context{cmd: cmd}
@@ -130,7 +130,7 @@ func Start() {
 
 func handleCommonFlags(ctx *Context) {
 	if ctx.Help() {
-		ctx.cmd.flags.Usage()
+		ctx.cmd.Flags.Usage()
 		os.Exit(0)
 	}
 

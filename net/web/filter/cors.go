@@ -42,14 +42,6 @@ type CORS struct {
 	MaxAge int
 }
 
-// CORS returns a new CORS filter.
-func NewCORS() *CORS {
-	return &CORS{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodDelete},
-	}
-}
-
 // Apply implements `web.Filter` interface.
 func (c *CORS) Apply(next web.HandlerFunc) web.HandlerFunc {
 	if len(c.AllowOrigins) == 0 {
