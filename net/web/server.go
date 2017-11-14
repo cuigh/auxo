@@ -20,7 +20,6 @@ import (
 	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/cuigh/auxo/ext/texts"
 	"github.com/cuigh/auxo/log"
-	"github.com/cuigh/auxo/net/web/binder"
 	"github.com/cuigh/auxo/net/web/router"
 	"golang.org/x/crypto/acme/autocert"
 )
@@ -66,7 +65,7 @@ func New(c *Options) (s *Server) {
 		cfg:          c,
 		Logger:       log.Get(PkgName),
 		ErrorHandler: DefaultErrorHandler,
-		Binder:       binder.New(binder.Options{MaxMemory: c.MaxBodySize}),
+		Binder:       new(binder),
 		router:       router.New(router.Options{}),
 	}
 	s.Logger.SetLevel(log.LevelDebug) // log.LevelOff

@@ -1,13 +1,12 @@
 package web
 
 import (
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"io/ioutil"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/cuigh/auxo/test/assert"
 )
 
 func TestServer(t *testing.T) {

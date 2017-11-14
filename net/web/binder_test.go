@@ -1,4 +1,4 @@
-package binder_test
+package web_test
 
 import (
 	"net/http"
@@ -7,34 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cuigh/auxo/net/web/binder"
+	"github.com/cuigh/auxo/net/web"
 	"github.com/cuigh/auxo/test/assert"
 )
 
-const (
-	HeaderContentType   = "Content-Type"
-	MIMEApplicationJSON = "application/json"
-	MIMEApplicationXML  = "application/xml"
-	MIMEApplicationForm = "application/x-www-form-urlencoded"
-	//MIMEMultipartForm   = "multipart/form-data"
-)
-
-type User struct {
+type TestUser struct {
 	ID   int32  `json:"id" xml:"id"`
-	Name string `json:"name" xml:"name" query:"name" form:"name" bind:"name,path=name,query=name,form=name,cookie=name,header=name"`
+	Name string `json:"name" xml:"name" bind:"name,name=path,name=query,name=form,name=cookie,name=header"`
 }
-
-//type Context struct {
-//	req *http.Request
-//}
-//
-//func (c *Context) Request() *http.Request {
-//	return c.req
-//}
-//
-//func (c *Context) Param(name string) string {
-//	return ""
-//}
 
 func TestBindQuery(t *testing.T) {
 	const content = `id=1&name=test`
@@ -47,7 +27,7 @@ func TestBindForm(t *testing.T) {
 	const content = `id=1&name=test`
 
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(content))
-	r.Header.Set(HeaderContentType, MIMEApplicationForm)
+	r.Header.Set(web.HeaderContentType, web.MIMEApplicationForm)
 	bindUser(t, r)
 }
 
@@ -55,7 +35,7 @@ func TestBindJSON(t *testing.T) {
 	const content = `{"id":1,"name":"test"}`
 
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(content))
-	r.Header.Set(HeaderContentType, MIMEApplicationJSON)
+	r.Header.Set(web.HeaderContentType, web.MIMEApplicationJSON)
 	bindUser(t, r)
 }
 
@@ -63,7 +43,7 @@ func TestBindXML(t *testing.T) {
 	const content = `<user><id>1</id><name>test</name></user>`
 
 	r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(content))
-	r.Header.Set(HeaderContentType, MIMEApplicationXML)
+	r.Header.Set(web.HeaderContentType, web.MIMEApplicationXML)
 	bindUser(t, r)
 }
 
@@ -124,9 +104,11 @@ func TestBindSliceValue(t *testing.T) {
 func bindUser(t *testing.T, r *http.Request) {
 	t.Helper()
 
-	b := binder.New(binder.Options{})
-	user := &User{}
-	err := b.Bind(r, user)
+	s := web.Default()
+	ctx := s.AcquireContext(nil, r)
+
+	user := &TestUser{}
+	err := ctx.Bind(user)
 	assert.NoError(t, err)
 	assert.Equal(t, int32(1), user.ID)
 	assert.Equal(t, "test", user.Name)
@@ -135,7 +117,8 @@ func bindUser(t *testing.T, r *http.Request) {
 func bind(t *testing.T, r *http.Request, v interface{}) {
 	t.Helper()
 
-	b := binder.New(binder.Options{})
-	err := b.Bind(r, v)
+	s := web.Default()
+	ctx := s.AcquireContext(nil, r)
+	err := ctx.Bind(v)
 	assert.NoError(t, err)
 }

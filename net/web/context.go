@@ -314,7 +314,7 @@ func (c *context) F(name string) string {
 }
 
 func (c *context) FormValues() (url.Values, error) {
-	if strings.HasPrefix(c.request.Header.Get(HeaderContentType), MIMEMultipartForm) {
+	if strings.HasPrefix(c.ContentType(), MIMEMultipartForm) {
 		if err := c.request.ParseMultipartForm(int64(c.server.cfg.MaxBodySize)); err != nil {
 			return nil, err
 		}
@@ -371,7 +371,7 @@ func (c *context) Bind(i interface{}, validate ...bool) (err error) {
 		return ErrBinderNotRegistered
 	}
 
-	err = c.server.Binder.Bind(c.request, i)
+	err = c.server.Binder.Bind(c, i)
 	if err == nil && len(validate) > 0 && validate[0] {
 		if c.server.Validator == nil {
 			return ErrValidatorNotRegistered

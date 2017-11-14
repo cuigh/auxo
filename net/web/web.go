@@ -106,7 +106,7 @@ type User = security.User
 type Binder interface {
 	// Bind takes data out of the request and decodes into a struct according
 	// to the Content-Type of the request.
-	Bind(r *http.Request, i interface{}) (err error)
+	Bind(ctx Context, i interface{}) (err error)
 }
 
 // Validator is the interface that check data is valid or not.

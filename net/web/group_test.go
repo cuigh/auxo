@@ -1,6 +1,7 @@
 package web
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,7 +36,7 @@ func TestGroup(t *testing.T) {
 
 	ctx := s.AcquireContext(nil, nil)
 	for _, c := range cases {
-		r, tsr := s.router.Find("/group"+c.Route, ctx.PathValues())
+		r, tsr := s.router.Find(http.MethodGet, "/group"+c.Route, ctx.PathValues())
 		assert.NotNil(t, r)
 		assert.False(t, tsr)
 	}
