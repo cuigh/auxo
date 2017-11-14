@@ -21,6 +21,13 @@ func (g *Group) Use(filters ...Filter) {
 	g.filters = append(g.filters, filters...)
 }
 
+// UseFunc adds filters to the router.
+func (g *Group) UseFunc(filters ...FilterFunc) {
+	for _, f := range filters {
+		g.filters = append(g.filters, f)
+	}
+}
+
 // Connect registers a route that matches 'CONNECT' method.
 func (g *Group) Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
 	return g.add(http.MethodConnect, path, h, filters...)

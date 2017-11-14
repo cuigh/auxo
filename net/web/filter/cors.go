@@ -106,6 +106,6 @@ func (c *CORS) Apply(next web.HandlerFunc) web.HandlerFunc {
 		if c.MaxAge > 0 {
 			w.Header().Set(web.HeaderAccessControlMaxAge, maxAge)
 		}
-		return ctx.Status(http.StatusNoContent).NoContent()
+		return ctx.Status(http.StatusNoContent).Empty()
 	}
 }

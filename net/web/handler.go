@@ -13,7 +13,7 @@ var (
 	methodNotAllowed = &handlerInfo{action: WrapError(ErrMethodNotAllowed)}
 )
 
-// WrapError wraps `http.Handler` into `web.HandlerFunc`.
+// WrapError wraps an `Error` into `web.HandlerFunc`.
 func WrapError(err *Error) HandlerFunc {
 	return func(c Context) error {
 		return err

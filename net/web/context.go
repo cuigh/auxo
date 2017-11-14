@@ -74,8 +74,8 @@ type Requester interface {
 	// FormValues returns the form parameters as `url.Values`.
 	FormValues() (url.Values, error)
 
-	// FormFile returns the multipart form file for the provided name.
-	FormFile(name string) (*multipart.FileHeader, error)
+	// File returns the multipart form file for the provided name.
+	File(name string) (multipart.File, *multipart.FileHeader, error)
 
 	// MultipartForm returns the multipart form.
 	MultipartForm() (*multipart.Form, error)
@@ -105,7 +105,7 @@ type Responser interface {
 	SetHeader(key, value string) Responser
 
 	// SetContentType sets the 'Content-Type' header of response.
-	SetContentType(value string) Responser
+	SetContentType(ct string) Responser
 
 	// Render renders a template with data and sends a text/html response.
 	// Renderer must be registered using `Server.Renderer`.
@@ -115,41 +115,31 @@ type Responser interface {
 	HTML(html string) error
 
 	// JSON sends a JSON response.
-	JSON(i interface{}) error
-
-	// JSONIndent sends a JSON response with indent.
-	JSONIndent(i interface{}, indent string) error
+	JSON(i interface{}, indent ...string) error
 
 	// JSONP sends a JSONP response. It uses `callback` to construct the JSONP payload.
 	JSONP(callback string, i interface{}) error
 
 	// XML sends an XML response.
-	XML(i interface{}) error
-
-	// XMLIndent sends a XML response with indent.
-	XMLIndent(i interface{}, indent string) error
+	XML(i interface{}, indent ...string) error
 
 	// Text sends string as plain text.
 	Text(s string) error
 
-	// Data sends byte array to response with content type.
-	Data(contentType string, b []byte) error
+	// Data sends byte array to response.
+	// You can use `Context.SetContentType` to set content type.
+	Data(b []byte, cd ...ContentDisposition) error
 
-	// Stream sends a streaming response with content type.
-	Stream(contentType string, r io.Reader) error
+	// Stream sends a streaming response.
+	// You can use `Context.SetContentType` to set content type.
+	Stream(r io.Reader, cd ...ContentDisposition) error
 
-	// File sends a response with the content of the file.
-	File(file string) error
+	// Content sends a response with the content of the file.
+	Content(file string, cd ...ContentDisposition) error
 
-	// Attachment sends a response as attachment, prompting client to save the file.
-	Attachment(file string, name string) error
-
-	// Inline sends a response as inline, opening the file in the browser.
-	Inline(file string, name string) error
-
-	// NoContent sends a response with no body.
+	// Empty sends a response with no body.
 	// You can use `Context.Status` to change status code (default is 200).
-	NoContent() error
+	Empty() error
 
 	// Redirect redirects the request to a provided URL with status code.
 	// You can use `Context.Status` to change status code.
@@ -336,9 +326,8 @@ func (c *context) FormValues() (url.Values, error) {
 	return c.request.Form, nil
 }
 
-func (c *context) FormFile(name string) (*multipart.FileHeader, error) {
-	_, fh, err := c.request.FormFile(name)
-	return fh, err
+func (c *context) File(name string) (multipart.File, *multipart.FileHeader, error) {
+	return c.request.FormFile(name)
 }
 
 func (c *context) MultipartForm() (*multipart.Form, error) {
@@ -408,28 +397,30 @@ func (c *context) Render(name string, data interface{}) (err error) {
 
 func (c *context) HTML(html string) (err error) {
 	b := *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&html))))
-	return c.Data(MIMETextHTMLCharsetUTF8, b)
+	return c.SetContentType(MIMETextHTMLCharsetUTF8).Data(b)
 }
 
 func (c *context) Text(s string) (err error) {
 	b := *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&s))))
-	return c.Data(MIMETextPlainCharsetUTF8, b)
+	return c.SetContentType(MIMETextPlainCharsetUTF8).Data(b)
 }
 
-func (c *context) JSON(i interface{}) (err error) {
-	b, err := json.Marshal(i)
-	if err != nil {
-		return
+func (c *context) JSON(i interface{}, indent ...string) (err error) {
+	var b []byte
+	if len(indent) > 0 {
+		b, err = json.MarshalIndent(i, "", indent[0])
+	} else {
+		b, err = json.Marshal(i)
 	}
-	return c.Data(MIMEApplicationJSONCharsetUTF8, b)
+
+	if err == nil {
+		return c.JSONBlob(b)
+	}
+	return
 }
 
-func (c *context) JSONIndent(i interface{}, indent string) (err error) {
-	b, err := json.MarshalIndent(i, "", indent)
-	if err != nil {
-		return
-	}
-	return c.Data(MIMEApplicationJSONCharsetUTF8, b)
+func (c *context) JSONBlob(b []byte) (err error) {
+	return c.SetContentType(MIMEApplicationJSONCharsetUTF8).Data(b)
 }
 
 func (c *context) JSONP(callback string, i interface{}) error {
@@ -449,44 +440,49 @@ func (c *context) JSONP(callback string, i interface{}) error {
 	return err
 }
 
-func (c *context) XML(i interface{}) (err error) {
-	b, err := xml.Marshal(i)
-	if err != nil {
-		return
+func (c *context) XML(i interface{}, indent ...string) (err error) {
+	var b []byte
+	if len(indent) > 0 {
+		b, err = xml.MarshalIndent(i, "", indent[0])
+	} else {
+		b, err = xml.Marshal(i)
 	}
-	return c.XMLBlob(b)
-}
 
-func (c *context) XMLIndent(i interface{}, indent string) (err error) {
-	b, err := xml.MarshalIndent(i, "", indent)
-	if err != nil {
-		return
+	if err == nil {
+		return c.XMLBlob(b)
 	}
-	return c.XMLBlob(b)
+	return
 }
 
 func (c *context) XMLBlob(b []byte) (err error) {
-	c.response.Header().Set(HeaderContentType, MIMEApplicationXMLCharsetUTF8)
-	if _, err = c.response.Write([]byte(xml.Header)); err != nil {
-		return
+	c.SetContentType(MIMEApplicationXMLCharsetUTF8)
+	if _, err = c.response.Write([]byte(xml.Header)); err == nil {
+		_, err = c.response.Write(b)
+	}
+	return
+}
+
+func (c *context) Data(b []byte, cd ...ContentDisposition) (err error) {
+	if len(cd) > 0 {
+		c.SetHeader(HeaderContentDisposition, fmt.Sprintf("%s; filename=%s", cd[0].Type, cd[0].Name))
 	}
 	_, err = c.response.Write(b)
 	return
 }
 
-func (c *context) Data(contentType string, b []byte) (err error) {
-	c.response.Header().Set(HeaderContentType, contentType)
-	_, err = c.response.Write(b)
-	return
-}
-
-func (c *context) Stream(contentType string, r io.Reader) (err error) {
-	c.response.Header().Set(HeaderContentType, contentType)
+func (c *context) Stream(r io.Reader, cd ...ContentDisposition) (err error) {
+	if len(cd) > 0 {
+		c.SetHeader(HeaderContentDisposition, fmt.Sprintf("%s; filename=%s", cd[0].Type, cd[0].Name))
+	}
 	_, err = io.Copy(c.response, r)
 	return
 }
 
-func (c *context) File(file string) error {
+func (c *context) Content(file string, cd ...ContentDisposition) error {
+	if len(cd) > 0 {
+		c.SetHeader(HeaderContentDisposition, fmt.Sprintf("%s; filename=%s", cd[0].Type, cd[0].Name))
+	}
+
 	f, err := os.Open(file)
 	if err != nil {
 		return ErrNotFound
@@ -521,21 +517,7 @@ func (c *context) File(file string) error {
 	return nil
 }
 
-func (c *context) Attachment(file, name string) (err error) {
-	return c.contentDisposition(file, name, "attachment")
-}
-
-func (c *context) Inline(file, name string) (err error) {
-	return c.contentDisposition(file, name, "inline")
-}
-
-func (c *context) contentDisposition(file, name, dispositionType string) (err error) {
-	c.response.Header().Set(HeaderContentDisposition, fmt.Sprintf("%s; filename=%s", dispositionType, name))
-	c.File(file)
-	return
-}
-
-func (c *context) NoContent() error {
+func (c *context) Empty() error {
 	c.response.CommitHeader()
 	return nil
 }

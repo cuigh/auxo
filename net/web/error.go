@@ -146,7 +146,7 @@ func (h *ErrorHandleMux) Handle(c Context, err error) {
 
 func (h *ErrorHandleMux) handleError(c Context, status, code int, msg, detail string) {
 	if c.Request().Method == http.MethodHead {
-		h.logError(c, c.Status(code).NoContent())
+		h.logError(c, c.Status(code).Empty())
 		return
 	}
 

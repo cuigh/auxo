@@ -76,6 +76,11 @@ const (
 	HeaderXCSRFToken              = "X-CSRF-Token"
 )
 
+const (
+	DispositionAttachment = "attachment"
+	DispositionInline     = "inline"
+)
+
 var (
 	methods = [...]string{
 		http.MethodConnect,
@@ -89,6 +94,11 @@ var (
 		http.MethodTrace,
 	}
 )
+
+type ContentDisposition struct {
+	Type string
+	Name string
+}
 
 type User = security.User
 

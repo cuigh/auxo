@@ -90,6 +90,13 @@ func (s *Server) Use(filters ...Filter) {
 	s.filters = append(s.filters, filters...)
 }
 
+// UseFunc adds global filters to the router.
+func (s *Server) UseFunc(filters ...FilterFunc) {
+	for _, f := range filters {
+		s.filters = append(s.filters, f)
+	}
+}
+
 // Connect registers a route that matches 'CONNECT' method.
 func (s *Server) Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
 	return s.add(http.MethodConnect, path, h, filters...)
@@ -201,7 +208,7 @@ func (s *Server) Handle(path string, controller interface{}, filters ...Filter) 
 func (s *Server) Static(prefix, root string) {
 	//fs := http.StripPrefix(prefix, http.FileServer(http.Dir(root)))
 	handler := func(c Context) error {
-		return c.File(path.Join(root, c.Path("")))
+		return c.Content(path.Join(root, c.Path("")))
 		//fs.ServeHTTP(c.Response(), c.Request())
 		//return nil
 	}
@@ -213,7 +220,7 @@ func (s *Server) Static(prefix, root string) {
 // File registers a route in order to server a single file of the local filesystem.
 func (s *Server) File(path, file string) {
 	s.Get(path, func(c Context) error {
-		return c.File(file)
+		return c.Content(file)
 	})
 }
 
