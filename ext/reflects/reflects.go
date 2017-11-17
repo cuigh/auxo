@@ -63,6 +63,13 @@ func Interface(v reflect.Value) interface{} {
 	return v.Interface()
 }
 
+func Indirect(v reflect.Value) reflect.Value {
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	return v
+}
+
 func Pointer(i interface{}) unsafe.Pointer {
 	return (*eface)(unsafe.Pointer(&i)).data
 }

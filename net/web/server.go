@@ -415,7 +415,7 @@ func (s *Server) getTLSConfig() (tlsConfig *tls.Config, err error) {
 		tlsConfig.Certificates = make([]tls.Certificate, 1)
 		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(c.TLSCertFile, c.TLSKeyFile)
 		if err != nil {
-			return nil, errors.New("load tls cert failed: " + err.Error())
+			return nil, errors.New("load TLS cert failed: " + err.Error())
 		}
 	} else if c.ACME.Enabled {
 		tlsConfig = new(tls.Config)

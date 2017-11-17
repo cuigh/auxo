@@ -148,6 +148,48 @@ func (tag StructTag) Find(key string, alias ...string) string {
 	return ""
 }
 
+type StructValue reflect.Value
+
+func StructOf(v reflect.Value) StructValue {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			t := v.Type().Elem()
+			v.Set(reflect.New(t))
+		}
+		v = v.Elem()
+	}
+	return StructValue(v)
+}
+
+func (sv StructValue) VisitFields(fn func(fv reflect.Value, fi *reflect.StructField) error) error {
+	v := (reflect.Value)(sv)
+	t := v.Type()
+	for i, num := 0, t.NumField(); i < num; i++ {
+		sf := t.Field(i)
+		if err := fn(v.Field(i), &sf); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (sv StructValue) VisitMethods(fn func(mv reflect.Value, mi *reflect.Method) error) error {
+	v := (reflect.Value)(sv)
+	t := v.Type()
+	for i, num := 0, t.NumMethod(); i < num; i++ {
+		mi := t.Method(i)
+		if err := fn(v.Method(i), &mi); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (sv StructValue) Interface() interface{} {
+	v := (reflect.Value)(sv)
+	return v.Interface()
+}
+
 func init() {
 	RegisterFieldAccessor(TypeBool, &FieldAccessor{
 		Get: func(ptr uintptr, f *reflect.StructField) interface{} {
