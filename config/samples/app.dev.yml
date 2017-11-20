@@ -2,8 +2,7 @@ name: 'auxo'
 debug: false
 
 web:
-  address: ':8001'
-  authorize_mode: '*'
+  authorize: '*'
 
 test:
   id: 10

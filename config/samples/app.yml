@@ -34,10 +34,23 @@ log:
       colorized: true
 
 web:
-  address: ':80,:443'
+  mode: develop
+  entries:
+  - address: :80
+  - address: :443
+    tls:
+      key: "test.key"
+      cert: "test.cert"
+#      acme:
+#        domain: "test.com,test.net"
+#        email: ""
+#        cache_dir: ""
+  - address: /var/run/docker.sock
+    tls:
+      key: "test.key"
+      cert: "test.cert"
   authorize: '*'
   read_timeout: 5s
-  time: "s"
   max_body_size: 2 M
 
 yaml:

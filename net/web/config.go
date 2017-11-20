@@ -7,20 +7,29 @@ import (
 	"github.com/cuigh/auxo/byte/size"
 )
 
-type Options struct {
-	Debug           bool
-	Name            string
-	Mode            string   // dev/prd
-	Addresses       []string `option:"address"` // http://:8001,https://auxo.net:443,unix:///a/b
-	TLSCertFile     string
-	TLSKeyFile      string
-	TLSDisableHTTP2 bool
-	ACME            struct { // default: Let's Encrypt
-		Enabled bool
-		Host    string
-		Dir     string
+// Entry represents an entry-point for listening.
+type Entry struct {
+	Address string // http://:8001,https://auxo.net:443,unix:///a/b
+	TLS     *struct {
+		Cert string
+		Key  string
+		ACME *struct {
+			//Server string // default: https://acme-staging.api.letsencrypt.org/directory
+			Domain   string
+			Email    string
+			CacheDir string
+		}
 	}
+}
+
+// Entry represents the options of Server.
+type Options struct {
+	// Name is used as HTTP `Server` header, default is auxo/[auxo.Version]
+	Name                  string
+	Mode                  string // develop/release
+	Entries               []Entry
 	RedirectTrailingSlash bool
+	MethodNotAllowed      bool
 	ReadTimeout           time.Duration
 	ReadHeaderTimeout     time.Duration
 	WriteTimeout          time.Duration
@@ -28,15 +37,15 @@ type Options struct {
 	MaxHeaderSize         size.Size
 	MaxBodySize           size.Size
 	Authorize             AuthorizeMode // default authorize mode
-	IndexUrl              string
-	LoginUrl              string
-	UnauthorizedUrl       string
-	IndexPages            []string // static index pages, default: index.html
+	IndexPages            []string      // static index pages, default: index.html
+	//IndexUrl              string
+	//LoginUrl              string
+	//UnauthorizedUrl       string
 }
 
 func (opts *Options) ensure() {
-	if len(opts.Addresses) == 0 {
-		opts.Addresses = []string{"http://:8080"}
+	if len(opts.Entries) == 0 {
+		opts.Entries = []Entry{{Address: ":80"}}
 	}
 	if opts.MaxBodySize <= 0 {
 		opts.MaxBodySize = 10 * size.MB

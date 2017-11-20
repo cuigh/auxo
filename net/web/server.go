@@ -35,7 +35,6 @@ type Server struct {
 	Logger       *log.Logger
 	stdLogger    *slog.Logger
 	cfg          *Options
-	acmeMgr      autocert.Manager
 	filters      []Filter
 	router       *router.Tree
 	ctxPool      *contextPool
@@ -44,7 +43,10 @@ type Server struct {
 
 // Default creates an instance of Server with default options.
 func Default(address ...string) (server *Server) {
-	c := &Options{Addresses: address}
+	c := &Options{}
+	for _, addr := range address {
+		c.Entries = append(c.Entries, Entry{Address: addr})
+	}
 	return New(c)
 }
 
@@ -71,11 +73,6 @@ func New(c *Options) (s *Server) {
 	s.Logger.SetLevel(log.LevelDebug) // log.LevelOff
 	s.stdLogger = slog.New(s.Logger, "web > ", 0)
 	s.ctxPool = newContextPool(s)
-	if c.ACME.Enabled {
-		s.acmeMgr = autocert.Manager{
-			Prompt: autocert.AcceptTOS,
-		}
-	}
 	return s
 }
 
@@ -303,7 +300,7 @@ func (s *Server) execute(c *context, route router.Route) {
 	if route != nil {
 		if ptr := route.Handler(); ptr != nil {
 			c.handler = (*handlerInfo)(ptr)
-		} else {
+		} else if s.cfg.MethodNotAllowed {
 			c.handler = methodNotAllowed
 		}
 		c.pathNames = route.Params()
@@ -324,10 +321,6 @@ func (s *Server) execute(c *context, route router.Route) {
 
 // Run starts the HTTP server.
 func (s *Server) Run() error {
-	if len(s.cfg.Addresses) == 0 {
-		return errors.New("web: listen address is empty")
-	}
-
 	servers, err := s.buildServers()
 	if err != nil {
 		return err
@@ -338,21 +331,22 @@ func (s *Server) Run() error {
 
 	errs := make(chan error)
 	for _, server := range servers {
+		server.Handler = s
 		go s.startServer(server, errs)
 	}
 	return <-errs
 }
 
 func (s *Server) buildServers() ([]*http.Server, error) {
-	tlsConfig, err := s.getTLSConfig()
-	if err != nil {
-		return nil, err
-	}
+	servers := make([]*http.Server, len(s.cfg.Entries))
+	for i, entry := range s.cfg.Entries {
+		tlsConfig, err := s.getTLSConfig(&entry)
+		if err != nil {
+			return nil, err
+		}
 
-	servers := make([]*http.Server, len(s.cfg.Addresses))
-	for i, addr := range s.cfg.Addresses {
 		servers[i] = &http.Server{
-			Addr:              addr,
+			Addr:              entry.Address,
 			ReadTimeout:       s.cfg.ReadTimeout,
 			ReadHeaderTimeout: s.cfg.ReadHeaderTimeout,
 			WriteTimeout:      s.cfg.WriteTimeout,
@@ -367,38 +361,76 @@ func (s *Server) buildServers() ([]*http.Server, error) {
 
 // StartServer runs a custom HTTP server.
 func (s *Server) startServer(server *http.Server, errs chan error) {
-	server.Handler = s
-
 	var (
-		addrType string
-		err      error
-		l        net.Listener
+		network string
+		err     error
+		ln      net.Listener
 	)
 
-	addrType, server.Addr = s.parseAddress(server.Addr)
-	switch addrType {
-	case "https":
-		s.Logger.Infof("web > https server started on %s", server.Addr)
-		err = server.ListenAndServeTLS("", "")
-	case "unix":
+	network, server.Addr = s.parseAddress(server.Addr)
+	if network == "unix" {
+		// TODO: handle error
 		os.Remove(server.Addr)
-		if l, err = net.Listen("unix", server.Addr); err == nil {
-			s.Logger.Infof("web > unix server started on %s", server.Addr)
-			err = server.Serve(l)
+	}
+	ln, err = net.Listen(network, server.Addr)
+
+	if err == nil {
+		ln = tcpKeepAliveListener{ln.(*net.TCPListener)}
+		if server.TLSConfig == nil {
+			s.Logger.Infof("web > Server started on %s", server.Addr)
+			err = server.Serve(ln)
+		} else {
+			s.Logger.Infof("web > Server started on %s(tls)", server.Addr)
+			err = server.ServeTLS(ln, "", "")
 		}
-	default:
-		s.Logger.Infof("web > http server started on %s", server.Addr)
-		err = server.ListenAndServe()
 	}
 	errs <- err
 }
 
-func (s *Server) parseAddress(addr string) (addrType, addrValue string) {
+func (s *Server) parseAddress(addr string) (network, address string) {
 	parts := strings.SplitN(addr, "://", 2)
 	if len(parts) == 2 {
 		return parts[0], parts[1]
 	}
-	return "http", addr
+
+	if addr[0] == '/' {
+		return "unix", addr
+	}
+	return "tcp", addr
+}
+
+func (s *Server) getTLSConfig(entry *Entry) (tlsConfig *tls.Config, err error) {
+	if entry.TLS == nil {
+		return
+	}
+
+	if entry.TLS.Cert != "" && entry.TLS.Key != "" {
+		tlsConfig = new(tls.Config)
+		tlsConfig.Certificates = make([]tls.Certificate, 1)
+		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(entry.TLS.Cert, entry.TLS.Key)
+		if err != nil {
+			return nil, errors.New("load TLS cert failed: " + err.Error())
+		}
+	} else if acme := entry.TLS.ACME; acme != nil {
+		m := &autocert.Manager{
+			Prompt: autocert.AcceptTOS,
+		}
+		if domains := strings.Split(acme.Domain, ","); len(domains) > 0 {
+			m.HostPolicy = autocert.HostWhitelist(domains...)
+		}
+		// todo: support default cache dir
+		if acme.CacheDir == "" {
+			s.Logger.Warn("ACME not using a cache: cache_dir is not set")
+		} else {
+			if err := os.MkdirAll(acme.CacheDir, 0700); err != nil {
+				s.Logger.Warnf("ACME not using a cache: %v", err)
+			} else {
+				m.Cache = autocert.DirCache(acme.CacheDir)
+			}
+		}
+		tlsConfig = &tls.Config{GetCertificate: m.GetCertificate}
+	}
+	return
 }
 
 func (s *Server) printRoutes() {
@@ -408,33 +440,14 @@ func (s *Server) printRoutes() {
 	})
 }
 
-func (s *Server) getTLSConfig() (tlsConfig *tls.Config, err error) {
-	c := s.cfg
-	if c.TLSCertFile != "" && c.TLSKeyFile != "" {
-		tlsConfig = new(tls.Config)
-		tlsConfig.Certificates = make([]tls.Certificate, 1)
-		tlsConfig.Certificates[0], err = tls.LoadX509KeyPair(c.TLSCertFile, c.TLSKeyFile)
-		if err != nil {
-			return nil, errors.New("load TLS cert failed: " + err.Error())
-		}
-	} else if c.ACME.Enabled {
-		tlsConfig = new(tls.Config)
-		tlsConfig.GetCertificate = s.acmeMgr.GetCertificate
-	}
-	if tlsConfig != nil && !s.cfg.TLSDisableHTTP2 {
-		tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2")
-	}
-	return
-}
-
-// Shutdown gracefully shutdown the HTTP server with timeout.
+// Shutdown gracefully shutdown the internal HTTP servers with timeout.
 func (s *Server) Close(timeout time.Duration) {
 	if timeout <= 0 {
 		for _, server := range s.servers {
 			if err := server.Close(); err != nil {
 				s.Logger.Warnf("web > Server [%s] shutdown failed: %s", server.Addr, err)
 			} else {
-				s.Logger.Infof("web > Server [%s] shutdown initiated", server.Addr)
+				s.Logger.Infof("web > Server [%s] shutdown successfully", server.Addr)
 			}
 		}
 	} else {
@@ -448,11 +461,29 @@ func (s *Server) Close(timeout time.Duration) {
 				if err := server.Shutdown(ctx); err != nil {
 					s.Logger.Warnf("web > Server [%s] shutdown failed: %s", server.Addr, err)
 				} else {
-					s.Logger.Infof("web > Server [%s] shutdown initiated", server.Addr)
+					s.Logger.Infof("web > Server [%s] shutdown gracefully", server.Addr)
 				}
 				g.Done()
 			}(server)
 		}
 		g.Wait()
 	}
+}
+
+// tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
+// connections. It's used by ListenAndServe and ListenAndServeTLS so
+// dead TCP connections (e.g. closing laptop mid-download) eventually
+// go away.
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
 }
