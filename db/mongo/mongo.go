@@ -46,6 +46,16 @@ func MustOpen(name string) DB {
 	panic(err)
 }
 
+func With(name string, fn func(db DB) error) error {
+	db, err := factory.Open(name)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	return fn(db)
+}
+
 type Options struct {
 	URL     string `option:"url"`
 	Options data.Map
