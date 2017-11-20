@@ -4,76 +4,40 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"hash"
 )
 
-var (
-	hasher    Hasher
-	saltBytes = 32 // 256 bits
-)
+var Default = &Manager{
+	Hasher:    PBKDF2(4096),
+	SaltBytes: 32,
+}
 
 type Hasher func(pwd, salt string) (string, error)
 
 type Manager struct {
-	hasher Hasher
+	Hasher
+	SaltBytes int
 }
 
-func NewManager(hasher Hasher, saltBytes int) *Manager {
-	return nil
-}
-
-func (m *Manager) Password(pwd string) (p string, s string, e error) {
-	return
-}
-
-func (m *Manager) Salt() (string, error) {
-	b := make([]byte, saltBytes)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
+// Validate validates the password is correct.
 func (m *Manager) Validate(pwd, hash, salt string) bool {
-	h, err := Hash(pwd, salt)
+	h, err := m.Hasher(pwd, salt)
 	return err == nil && h == hash
 }
 
-func SetHasher(h Hasher) {
-	if h == nil {
-		panic("hasher can't be nil")
-	}
-	hasher = h
-}
-
-func SetSaltBytes(bytes int) {
-	if bytes <= 0 {
-		panic("bytes <= 0")
-	}
-	saltBytes = bytes
-}
-
-func Validate(hashed, raw, salt string) bool {
-	h, err := Hash(raw, salt)
-	return err == nil && h == hashed
-}
-
-func Hash(pwd, salt string) (string, error) {
-	return hasher(pwd, salt)
-}
-
-func Get(pwd string) (hash, salt string, err error) {
-	salt, err = NewSalt()
+// Generate create a hashed password with random salt.
+func (m *Manager) Generate(raw string) (pwd string, salt string, err error) {
+	salt, err = m.createSalt()
 	if err == nil {
-		hash, err = Hash(pwd, salt)
+		pwd, err = m.Hasher(raw, salt)
 	}
 	return
 }
 
-func NewSalt() (string, error) {
-	b := make([]byte, saltBytes)
+func (m *Manager) createSalt() (string, error) {
+	b := make([]byte, m.SaltBytes)
 	_, err := rand.Read(b)
 	if err != nil {
 		return "", err
@@ -81,24 +45,33 @@ func NewSalt() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-func PBKDF2() Hasher {
+// Validate validates the password is correct.
+func Validate(pwd, hash, salt string) bool {
+	return Default.Validate(pwd, hash, salt)
+}
+
+// Generate create a hashed password with random salt.
+func Generate(raw string) (pwd string, salt string, err error) {
+	return Default.Generate(raw)
+}
+
+// PBKDF2 is a Hasher implement with PBKDF2 algorithm.
+func PBKDF2(iter int) Hasher {
 	return func(pwd, salt string) (string, error) {
-		b := pbkdf2([]byte(pwd), []byte(salt), 4096, 32, sha1.New)
+		b := pbkdf2([]byte(pwd), []byte(salt), iter, 32, sha1.New)
 		return hex.EncodeToString(b), nil
 	}
 }
 
-// not safe enough, but old system may use this
-//func SHA256() Hasher {
-//	return func(pwd, salt string) (string, error) {
-//		h := sha256.New()
-//		if _, err := h.Write([]byte(pwd + salt)); err != nil {
-//			return "", err
-//		}
-//		b := h.Sum(nil)
-//		return hex.EncodeToString(b), nil
-//	}
-//}
+// SHA256 is a Hasher implement with SHA256 algorithm.
+func SHA256(pwd, salt string) (string, error) {
+	h := sha256.New()
+	if _, err := h.Write([]byte(pwd + salt)); err != nil {
+		return "", err
+	}
+	b := h.Sum(nil)
+	return hex.EncodeToString(b), nil
+}
 
 // copy from: golang.org/x/crypto/pbkdf2
 func pbkdf2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte {
@@ -136,20 +109,4 @@ func pbkdf2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte 
 		}
 	}
 	return dk[:keyLen]
-}
-
-func init() {
-	// not safe enough, but old system may use this
-	//hasher = func(pwd, salt string) (string, error) {
-	//	h := sha256.New()
-	//	if _, err := h.Write([]byte(pwd + salt)); err != nil {
-	//		return "", err
-	//	}
-	//	b := h.Sum(nil)
-	//	return hex.EncodeToString(b), nil
-	//}
-	hasher = func(pwd, salt string) (string, error) {
-		b := pbkdf2([]byte(pwd), []byte(salt), 4096, 32, sha1.New)
-		return hex.EncodeToString(b), nil
-	}
 }
