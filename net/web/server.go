@@ -28,7 +28,7 @@ var _ Router = &Server{}
 
 // Server represents information of the HTTP server.
 type Server struct {
-	ErrorHandler ErrorHandler
+	ErrorHandler *ErrorHandler
 	Binder       Binder
 	Validator    Validator
 	Renderer     Renderer
@@ -66,7 +66,7 @@ func New(c *Options) (s *Server) {
 	s = &Server{
 		cfg:          c,
 		Logger:       log.Get(PkgName),
-		ErrorHandler: DefaultErrorHandler,
+		ErrorHandler: &ErrorHandler{},
 		Binder:       new(binder),
 		router:       router.New(router.Options{}),
 	}
@@ -315,7 +315,7 @@ func (s *Server) execute(c *context, route router.Route) {
 
 	// execute handler
 	if err := h(c); err != nil {
-		s.ErrorHandler.Handle(c, err)
+		s.ErrorHandler.handle(c, err)
 	}
 }
 

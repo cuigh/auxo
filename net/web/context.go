@@ -550,7 +550,7 @@ func (c *context) Status(code int) Responser {
 }
 
 func (c *context) Error(err error) {
-	c.server.ErrorHandler.Handle(c, err)
+	c.server.ErrorHandler.handle(c, err)
 }
 
 func (c *context) Server() *Server {

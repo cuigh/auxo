@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-
 	"reflect"
 
 	"github.com/cuigh/auxo/data"
@@ -45,65 +44,38 @@ func NewError(code int, msg ...string) *Error {
 	return (*Error)(e)
 }
 
-var DefaultErrorHandler = new(ErrorHandleMux)
-
 type ErrorHandlerFunc func(Context, error)
 
-type ErrorHandler interface {
-	Handle(c Context, err error)
-	//OnCode(code int, fn ErrorHandlerFunc)
-	//OnType(ct string, fn ErrorHandlerFunc)
-	//OnError(t reflect.Type, fn ErrorHandlerFunc)
+type ErrorHandler struct {
+	Detail  bool
+	Default ErrorHandlerFunc
+	errors  map[reflect.Type]ErrorHandlerFunc
+	codes   map[int]ErrorHandlerFunc
+	types   map[string]ErrorHandlerFunc
 }
 
-func WrapErrorHandler(handler ErrorHandler, filter func(c Context, err error) error) ErrorHandler {
-	return &errorHandlerWrapper{
-		handler: handler,
-		filter:  filter,
-	}
-}
-
-type errorHandlerWrapper struct {
-	handler ErrorHandler
-	filter  func(c Context, err error) error
-}
-
-func (h *errorHandlerWrapper) Handle(c Context, err error) {
-	err = h.filter(c, err)
-	if err != nil {
-		h.handler.Handle(c, err)
-	}
-}
-
-type ErrorHandleMux struct {
-	Detail bool
-	errors map[reflect.Type]ErrorHandlerFunc
-	codes  map[int]ErrorHandlerFunc
-	types  map[string]ErrorHandlerFunc
-}
-
-func (h *ErrorHandleMux) OnCode(code int, fn ErrorHandlerFunc) {
+func (h *ErrorHandler) OnCode(code int, fn ErrorHandlerFunc) {
 	if h.codes == nil {
 		h.codes = make(map[int]ErrorHandlerFunc)
 	}
 	h.codes[code] = fn
 }
 
-func (h *ErrorHandleMux) OnType(ct string, fn ErrorHandlerFunc) {
+func (h *ErrorHandler) OnType(ct string, fn ErrorHandlerFunc) {
 	if h.types == nil {
 		h.types = make(map[string]ErrorHandlerFunc)
 	}
 	h.types[ct] = fn
 }
 
-func (h *ErrorHandleMux) OnError(t reflect.Type, fn ErrorHandlerFunc) {
+func (h *ErrorHandler) OnError(t reflect.Type, fn ErrorHandlerFunc) {
 	if h.errors == nil {
 		h.errors = make(map[reflect.Type]ErrorHandlerFunc)
 	}
 	h.errors[t] = fn
 }
 
-func (h *ErrorHandleMux) Handle(c Context, err error) {
+func (h *ErrorHandler) handle(c Context, err error) {
 	if c.Response().Committed() {
 		c.Logger().Error(err)
 		return
@@ -134,6 +106,11 @@ func (h *ErrorHandleMux) Handle(c Context, err error) {
 		}
 	}
 
+	if h.Default != nil {
+		h.Default(c, err)
+		return
+	}
+
 	// default handler
 	if e, ok := err.(*Error); ok {
 		h.handleError(c, e.Code, 0, e.Message, e.Detail)
@@ -144,7 +121,7 @@ func (h *ErrorHandleMux) Handle(c Context, err error) {
 	}
 }
 
-func (h *ErrorHandleMux) handleError(c Context, status, code int, msg, detail string) {
+func (h *ErrorHandler) handleError(c Context, status, code int, msg, detail string) {
 	if c.Request().Method == http.MethodHead {
 		h.logError(c, c.Status(code).Empty())
 		return
@@ -169,7 +146,7 @@ func (h *ErrorHandleMux) handleError(c Context, status, code int, msg, detail st
 	}
 }
 
-func (h *ErrorHandleMux) logError(c Context, err error) {
+func (h *ErrorHandler) logError(c Context, err error) {
 	if err != nil {
 		c.Logger().Error(err)
 	}
