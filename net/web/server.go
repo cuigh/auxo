@@ -28,7 +28,7 @@ var _ Router = &Server{}
 
 // Server represents information of the HTTP server.
 type Server struct {
-	ErrorHandler *ErrorHandler
+	ErrorHandler ErrorHandler
 	Binder       Binder
 	Validator    Validator
 	Renderer     Renderer
@@ -37,6 +37,7 @@ type Server struct {
 	cfg          *Options
 	filters      []Filter
 	router       *router.Tree
+	routes       map[string]router.Route
 	ctxPool      *contextPool
 	servers      []*http.Server
 }
@@ -64,13 +65,11 @@ func Auto() (server *Server) {
 func New(c *Options) (s *Server) {
 	c.ensure()
 	s = &Server{
-		cfg:          c,
-		Logger:       log.Get(PkgName),
-		ErrorHandler: &ErrorHandler{},
-		Binder:       new(binder),
-		router:       router.New(router.Options{}),
+		cfg:    c,
+		Logger: log.Get(PkgName),
+		Binder: new(binder),
+		router: router.New(router.Options{}),
 	}
-	s.Logger.SetLevel(log.LevelDebug) // log.LevelOff
 	s.stdLogger = slog.New(s.Logger, "web > ", 0)
 	s.ctxPool = newContextPool(s)
 	return s
@@ -253,6 +252,24 @@ func (s *Server) Group(prefix string, filters ...Filter) (g *Group) {
 	g = &Group{prefix: prefix, server: s}
 	g.Use(filters...)
 	return
+}
+
+// URL generates an URL from handler name and provided parameters.
+func (s *Server) URL(name string, params ...interface{}) string {
+	if s.routes == nil {
+		s.routes = make(map[string]router.Route)
+		s.router.Walk(func(r router.Route, m string) {
+			handler := (*handlerInfo)(r.Handler())
+			if handler.name != "" {
+				s.routes[handler.name] = r
+			}
+		})
+	}
+
+	if r := s.routes[name]; r != nil {
+		return r.URL(params)
+	}
+	return ""
 }
 
 // AcquireContext returns an `Context` instance from the pool.

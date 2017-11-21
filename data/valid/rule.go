@@ -1,18 +1,13 @@
 package valid
 
 import (
-	"net"
-	"reflect"
-
-	"strings"
-
-	"strconv"
-
-	"regexp"
-
-	"os"
-
 	"fmt"
+	"net"
+	"os"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
 
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/reflects"

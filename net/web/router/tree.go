@@ -30,6 +30,7 @@ type Route interface {
 	Path() string
 	Handler() unsafe.Pointer
 	Params() []string
+	URL(params ...interface{}) string
 }
 
 // New creates a route tree.

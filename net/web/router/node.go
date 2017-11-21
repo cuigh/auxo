@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"unsafe"
@@ -38,6 +39,25 @@ func (r *route) Params() []string {
 
 func (r *route) Path() string {
 	return r.m.parent.path
+}
+
+func (r *route) URL(params ...interface{}) string {
+	l := len(params)
+	if l != len(r.Params()) {
+		panic("Wrong parameters for route: " + r.Path())
+	}
+
+	var u string
+	i := l - 1
+	for n := r.m.parent; n != nil; n = n.parent {
+		if n.kind == kindStatic {
+			u = n.text + u
+		} else {
+			u = fmt.Sprint(params[i]) + u
+			i--
+		}
+	}
+	return u
 }
 
 type routeMap struct {
