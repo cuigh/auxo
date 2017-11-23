@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/cuigh/auxo/ext/reflects"
 )
 
 var layouts = [...]string{
@@ -37,18 +39,23 @@ func StringToTime(s string) (t time.Time, e error) {
 	return t, fmt.Errorf("unable to parse date: %s", s)
 }
 
+// TODO: refactor
 func StringToType(s string, p reflect.Type) interface{} {
-	switch {
-	case p == reflect.TypeOf(time.Time{}):
+	switch p {
+	case reflects.TypeTime:
 		return ToTime(s)
-	case p == reflect.TypeOf(time.Nanosecond):
+	case reflects.TypeDuration:
 		return ToDuration(s)
 	default:
 		switch p.Kind() {
 		case reflect.String:
 			return s
+		case reflect.Bool:
+			return ToBool(s)
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			return ToInt(s)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return ToUint(s)
 		case reflect.Slice:
 			et := p.Elem()
 			if et.Kind() == reflect.String {

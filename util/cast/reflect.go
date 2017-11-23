@@ -9,47 +9,49 @@ import (
 
 func TryToValue(i interface{}, t reflect.Type) (v reflect.Value, err error) {
 	var value interface{}
-	switch t {
-	case reflects.TypeBool:
-		value, err = TryToBool(i)
-	case reflects.TypeString:
-		value = ToString(i)
-	case reflects.TypeInt:
-		value, err = TryToInt(i)
-	case reflects.TypeInt8:
-		value, err = TryToInt8(i)
-	case reflects.TypeInt16:
-		value, err = TryToInt16(i)
-	case reflects.TypeInt32:
-		value, err = TryToInt32(i)
-	case reflects.TypeInt64:
-		value, err = TryToInt64(i)
-	case reflects.TypeUint:
-		value, err = TryToUint(i)
-	case reflects.TypeUint8:
-		value, err = TryToUint8(i)
-	case reflects.TypeUint16:
-		value, err = TryToUint16(i)
-	case reflects.TypeUint32:
-		value, err = TryToUint32(i)
-	case reflects.TypeUint64:
-		value, err = TryToUint64(i)
-	case reflects.TypeFloat32:
-		value, err = TryToFloat32(i)
-	case reflects.TypeFloat64:
-		value, err = TryToFloat64(i)
-	case reflects.TypeDuration:
+
+	if t == reflects.TypeDuration {
 		value, err = TryToDuration(i)
-	case reflects.TypeTime:
+	} else if t == reflects.TypeTime {
 		value, err = TryToTime(i)
-	default:
-		if t.Kind() == reflect.Slice {
+	} else {
+		switch t.Kind() {
+		case reflect.Bool:
+			value, err = TryToBool(i)
+		case reflect.String:
+			value = ToString(i)
+		case reflect.Int:
+			value, err = TryToInt(i)
+		case reflect.Int8:
+			value, err = TryToInt8(i)
+		case reflect.Int16:
+			value, err = TryToInt16(i)
+		case reflect.Int32:
+			value, err = TryToInt32(i)
+		case reflect.Int64:
+			value, err = TryToInt64(i)
+		case reflect.Uint:
+			value, err = TryToUint(i)
+		case reflect.Uint8:
+			value, err = TryToUint8(i)
+		case reflect.Uint16:
+			value, err = TryToUint16(i)
+		case reflect.Uint32:
+			value, err = TryToUint32(i)
+		case reflect.Uint64:
+			value, err = TryToUint64(i)
+		case reflect.Float32:
+			value, err = TryToFloat32(i)
+		case reflect.Float64:
+			value, err = TryToFloat64(i)
+		case reflect.Slice:
 			return TryToSliceValue(i, t.Elem())
+		default:
+			err = castError(i, t.String())
 		}
-		err = castError(i, t.String())
 	}
 	if err == nil {
-		v = reflect.ValueOf(value)
+		v = reflect.ValueOf(value).Convert(t)
 	}
 	return
 }

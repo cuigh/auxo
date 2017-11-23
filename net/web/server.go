@@ -453,7 +453,7 @@ func (s *Server) getTLSConfig(entry *Entry) (tlsConfig *tls.Config, err error) {
 func (s *Server) printRoutes() {
 	s.router.Walk(func(r router.Route, m string) {
 		handler := (*handlerInfo)(r.Handler())
-		s.Logger.Infof("web > [%s] %s -> %s", texts.PadCenter(m, ' ', 7), r.Path(), handler.Name())
+		s.Logger.Debugf("web > [%s] %s -> %s", texts.PadCenter(m, ' ', 7), r.Path(), handler.Name())
 	})
 }
 

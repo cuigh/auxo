@@ -35,8 +35,8 @@ type (
 	Closer func(timeout time.Duration)
 )
 
-// GetPath returns program's full filename
-func GetPath() string {
+// Path returns program's full filename
+func Path() string {
 	p, err := os.Executable()
 	if err != nil {
 		panic(err)

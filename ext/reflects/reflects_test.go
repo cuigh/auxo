@@ -173,3 +173,28 @@ func TestSimpleValue(t *testing.T) {
 		assertEqual(t, c.Value2, c.Value.Interface())
 	}
 }
+
+func TestIsEmpty(t *testing.T) {
+	i, j := 0, 1
+	var k *int
+	cases := []struct {
+		Value    interface{}
+		Expected bool
+	}{
+		{true, false},
+		{false, true},
+		{"a", false},
+		{"", true},
+		{0, true},
+		{1, false},
+		{0.0, true},
+		{1.0, false},
+		{&i, true},
+		{&j, false},
+		{k, true},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.Expected, reflects.IsEmpty(reflect.ValueOf(c.Value)))
+	}
+}

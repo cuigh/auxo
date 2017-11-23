@@ -20,13 +20,13 @@ type Renderer struct {
 	trans jet.Translator
 }
 
-type Config struct {
+type Options struct {
 	Debug bool
 }
 
 func New(dir ...string) *Renderer {
 	if len(dir) == 0 {
-		d := filepath.Dir(app.GetPath())
+		d := filepath.Dir(app.Path())
 		p := filepath.Join(d, "views")
 		if files.Exist(p) {
 			dir = append(dir, p)
@@ -45,6 +45,8 @@ func New(dir ...string) *Renderer {
 		set: jet.NewHTMLSet(dir...),
 	}
 	// Add common functions
+	r.set.AddGlobalFunc("eq", equal)
+	r.set.AddGlobalFunc("or", or)
 	r.AddFunc("printf", fmt.Sprintf)
 	r.AddFunc("limit", renderer.Limit)
 	r.AddFunc("slice", renderer.Slice)
