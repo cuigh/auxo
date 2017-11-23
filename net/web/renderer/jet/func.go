@@ -15,7 +15,7 @@ func equal(args jet.Arguments) reflect.Value {
 	v2 := reflects.Indirect(args.Get(1))
 	v, err := cast.TryToValue(v2.Interface(), v1.Type())
 	if err != nil {
-		panic(err)
+		return reflect.ValueOf(false)
 	}
 	return reflect.ValueOf(v1.Interface() == v.Interface())
 }
