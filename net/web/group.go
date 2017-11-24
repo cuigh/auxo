@@ -105,7 +105,7 @@ func (g *Group) FileSystem(path string, fs http.FileSystem) {
 }
 
 func (g *Group) add(method, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.server.add(method, g.prefix+path, handler, g.mergeFilters(filters)...)
+	return g.server.register(method, g.prefix+path, handler, g.mergeFilters(filters)...)
 }
 
 func (g *Group) mergeFilters(filters []Filter) []Filter {

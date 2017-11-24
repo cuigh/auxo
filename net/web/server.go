@@ -94,47 +94,47 @@ func (s *Server) UseFunc(filters ...FilterFunc) {
 
 // Connect registers a route that matches 'CONNECT' method.
 func (s *Server) Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodConnect, path, h, filters...)
+	return s.register(http.MethodConnect, path, h, filters...)
 }
 
 // Delete registers a route that matches 'DELETE' method.
 func (s *Server) Delete(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodDelete, path, h, filters...)
+	return s.register(http.MethodDelete, path, h, filters...)
 }
 
 // Get registers a route that matches 'GET' method.
 func (s *Server) Get(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodGet, path, h, filters...)
+	return s.register(http.MethodGet, path, h, filters...)
 }
 
 // Head registers a route that matches 'HEAD' method.
 func (s *Server) Head(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodHead, path, h, filters...)
+	return s.register(http.MethodHead, path, h, filters...)
 }
 
 // Options registers a route that matches 'OPTIONS' method.
 func (s *Server) Options(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodOptions, path, h, filters...)
+	return s.register(http.MethodOptions, path, h, filters...)
 }
 
 // Patch registers a route that matches 'PATCH' method.
 func (s *Server) Patch(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodPatch, path, h, filters...)
+	return s.register(http.MethodPatch, path, h, filters...)
 }
 
 // Post registers a route that matches 'POST' method.
 func (s *Server) Post(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodPost, path, h, filters...)
+	return s.register(http.MethodPost, path, h, filters...)
 }
 
 // Put registers a route that matches 'PUT' method.
 func (s *Server) Put(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodPut, path, h, filters...)
+	return s.register(http.MethodPut, path, h, filters...)
 }
 
 // Trace registers a route that matches 'TRACE' method.
 func (s *Server) Trace(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.add(http.MethodTrace, path, h, filters...)
+	return s.register(http.MethodTrace, path, h, filters...)
 }
 
 // Any registers a route that matches all the HTTP methods.
@@ -148,7 +148,7 @@ func (s *Server) Match(methods []string, path string, handler HandlerFunc, filte
 		name:   handler.Name(),
 		action: handler.Chain(filters...),
 	}
-	s.addInfo(path, info, methods...)
+	s.registerInfo(path, info, methods...)
 	return info
 }
 
@@ -178,24 +178,46 @@ func (s *Server) Handle(path string, controller interface{}, filters ...Filter) 
 			panic(fmt.Sprintf("web > handler %s.%s isn't initialized", t.Name(), sf.Name))
 		}
 
-		st := reflects.StructTag(sf.Tag)
-		a := parseAuthorizeMode(st.Find("authorize", "a"), s.cfg.Authorize)
-		n := st.Find("name", "n")
-		p := st.Find("path", "p")
-		if n == "" {
-			n = strings.ToLower(t.PkgPath() + "." + strings.TrimSuffix(t.Name(), "Controller") + "." + sf.Name)
-		}
-		if p == "" {
-			p = "/" + strings.ToLower(sf.Name)
-		}
-		p = path + p
+		s.handleField(path, t, &sf, h, filters...)
+	}
+}
 
-		if method := st.Find("method", "m"); method != "" {
-			methods := strings.Split(strings.ToUpper(method), ",")
-			s.Match(methods, p, h, filters...).SetName(n).SetAuthorize(a)
-		} else {
-			s.Get(p, h, filters...).SetName(n).SetAuthorize(a)
+func (s *Server) handleField(prefix string, t reflect.Type, sf *reflect.StructField, handler HandlerFunc, filters ...Filter) {
+	var (
+		p       string
+		methods []string
+		opts    = reflects.StructTag(sf.Tag).All()
+		info    = &handlerInfo{
+			action: handler.Chain(filters...),
 		}
+	)
+
+	for k, v := range opts {
+		switch k {
+		case "name", "n":
+			info.name = v
+		case "path", "p":
+			p = v
+		case "authorize", "auth", "a":
+			info.authorize = parseAuthorizeMode(v, s.cfg.Authorize)
+		case "method", "m":
+			methods = strings.Split(strings.ToUpper(v), ",")
+		default:
+			info.SetOption(k, v)
+		}
+	}
+
+	if info.name == "" {
+		info.name = strings.ToLower(t.PkgPath() + "." + strings.TrimSuffix(t.Name(), "Controller") + "." + sf.Name)
+	}
+	if p == "" {
+		p = "/" + strings.ToLower(sf.Name)
+	}
+
+	if methods == nil {
+		s.registerInfo(prefix+p, info, http.MethodGet)
+	} else {
+		s.registerInfo(prefix+p, info, methods...)
 	}
 }
 
@@ -231,16 +253,16 @@ func (s *Server) FileSystem(prefix string, fs http.FileSystem) {
 	s.Get(p, handler)
 }
 
-func (s *Server) add(method, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
+func (s *Server) register(method, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
 	info := &handlerInfo{
 		name:   handler.Name(),
 		action: handler.Chain(filters...),
 	}
-	s.addInfo(path, info, method)
+	s.registerInfo(path, info, method)
 	return info
 }
 
-func (s *Server) addInfo(path string, info *handlerInfo, methods ...string) {
+func (s *Server) registerInfo(path string, info *handlerInfo, methods ...string) {
 	err := s.router.Add(path, unsafe.Pointer(info), methods...)
 	if err != nil {
 		panic(err)

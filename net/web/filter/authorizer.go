@@ -54,6 +54,8 @@ func (a *Authorizer) Apply(next web.HandlerFunc) web.HandlerFunc {
 					"message":   a.UnauthorizedMsg,
 					"login_url": a.LoginUrl,
 				})
+			} else if ctx.IsAJAX() {
+				return ctx.Status(http.StatusUnauthorized).HTML(a.UnauthorizedMsg)
 			}
 
 			u, err := url.Parse(a.LoginUrl)
