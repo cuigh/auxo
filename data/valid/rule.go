@@ -2,6 +2,7 @@ package valid
 
 import (
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"reflect"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/reflects"
-	"github.com/google/gxui/math"
 )
 
 var (
@@ -180,7 +180,7 @@ func lengthRule(ctx *Context, arg *Argument) error {
 		if err != nil {
 			return err
 		}
-		end, err := toInt(pair[1], math.MaxInt)
+		end, err := toInt(pair[1], math.MaxInt32)
 		if err != nil {
 			return err
 		}
@@ -237,7 +237,7 @@ func rangeRule(ctx *Context, arg *Argument) error {
 			if err != nil {
 				return err
 			}
-			end, err := toInt64(pair[1], int64(math.MaxInt))
+			end, err := toInt64(pair[1], int64(math.MaxInt32))
 			if err != nil {
 				return err
 			}
@@ -273,7 +273,7 @@ func rangeRule(ctx *Context, arg *Argument) error {
 			if err != nil {
 				return err
 			}
-			end, err := toUint64(pair[1], uint64(math.MaxUint))
+			end, err := toUint64(pair[1], uint64(math.MaxUint32))
 			if err != nil {
 				return err
 			}
@@ -309,7 +309,7 @@ func rangeRule(ctx *Context, arg *Argument) error {
 			if err != nil {
 				return err
 			}
-			end, err := toFloat64(pair[1], float64(math.MaxUint))
+			end, err := toFloat64(pair[1], float64(math.MaxUint32))
 			if err != nil {
 				return err
 			}
