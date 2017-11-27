@@ -57,7 +57,7 @@ func With(name string, fn func(db DB) error) error {
 }
 
 type Options struct {
-	URL     string `option:"url"`
+	Address string
 	Options data.Map
 }
 
@@ -150,7 +150,7 @@ func (f *Factory) openSession(opts *Options) (*Session, error) {
 		maxPoolSize = defaultPoolSize
 	}
 
-	info, err := mgo.ParseURL(opts.URL)
+	info, err := mgo.ParseURL(opts.Address)
 	if err != nil {
 		return nil, err
 	}

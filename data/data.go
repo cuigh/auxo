@@ -28,3 +28,12 @@ type Option struct {
 }
 
 type Options []Option
+
+func (opts Options) Get(name string) string {
+	for _, opt := range opts {
+		if opt.Name == name {
+			return opt.Value
+		}
+	}
+	return ""
+}

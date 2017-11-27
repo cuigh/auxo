@@ -1,5 +1,5 @@
 db.mongo:
     test:
-      url: localhost:27017/test
+      address: localhost:27017/test
       options:
         consistency_mode: 1
