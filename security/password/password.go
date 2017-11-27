@@ -22,7 +22,7 @@ type Manager struct {
 }
 
 // Validate validates the password is correct.
-func (m *Manager) Validate(pwd, hash, salt string) bool {
+func (m *Manager) Validate(hash, pwd, salt string) bool {
 	h, err := m.Hasher(pwd, salt)
 	return err == nil && h == hash
 }
@@ -46,8 +46,8 @@ func (m *Manager) createSalt() (string, error) {
 }
 
 // Validate validates the password is correct.
-func Validate(pwd, hash, salt string) bool {
-	return Default.Validate(pwd, hash, salt)
+func Validate(hash, pwd, salt string) bool {
+	return Default.Validate(hash, pwd, salt)
 }
 
 // Generate create a hashed password with random salt.
