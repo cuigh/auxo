@@ -1,0 +1,10 @@
+db.redis:
+    test:
+      type: sentinel
+      address: localhost:6309
+      masters: m1,m2
+      password: 123456
+      max_pool_size: 100
+      connect_timeout: 5s
+      read_timeout: 5s
+      write_timeout: 5s
