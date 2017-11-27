@@ -9,7 +9,6 @@ import (
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/texts"
 	"github.com/cuigh/auxo/log"
-	"github.com/cuigh/auxo/util/cast"
 )
 
 const PkgName = "auxo.db.gsd"
@@ -154,7 +153,7 @@ type Factory struct {
 	dbMap  map[string]DB
 }
 
-func New(opts *DBOptions) (DB, error) {
+func New(opts *Options) (DB, error) {
 	if opts.Address == "" {
 		return nil, errors.New("gsd: New with empty address")
 	}
@@ -172,11 +171,15 @@ func New(opts *DBOptions) (DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if conns := cast.ToInt(opts.Options.Get("max_open_conns")); conns > 0 {
-		db.SetMaxOpenConns(conns)
+
+	if opts.MaxOpenConns > 0 {
+		db.SetMaxOpenConns(opts.MaxOpenConns)
 	}
-	if conns := cast.ToInt(opts.Options.Get("max_idle_conns")); conns > 0 {
-		db.SetMaxIdleConns(conns)
+	if opts.MaxIdleConns > 0 {
+		db.SetMaxIdleConns(opts.MaxIdleConns)
+	}
+	if opts.ConnLifetime > 0 {
+		db.SetConnMaxLifetime(opts.ConnLifetime)
 	}
 
 	return &database{
@@ -234,13 +237,13 @@ func (f *Factory) initDB(name string) (db DB, err error) {
 	return
 }
 
-func (f *Factory) loadOptions(name string) (*DBOptions, error) {
+func (f *Factory) loadOptions(name string) (*Options, error) {
 	key := "db.sql." + name
 	if config.Get(key) == nil {
 		return nil, errors.Format("can't find db config for [%s]", name)
 	}
 
-	opts := &DBOptions{}
+	opts := &Options{}
 	err := config.UnmarshalOption(key, opts)
 	if err != nil {
 		return nil, err

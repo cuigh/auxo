@@ -3,17 +3,15 @@ package mongo
 import (
 	"sync"
 
+	"time"
+
 	"github.com/cuigh/auxo/config"
-	"github.com/cuigh/auxo/data"
-	"github.com/cuigh/auxo/ext/times"
-	"github.com/cuigh/auxo/util/cast"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
 const (
-	PkgName         = "auxo.db.mongo"
-	defaultPoolSize = 100
+	PkgName = "auxo.db.mongo"
 )
 
 var factory = &Factory{
@@ -57,8 +55,10 @@ func With(name string, fn func(db DB) error) error {
 }
 
 type Options struct {
-	Address string
-	Options data.Map
+	Address     string
+	PoolSize    int
+	DialTimeout time.Duration
+	Consistency string
 }
 
 type DB interface {
@@ -145,34 +145,31 @@ func (f *Factory) initSession(name string) (*Session, error) {
 }
 
 func (f *Factory) openSession(opts *Options) (*Session, error) {
-	maxPoolSize := cast.ToInt(opts.Options.Get("max_pool_size"))
-	if maxPoolSize <= 0 {
-		maxPoolSize = defaultPoolSize
-	}
-
 	info, err := mgo.ParseURL(opts.Address)
 	if err != nil {
 		return nil, err
 	}
 
-	info.Timeout = cast.ToDuration(opts.Options.Get("connect_timeout"), times.Seconds(10))
-	info.PoolLimit = maxPoolSize
+	if opts.DialTimeout > 0 {
+		info.Timeout = opts.DialTimeout
+	}
+	if opts.PoolSize > 0 {
+		info.PoolLimit = opts.PoolSize
+	}
 
 	s, err := mgo.DialWithInfo(info)
-	if err == nil {
-		if consistency := cast.ToString(opts.Options.Get("consistency")); consistency != "" {
-			switch consistency {
-			case "Primary":
-				s.SetMode(mgo.Primary, false)
-			case "PrimaryPreferred":
-				s.SetMode(mgo.PrimaryPreferred, false)
-			case "Secondary":
-				s.SetMode(mgo.Secondary, false)
-			case "SecondaryPreferred":
-				s.SetMode(mgo.SecondaryPreferred, false)
-			case "Nearest":
-				s.SetMode(mgo.Nearest, false)
-			}
+	if err == nil && opts.Consistency != "" {
+		switch opts.Consistency {
+		case "Primary":
+			s.SetMode(mgo.Primary, false)
+		case "PrimaryPreferred":
+			s.SetMode(mgo.PrimaryPreferred, false)
+		case "Secondary":
+			s.SetMode(mgo.Secondary, false)
+		case "SecondaryPreferred":
+			s.SetMode(mgo.SecondaryPreferred, false)
+		case "Nearest":
+			s.SetMode(mgo.Nearest, false)
 		}
 	}
 	return s, err

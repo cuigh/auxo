@@ -11,12 +11,15 @@ import (
 	"github.com/cuigh/auxo/log"
 )
 
-type DBOptions struct {
-	Name     string
-	Provider string
-	Driver   string
-	Address  string
-	Trace    struct {
+type Options struct {
+	Name         string
+	Provider     string
+	Driver       string
+	Address      string
+	MaxOpenConns int
+	MaxIdleConns int
+	ConnLifetime time.Duration
+	Trace        struct {
 		Enabled bool
 		Time    time.Duration
 	}
@@ -43,7 +46,7 @@ type DB interface {
 }
 
 type database struct {
-	opts   *DBOptions
+	opts   *Options
 	logger *log.Logger
 	db     *sql.DB
 	p      Provider

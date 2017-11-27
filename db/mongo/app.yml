@@ -1,7 +1,6 @@
 db.mongo:
     test:
       address: localhost:27017/test
-      options:
-        max_pool_size: 100
-        connect_timeout: 5s
-        consistency: Primary
+      pool_size: 100
+      dial_timeout: 5s
+      consistency: Primary
