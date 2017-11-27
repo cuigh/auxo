@@ -145,7 +145,7 @@ func (f *Factory) initSession(name string) (*Session, error) {
 }
 
 func (f *Factory) openSession(opts *Options) (*Session, error) {
-	maxPoolSize := cast.ToInt(opts.Options.Get("MaxPoolSize"))
+	maxPoolSize := cast.ToInt(opts.Options.Get("max_pool_size"))
 	if maxPoolSize <= 0 {
 		maxPoolSize = defaultPoolSize
 	}
@@ -155,12 +155,12 @@ func (f *Factory) openSession(opts *Options) (*Session, error) {
 		return nil, err
 	}
 
-	info.Timeout = cast.ToDuration(opts.Options.Get("ConnectTimeout"), times.Seconds(10))
+	info.Timeout = cast.ToDuration(opts.Options.Get("connect_timeout"), times.Seconds(10))
 	info.PoolLimit = maxPoolSize
 
 	s, err := mgo.DialWithInfo(info)
 	if err == nil {
-		if consistency := cast.ToString(opts.Options.Get("ReadPreference")); consistency != "" {
+		if consistency := cast.ToString(opts.Options.Get("consistency")); consistency != "" {
 			switch consistency {
 			case "Primary":
 				s.SetMode(mgo.Primary, false)

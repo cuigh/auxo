@@ -2,4 +2,6 @@ db.mongo:
     test:
       address: localhost:27017/test
       options:
-        consistency_mode: 1
+        max_pool_size: 100
+        connect_timeout: 5s
+        consistency: Primary
