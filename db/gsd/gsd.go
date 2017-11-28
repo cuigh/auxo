@@ -239,7 +239,7 @@ func (f *Factory) initDB(name string) (db DB, err error) {
 
 func (f *Factory) loadOptions(name string) (*Options, error) {
 	key := "db.sql." + name
-	if config.Get(key) == nil {
+	if !config.Exist(key) {
 		return nil, errors.Format("can't find db config for [%s]", name)
 	}
 

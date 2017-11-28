@@ -18,15 +18,18 @@ const (
 	TypeCluster  = "cluster"
 )
 
-var factory = new(Factory)
+type Client = redis.Cmdable
+type StringCmd = redis.StringCmd
 
-func Open(name string) (redis.Cmdable, error) {
-	return factory.Open(name)
+var f = new(factory)
+
+func Open(name string) (Client, error) {
+	return f.Open(name)
 }
 
-type Factory struct {
+type factory struct {
 	locker sync.Mutex
-	cmds   map[string]redis.Cmdable
+	cmds   map[string]Client
 }
 
 type Options struct {
@@ -40,7 +43,7 @@ type Options struct {
 	MasterNames  []string
 }
 
-func (f *Factory) Open(name string) (cmd redis.Cmdable, err error) {
+func (f *factory) Open(name string) (cmd Client, err error) {
 	cmd = f.cmds[name]
 	if cmd == nil {
 		cmd, err = f.create(name)
@@ -48,7 +51,7 @@ func (f *Factory) Open(name string) (cmd redis.Cmdable, err error) {
 	return
 }
 
-func (f *Factory) create(name string) (cmd redis.Cmdable, err error) {
+func (f *factory) create(name string) (cmd Client, err error) {
 	f.locker.Lock()
 	defer f.locker.Unlock()
 
@@ -72,10 +75,18 @@ func (f *Factory) create(name string) (cmd redis.Cmdable, err error) {
 	default: // single node
 		cmd = f.createSingle(opts)
 	}
+
+	// rebuild map to avoid locker
+	cmds := make(map[string]Client)
+	for k, v := range f.cmds {
+		cmds[k] = v
+	}
+	cmds[name] = cmd
+	f.cmds = cmds
 	return
 }
 
-func (f *Factory) createRing(opts *Options) redis.Cmdable {
+func (f *factory) createRing(opts *Options) Client {
 	ringOpts := &redis.RingOptions{
 		Password:     opts.Password,
 		DialTimeout:  opts.DialTimeout,
@@ -90,7 +101,7 @@ func (f *Factory) createRing(opts *Options) redis.Cmdable {
 	return redis.NewRing(ringOpts)
 }
 
-func (f *Factory) createSentinel(opts *Options) redis.Cmdable {
+func (f *factory) createSentinel(opts *Options) Client {
 	if len(opts.MasterNames) > 1 {
 		// TODO: support sentinel cluster
 		panic(errors.NotSupported)
@@ -123,7 +134,7 @@ func (f *Factory) createSentinel(opts *Options) redis.Cmdable {
 	}
 }
 
-func (f *Factory) createCluster(opts *Options) redis.Cmdable {
+func (f *factory) createCluster(opts *Options) Client {
 	options := &redis.ClusterOptions{
 		Addrs:        opts.Address,
 		Password:     opts.Password,
@@ -135,7 +146,7 @@ func (f *Factory) createCluster(opts *Options) redis.Cmdable {
 	return redis.NewClusterClient(options)
 }
 
-func (f *Factory) createSingle(opts *Options) redis.Cmdable {
+func (f *factory) createSingle(opts *Options) Client {
 	options := &redis.Options{
 		Addr:         opts.Address[0],
 		Password:     opts.Password,
@@ -147,9 +158,9 @@ func (f *Factory) createSingle(opts *Options) redis.Cmdable {
 	return redis.NewClient(options)
 }
 
-func (f *Factory) loadOptions(name string) (*Options, error) {
+func (f *factory) loadOptions(name string) (*Options, error) {
 	key := "db.redis." + name
-	if config.Get(key) == nil {
+	if !config.Exist(key) {
 		return nil, errors.Format("can't find redis config for [%s]", name)
 	}
 

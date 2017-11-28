@@ -1,0 +1,20 @@
+cache:
+- provider: memory
+  enabled: true
+  error: log
+  time: 30m
+  keys:
+    test1: 10m, test_version
+    test2: 10m, test_version
+- provider: redis
+  name: redis
+  enabled: true
+  error: panic
+  time: 10m
+  prefix: CKG
+  options:
+    db: cache
+
+db.redis:
+    cache:
+      address: 192.168.50.41:6379

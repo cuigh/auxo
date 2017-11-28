@@ -99,6 +99,11 @@ func UnmarshalOption(name string, v interface{}) error {
 	return m.UnmarshalOption(name, v)
 }
 
+// Exist returns the key is exist or not.
+func Exist(key string) bool {
+	return m.Get(key) != nil
+}
+
 // Get searches option from flag/env/config/remote/default. It returns nil if option is not found.
 func Get(key string) interface{} {
 	return m.Get(key)

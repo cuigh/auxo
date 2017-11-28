@@ -14,7 +14,7 @@ const (
 	PkgName = "auxo.db.mongo"
 )
 
-var factory = &Factory{
+var f = &factory{
 	sessions: make(map[string]*Session),
 }
 
@@ -29,15 +29,15 @@ type ChangeInfo = mgo.ChangeInfo
 type MapReduceInfo = mgo.MapReduceInfo
 
 func Configure(name string, opts *Options) {
-	factory.opts.Store(name, opts)
+	f.opts.Store(name, opts)
 }
 
 func Open(name string) (DB, error) {
-	return factory.Open(name)
+	return f.Open(name)
 }
 
 func MustOpen(name string) DB {
-	db, err := factory.Open(name)
+	db, err := f.Open(name)
 	if err == nil {
 		return db
 	}
@@ -45,7 +45,7 @@ func MustOpen(name string) DB {
 }
 
 func With(name string, fn func(db DB) error) error {
-	db, err := factory.Open(name)
+	db, err := f.Open(name)
 	if err != nil {
 		return err
 	}
@@ -89,13 +89,13 @@ func (d *database) Close() {
 	d.db.Session.Close()
 }
 
-type Factory struct {
+type factory struct {
 	locker   sync.Mutex
 	sessions map[string]*Session
 	opts     sync.Map
 }
 
-func (f *Factory) Open(name string) (DB, error) {
+func (f *factory) Open(name string) (DB, error) {
 	session := f.sessions[name]
 	if session == nil {
 		var err error
@@ -110,7 +110,7 @@ func (f *Factory) Open(name string) (DB, error) {
 	}, nil
 }
 
-func (f *Factory) initSession(name string) (*Session, error) {
+func (f *factory) initSession(name string) (*Session, error) {
 	f.locker.Lock()
 	defer f.locker.Unlock()
 
@@ -135,16 +135,17 @@ func (f *Factory) initSession(name string) (*Session, error) {
 	session, err := f.openSession(opts)
 	if err == nil {
 		// rebuild map to avoid locker
-		pools := make(map[string]*Session)
+		sessions := make(map[string]*Session)
 		for k, v := range f.sessions {
-			pools[k] = v
+			sessions[k] = v
 		}
-		pools[name] = p
+		sessions[name] = p
+		f.sessions = sessions
 	}
 	return session, err
 }
 
-func (f *Factory) openSession(opts *Options) (*Session, error) {
+func (f *factory) openSession(opts *Options) (*Session, error) {
 	info, err := mgo.ParseURL(opts.Address)
 	if err != nil {
 		return nil, err

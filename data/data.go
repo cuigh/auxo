@@ -6,8 +6,6 @@ type Value interface {
 	Bytes() ([]byte, error)
 	Bool() (bool, error)
 	String() (string, error)
-	//Time() (time.Time, error)
-	//Duration() (time.Duration, error)
 	Int() (int, error)
 	Int8() (int8, error)
 	Int16() (int16, error)
@@ -20,6 +18,8 @@ type Value interface {
 	Uint64() (uint64, error)
 	Float32() (float32, error)
 	Float64() (float64, error)
+	//Time() (time.Time, error)
+	//Duration() (time.Duration, error)
 }
 
 type Option struct {
