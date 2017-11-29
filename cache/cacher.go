@@ -57,6 +57,7 @@ type Options struct {
 }
 
 type Cacher interface {
+	// Get returns cached value, the result is assured of not nil.
 	Get(key string, args ...interface{}) data.Value
 	Set(value interface{}, key string, args ...interface{})
 	Exist(key string, args ...interface{}) bool

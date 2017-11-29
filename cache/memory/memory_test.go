@@ -16,7 +16,7 @@ type User struct {
 
 func TestProvider(t *testing.T) {
 	var (
-		value  int = 10
+		value  = 10
 		actual int
 	)
 

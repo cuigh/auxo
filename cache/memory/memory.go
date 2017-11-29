@@ -10,16 +10,16 @@ import (
 	"github.com/cuigh/auxo/errors"
 )
 
-type Item struct {
+type item struct {
 	value  interface{}
 	expiry time.Time
 }
 
-func (i *Item) IsNil() bool {
+func (i *item) IsNil() bool {
 	return i.value == nil
 }
 
-func (i *Item) Scan(value interface{}) (err error) {
+func (i *item) Scan(value interface{}) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.Convert(e)
@@ -34,128 +34,128 @@ func (i *Item) Scan(value interface{}) (err error) {
 	return
 }
 
-func (i *Item) Bytes() ([]byte, error) {
+func (i *item) Bytes() ([]byte, error) {
 	if v, ok := i.value.([]byte); ok {
 		return v, nil
 	}
 	return nil, i.typeError("[]byte")
 }
 
-func (i *Item) Bool() (bool, error) {
+func (i *item) Bool() (bool, error) {
 	if v, ok := i.value.(bool); ok {
 		return v, nil
 	}
 	return false, i.typeError("bool")
 }
 
-func (i *Item) Int() (int, error) {
+func (i *item) Int() (int, error) {
 	if v, ok := i.value.(int); ok {
 		return v, nil
 	}
 	return 0, i.typeError("int")
 }
 
-func (i *Item) Int8() (int8, error) {
+func (i *item) Int8() (int8, error) {
 	if v, ok := i.value.(int8); ok {
 		return v, nil
 	}
 	return 0, i.typeError("int8")
 }
 
-func (i *Item) Int16() (int16, error) {
+func (i *item) Int16() (int16, error) {
 	if v, ok := i.value.(int16); ok {
 		return v, nil
 	}
 	return 0, i.typeError("int16")
 }
 
-func (i *Item) Int32() (int32, error) {
+func (i *item) Int32() (int32, error) {
 	if v, ok := i.value.(int32); ok {
 		return v, nil
 	}
 	return 0, i.typeError("int32")
 }
 
-func (i *Item) Int64() (int64, error) {
+func (i *item) Int64() (int64, error) {
 	if v, ok := i.value.(int64); ok {
 		return v, nil
 	}
 	return 0, i.typeError("int64")
 }
 
-func (i *Item) Uint() (uint, error) {
+func (i *item) Uint() (uint, error) {
 	if v, ok := i.value.(uint); ok {
 		return v, nil
 	}
 	return 0, i.typeError("uint")
 }
 
-func (i *Item) Uint8() (uint8, error) {
+func (i *item) Uint8() (uint8, error) {
 	if v, ok := i.value.(uint8); ok {
 		return v, nil
 	}
 	return 0, i.typeError("uint8")
 }
 
-func (i *Item) Uint16() (uint16, error) {
+func (i *item) Uint16() (uint16, error) {
 	if v, ok := i.value.(uint16); ok {
 		return v, nil
 	}
 	return 0, i.typeError("uint16")
 }
 
-func (i *Item) Uint32() (uint32, error) {
+func (i *item) Uint32() (uint32, error) {
 	if v, ok := i.value.(uint32); ok {
 		return v, nil
 	}
 	return 0, i.typeError("uint32")
 }
 
-func (i *Item) Uint64() (uint64, error) {
+func (i *item) Uint64() (uint64, error) {
 	if v, ok := i.value.(uint64); ok {
 		return v, nil
 	}
 	return 0, i.typeError("uint64")
 }
 
-func (i *Item) Float32() (float32, error) {
+func (i *item) Float32() (float32, error) {
 	if v, ok := i.value.(float32); ok {
 		return v, nil
 	}
 	return 0, i.typeError("float32")
 }
 
-func (i *Item) Float64() (float64, error) {
+func (i *item) Float64() (float64, error) {
 	if v, ok := i.value.(float64); ok {
 		return v, nil
 	}
 	return 0, i.typeError("float64")
 }
 
-func (i *Item) String() (string, error) {
+func (i *item) String() (string, error) {
 	if v, ok := i.value.(string); ok {
 		return v, nil
 	}
 	return "", i.typeError("string")
 }
 
-func (i *Item) typeError(t string) error {
+func (i *item) typeError(t string) error {
 	return errors.Format("type is %T, not %s", i.value, t)
 }
 
-func (i *Item) Valid() bool {
+func (i *item) Valid() bool {
 	return i.expiry.After(time.Now())
 }
 
 // Provider is memory provider implementation.
 type Provider struct {
 	locker sync.RWMutex
-	items  map[string]*Item
+	items  map[string]*item
 }
 
 func NewProvider() *Provider {
 	p := &Provider{
-		items: make(map[string]*Item),
+		items: make(map[string]*item),
 	}
 	go p.removeExpired()
 	return p
@@ -169,12 +169,12 @@ func (p *Provider) Get(key string) (value data.Value, err error) {
 	if ok && item.Valid() {
 		return item, nil
 	}
-	return nil, nil
+	return data.Nil, nil
 }
 
 func (p *Provider) Set(key string, value interface{}, expiry time.Duration) error {
 	p.locker.Lock()
-	p.items[key] = &Item{
+	p.items[key] = &item{
 		value:  value,
 		expiry: time.Now().Add(expiry),
 	}

@@ -18,10 +18,13 @@ const (
 	TypeCluster  = "cluster"
 )
 
+var (
+	Nil = redis.Nil
+	f   = new(factory)
+)
+
 type Client = redis.Cmdable
 type StringCmd = redis.StringCmd
-
-var f = new(factory)
 
 func Open(name string) (Client, error) {
 	return f.Open(name)

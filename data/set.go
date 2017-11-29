@@ -4,14 +4,14 @@ import (
 	"reflect"
 )
 
-// Null is a empty struct instance.
-var Null = struct{}{}
+// Empty is a empty struct instance.
+var Empty = struct{}{}
 
 type Set map[interface{}]struct{}
 
 func (s Set) Add(items ...interface{}) {
 	for _, item := range items {
-		s[item] = Null
+		s[item] = Empty
 	}
 }
 
@@ -37,7 +37,7 @@ func (s Set) Contains(item interface{}) bool {
 
 func (s Set) Union(set Set) {
 	for k := range set {
-		s[k] = Null
+		s[k] = Empty
 	}
 }
 

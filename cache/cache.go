@@ -31,6 +31,7 @@ var (
 
 // Provider is cache provider interface.
 type Provider interface {
+	// Get returns cached value, provider should return data.Nil instead of nil when cache is invalid.
 	Get(key string) (data.Value, error)
 	Set(key string, value interface{}, expiry time.Duration) error
 	Remove(key string) error
@@ -50,6 +51,7 @@ func defaultCacher() *cacher {
 	return c.(*cacher)
 }
 
+// Get returns cached value, the result is assured of not nil.
 func Get(key string, args ...interface{}) data.Value {
 	return defaultCacher().Get(key, args...)
 }

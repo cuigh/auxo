@@ -1,5 +1,12 @@
 package data
 
+import "errors"
+
+var (
+	Nil         Value = nilValue{}
+	ErrNilValue       = errors.New("nil value")
+)
+
 type Value interface {
 	IsNil() bool
 	Scan(i interface{}) error
@@ -20,6 +27,77 @@ type Value interface {
 	Float64() (float64, error)
 	//Time() (time.Time, error)
 	//Duration() (time.Duration, error)
+}
+
+type nilValue struct {
+}
+
+func (nilValue) IsNil() bool {
+	return true
+}
+
+func (nilValue) Scan(i interface{}) error {
+	return ErrNilValue
+}
+
+func (nilValue) Bytes() ([]byte, error) {
+	return nil, ErrNilValue
+}
+
+func (nilValue) Bool() (bool, error) {
+	return false, ErrNilValue
+}
+
+func (nilValue) String() (string, error) {
+	return "", ErrNilValue
+}
+
+func (nilValue) Int() (int, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Int8() (int8, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Int16() (int16, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Int32() (int32, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Int64() (int64, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Uint() (uint, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Uint8() (uint8, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Uint16() (uint16, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Uint32() (uint32, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Uint64() (uint64, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Float32() (float32, error) {
+	return 0, ErrNilValue
+}
+
+func (nilValue) Float64() (float64, error) {
+	return 0, ErrNilValue
 }
 
 type Option struct {

@@ -30,7 +30,7 @@ func TestCache(t *testing.T) {
 	assert.False(t, cache.Exist(key))
 
 	// Get: nil
-	assert.Nil(t, cache.Get(key))
+	assert.True(t, cache.Get(key).IsNil())
 
 	// Set
 	cache.Set(value, key)
@@ -54,7 +54,7 @@ func TestCache(t *testing.T) {
 	assert.False(t, cache.Exist(key))
 
 	// Get: nil
-	assert.Nil(t, cache.Get(key))
+	assert.True(t, cache.Get(key).IsNil())
 }
 
 func TestCacher(t *testing.T) {
@@ -74,7 +74,7 @@ func TestCacher(t *testing.T) {
 	assert.False(t, c.Exist(key))
 
 	// Get: nil
-	assert.Nil(t, c.Get(key))
+	assert.True(t, c.Get(key).IsNil())
 
 	// Set
 	c.Set(value, key)
@@ -98,7 +98,7 @@ func TestCacher(t *testing.T) {
 	assert.False(t, c.Exist(key))
 
 	// Get: nil
-	assert.Nil(t, c.Get(key))
+	assert.True(t, c.Get(key).IsNil())
 }
 
 func TestRemoveVersion(t *testing.T) {

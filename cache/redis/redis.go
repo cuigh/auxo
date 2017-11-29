@@ -9,11 +9,8 @@ import (
 	"github.com/cuigh/auxo/cache"
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/db/redis"
-	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/util/cast"
 )
-
-var ErrNilValue = errors.New("value is nil")
 
 type Provider struct {
 	client redis.Client
@@ -41,12 +38,9 @@ func (p *Provider) Get(key string) (v data.Value, err error) {
 	err = cmd.Err()
 	if err == nil {
 		return (*value)(cmd), nil
-	} else if err.Error() == "redis: nil" { // HACK: redis driver should expose Nil error
-		return (*value)(nil), nil
+	} else if err == redis.Nil {
+		return data.Nil, nil
 	}
-	//} else if err == redis.Nil {
-	//	return (*value)(nil), nil
-	//}
 	return nil, err
 }
 
@@ -90,10 +84,6 @@ func (v *value) IsNil() bool {
 }
 
 func (v *value) Scan(i interface{}) error {
-	if v == nil {
-		return ErrNilValue
-	}
-
 	cmd := (*redis.StringCmd)(v)
 	switch i.(type) {
 	case nil, *bool, *string, *[]byte, *float32, *float64, *int, *int8, *int16, *int32, *int64, *uint, *uint8, *uint16, *uint32, *uint64:
@@ -111,132 +101,72 @@ func (v *value) Scan(i interface{}) error {
 }
 
 func (v *value) Bytes() (b []byte, err error) {
-	if v == nil {
-		err = ErrNilValue
-		return
-	}
-
 	return v.cmd().Bytes()
 }
 
 func (v *value) Bool() (b bool, err error) {
-	if v == nil {
-		err = ErrNilValue
-		return
-	}
-
 	err = v.cmd().Scan(&b)
 	return
 }
 
 func (v *value) Int() (i int, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Int8() (i int8, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Int16() (i int16, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Int32() (i int32, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Int64() (i int64, err error) {
-	if v == nil {
-		return 0, ErrNilValue
-	}
 	return v.cmd().Int64()
 }
 
 func (v *value) Uint() (i uint, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Uint8() (i uint8, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Uint16() (i uint16, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Uint32() (i uint32, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&i)
-	}
+	err = v.cmd().Scan(&i)
 	return
 }
 
 func (v *value) Uint64() (i uint64, err error) {
-	if v == nil {
-		return 0, ErrNilValue
-	}
 	return v.cmd().Uint64()
 }
 
 func (v *value) Float32() (f float32, err error) {
-	if v == nil {
-		err = ErrNilValue
-	} else {
-		err = v.cmd().Scan(&f)
-	}
+	err = v.cmd().Scan(&f)
 	return
 }
 
 func (v *value) Float64() (f float64, err error) {
-	if v == nil {
-		return 0, ErrNilValue
-	}
 	return v.cmd().Float64()
 }
 
 func (v *value) String() (s string, err error) {
-	if v == nil {
-		err = ErrNilValue
-		return
-	}
-
 	return v.cmd().String(), nil
 }
 
