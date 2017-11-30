@@ -278,6 +278,23 @@ func (s *Server) Group(prefix string, filters ...Filter) (g *Group) {
 
 // URL generates an URL from handler name and provided parameters.
 func (s *Server) URL(name string, params ...interface{}) string {
+	routes := s.getRoutes()
+	if r := routes[name]; r != nil {
+		return r.URL(params)
+	}
+	return ""
+}
+
+func (s *Server) Handler(name string) (handler HandlerInfo) {
+	routes := s.getRoutes()
+	if r := routes[name]; r != nil {
+		handler = (*handlerInfo)(r.Handler())
+	}
+	return
+}
+
+func (s *Server) getRoutes() map[string]router.Route {
+	// TODO: add locker
 	if s.routes == nil {
 		s.routes = make(map[string]router.Route)
 		s.router.Walk(func(r router.Route, m string) {
@@ -287,11 +304,7 @@ func (s *Server) URL(name string, params ...interface{}) string {
 			}
 		})
 	}
-
-	if r := s.routes[name]; r != nil {
-		return r.URL(params)
-	}
-	return ""
+	return s.routes
 }
 
 // AcquireContext returns an `Context` instance from the pool.

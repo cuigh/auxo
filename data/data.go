@@ -1,6 +1,9 @@
 package data
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 var (
 	Nil         Value = nilValue{}
@@ -103,6 +106,14 @@ func (nilValue) Float64() (float64, error) {
 type Option struct {
 	Name  string `json:"name" xml:"name,attr"`
 	Value string `json:"value" xml:"value,attr"`
+}
+
+func ParseOption(s, sep string) Option {
+	pair := strings.SplitN(s, sep, 2)
+	return Option{
+		Name:  pair[0],
+		Value: pair[1],
+	}
 }
 
 type Options []Option

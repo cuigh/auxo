@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/errors"
 )
 
@@ -78,6 +79,7 @@ type HandlerCustomizer interface {
 	SetName(name string) HandlerCustomizer
 	SetAuthorize(mode AuthorizeMode) HandlerCustomizer
 	SetOption(name, value string) HandlerCustomizer
+	SetData(name string, value interface{}) HandlerCustomizer
 }
 
 // HandlerInfo is the interface for handler info.
@@ -86,6 +88,7 @@ type HandlerInfo interface {
 	Name() string
 	Authorize() AuthorizeMode
 	Option(name string) string
+	Data(name string) interface{}
 }
 
 const (
@@ -132,7 +135,8 @@ type handlerInfo struct {
 	action    HandlerFunc
 	name      string
 	authorize AuthorizeMode
-	options   map[string]string
+	options   data.Options
+	data      data.Map
 }
 
 func (h *handlerInfo) Action() HandlerFunc {
@@ -158,16 +162,25 @@ func (h *handlerInfo) SetAuthorize(mode AuthorizeMode) HandlerCustomizer {
 }
 
 func (h *handlerInfo) Option(name string) string {
-	if h.options == nil {
-		return ""
-	}
-	return h.options[name]
+	return h.options.Get(name)
 }
 
 func (h *handlerInfo) SetOption(name, value string) HandlerCustomizer {
-	if h.options == nil {
-		h.options = make(map[string]string)
+	h.options = append(h.options, data.Option{Name: name, Value: value})
+	return h
+}
+
+func (h *handlerInfo) Data(name string) (d interface{}) {
+	if h.data != nil {
+		d = h.data.Get(name)
 	}
-	h.options[name] = value
+	return
+}
+
+func (h *handlerInfo) SetData(name string, value interface{}) HandlerCustomizer {
+	if h.data == nil {
+		h.data = data.Map{}
+	}
+	h.data.Set(name, value)
 	return h
 }
