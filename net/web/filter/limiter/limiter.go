@@ -21,6 +21,14 @@ var ErrorTooManyRequests = web.NewError(http.StatusTooManyRequests)
 
 type Keyer func(ctx web.Context) string
 
+func HandlerName(ctx web.Context) string {
+	return ctx.Handler().Name()
+}
+
+func IP(ctx web.Context) string {
+	return ctx.RealIP()
+}
+
 type Options struct {
 	Key Keyer
 }
@@ -30,9 +38,7 @@ func (o *Options) ensure(opts ...Options) {
 		*o = opts[0]
 	}
 	if o.Key == nil {
-		o.Key = func(ctx web.Context) string {
-			return ctx.Handler().Name()
-		}
+		o.Key = IP
 	}
 }
 

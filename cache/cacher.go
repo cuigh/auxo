@@ -274,23 +274,22 @@ func (c *cacher) handleError(err error) {
 
 func prefix(prefix string) Keyer {
 	if prefix == "" {
-		prefix = "CKG"
+		prefix = "auxo:"
+	} else if !strings.HasSuffix(prefix, ":") {
+		prefix = prefix + ":"
 	}
 
 	return func(key string, args ...interface{}) string {
-		const joiner = "-"
-
 		length := len(args)
 		if length == 0 {
-			return prefix + joiner + key
+			return prefix + key
 		}
 
-		arr := make([]string, length+2)
-		arr[0] = prefix
-		arr[1] = key
+		arr := make([]string, length+1)
+		arr[0] = key
 		for i := 0; i < length; i++ {
-			arr[i+2] = cast.ToString(args[i])
+			arr[i+1] = cast.ToString(args[i])
 		}
-		return strings.Join(arr, joiner)
+		return prefix + strings.Join(arr, "-")
 	}
 }

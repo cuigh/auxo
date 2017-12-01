@@ -8,3 +8,5 @@ db.redis:
       connect_timeout: 5s
       read_timeout: 5s
       write_timeout: 5s
+    cache:
+      address: 192.168.50.41:6379

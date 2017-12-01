@@ -24,7 +24,12 @@ var (
 )
 
 type Client = redis.Cmdable
+type Pipeliner = redis.Pipeliner
+type Cmd = redis.Cmd
 type StringCmd = redis.StringCmd
+type IntCmd = redis.IntCmd
+type BoolCmd = redis.BoolCmd
+type DurationCmd = redis.DurationCmd
 
 func Open(name string) (Client, error) {
 	return f.Open(name)
