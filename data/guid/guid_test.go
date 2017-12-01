@@ -8,7 +8,8 @@ import (
 
 func TestNew(t *testing.T) {
 	id := New()
-	assert.Equal(t, 20, len(id))
+	assert.Equal(t, 20, len(id.String()))
+	assert.Equal(t, 12, len(id.Slice()))
 	t.Log(id)
 }
 

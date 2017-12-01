@@ -25,10 +25,10 @@ var (
 	machineID = readMachineID()
 )
 
-// New returns a new unique string id, see mgo package
-func New() string {
-	id := make([]byte, 12)
+type ID [12]byte
 
+// New returns a new unique id, see mgo package
+func New() (id ID) {
 	// Timestamp, 4 bytes, big endian
 	binary.BigEndian.PutUint32(id[:], uint32(time.Now().Unix()))
 	// Machine, first 3 bytes of md5(hostname)
@@ -44,30 +44,11 @@ func New() string {
 	id[9] = byte(i >> 16)
 	id[10] = byte(i >> 8)
 	id[11] = byte(i)
-
-	return base32(id)
+	return
 }
 
-// readMachineID generates machine id and puts it into the machineId global
-// variable. If this function fails to get the hostname, it will cause
-// a runtime error.
-func readMachineID() []byte {
-	id := make([]byte, 3)
-	hostname, err1 := os.Hostname()
-	if err1 != nil {
-		_, err2 := io.ReadFull(rand.Reader, id)
-		if err2 != nil {
-			panic(fmt.Errorf("cannot get hostname: %v; %v", err1, err2))
-		}
-		return id
-	}
-	hw := md5.New()
-	hw.Write([]byte(hostname))
-	copy(id, hw.Sum(nil))
-	return id
-}
-
-func base32(id []byte) string {
+// String encodes ID as base32 string.
+func (id ID) String() string {
 	text := make([]byte, 20)
 
 	text[0] = chars[id[0]>>3]
@@ -92,4 +73,27 @@ func base32(id []byte) string {
 	text[19] = chars[(id[11]<<4)&0x1F]
 
 	return string(text)
+}
+
+func (id ID) Slice() []byte {
+	return id[:]
+}
+
+// readMachineID generates machine id and puts it into the machineId global
+// variable. If this function fails to get the hostname, it will cause
+// a runtime error.
+func readMachineID() []byte {
+	id := make([]byte, 3)
+	hostname, err1 := os.Hostname()
+	if err1 != nil {
+		_, err2 := io.ReadFull(rand.Reader, id)
+		if err2 != nil {
+			panic(fmt.Errorf("cannot get hostname: %v; %v", err1, err2))
+		}
+		return id
+	}
+	hw := md5.New()
+	hw.Write([]byte(hostname))
+	copy(id, hw.Sum(nil))
+	return id
 }
