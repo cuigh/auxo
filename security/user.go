@@ -6,6 +6,7 @@ type User interface {
 	ID() string
 	Name() string
 	Anonymous() bool
+	//Admin() bool
 	//Roles() []string
 	//Data(key string) interface{}
 }

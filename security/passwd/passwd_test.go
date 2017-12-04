@@ -1,4 +1,4 @@
-package password
+package passwd
 
 import (
 	"crypto/sha512"
