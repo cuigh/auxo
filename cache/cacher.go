@@ -105,7 +105,7 @@ func newCacher(p Provider, opts *Options) *cacher {
 
 func (c *cacher) Get(key string, args ...interface{}) (v data.Value) {
 	if !c.enabled {
-		return nil
+		return data.Nil
 	}
 
 	info := c.getInfo(key)
