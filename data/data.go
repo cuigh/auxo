@@ -126,3 +126,31 @@ func (opts Options) Get(name string) string {
 	}
 	return ""
 }
+
+type Channel chan struct{}
+
+func (c Channel) Send() {
+	c <- Empty
+}
+
+func (c Channel) TrySend() bool {
+	select {
+	case c <- Empty:
+		return true
+	default:
+		return false
+	}
+}
+
+func (c Channel) Receive() {
+	<-c
+}
+
+func (c Channel) TryReceive() bool {
+	select {
+	case <-c:
+		return true
+	default:
+		return false
+	}
+}

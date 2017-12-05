@@ -1,6 +1,7 @@
 package reflects
 
 import (
+	"context"
 	"reflect"
 	"time"
 	"unsafe"
@@ -10,6 +11,7 @@ import (
 
 var (
 	TypeError    = reflect.TypeOf((*error)(nil)).Elem()
+	TypeContext  = reflect.TypeOf((*context.Context)(nil)).Elem()
 	TypeString   = reflect.TypeOf("")
 	TypeBool     = reflect.TypeOf(true)
 	TypeBytes    = reflect.TypeOf([]byte{})
