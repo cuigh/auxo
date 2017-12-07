@@ -127,13 +127,26 @@ func (opts Options) Get(name string) string {
 	return ""
 }
 
-type Channel chan struct{}
+// Chan is a simple notification channel
+type Chan chan struct{}
 
-func (c Channel) Send() {
+// ReadOnly converts c to receive-only channel
+func (c Chan) ReadOnly() ReadChan {
+	return (chan struct{})(c)
+}
+
+// WriteOnly converts c to send-only channel
+func (c Chan) WriteOnly() WriteChan {
+	return (chan struct{})(c)
+}
+
+// Send send a notification to channel. It blocks if channel is full.
+func (c Chan) Send() {
 	c <- Empty
 }
 
-func (c Channel) TrySend() bool {
+// Send send a notification to channel. It returns false if channel is full.
+func (c Chan) TrySend() bool {
 	select {
 	case c <- Empty:
 		return true
@@ -142,13 +155,51 @@ func (c Channel) TrySend() bool {
 	}
 }
 
-func (c Channel) Receive() {
+// Receive receive a notification from channel. It blocks if channel is empty.
+func (c Chan) Receive() {
 	<-c
 }
 
-func (c Channel) TryReceive() bool {
+// Receive receive a notification from channel. It returns false if channel is empty.
+func (c Chan) TryReceive() bool {
 	select {
 	case <-c:
+		return true
+	default:
+		return false
+	}
+}
+
+// ReadChan is a receive-only notification channel
+type ReadChan <-chan struct{}
+
+// Receive receive a notification from channel. It blocks if channel is empty.
+func (c ReadChan) Receive() {
+	<-c
+}
+
+// Receive receive a notification from channel. It returns false if channel is empty.
+func (c ReadChan) TryReceive() bool {
+	select {
+	case <-c:
+		return true
+	default:
+		return false
+	}
+}
+
+// WriteChan is a send-only notification channel
+type WriteChan chan<- struct{}
+
+// Send send a notification to channel. It blocks if channel is full.
+func (c WriteChan) Send() {
+	c <- Empty
+}
+
+// Send send a notification to channel. It returns false if channel is full.
+func (c WriteChan) TrySend() bool {
+	select {
+	case c <- Empty:
 		return true
 	default:
 		return false

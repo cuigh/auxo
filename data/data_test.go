@@ -7,7 +7,7 @@ import (
 )
 
 func TestChannel(t *testing.T) {
-	c := make(Channel, 1)
+	c := make(Chan, 1)
 
 	c.Send()
 	assert.True(t, c.TryReceive())
