@@ -18,21 +18,24 @@ var (
 	Version  string
 	Revision string
 
+	// Timeout is the amount of time allowed to wait graceful shutdown.
+	Timeout = time.Second * 30
+
 	closeEvents []func()
 )
 
 type (
-	// Program is interface of a program.
-	Program interface {
-		Run() error
+	// Server defines the interface of server application.
+	Server interface {
+		Serve() error
 		Close(timeout time.Duration)
 	}
 
-	// Runner is program execute method.
-	Runner func() error
+	// ServeFunc is server execute method.
+	ServeFunc func() error
 
-	// Closer is program shutdown method.
-	Closer func(timeout time.Duration)
+	// CloseFunc is server shutdown method.
+	CloseFunc func(timeout time.Duration)
 )
 
 // Path returns program's full filename
@@ -45,12 +48,12 @@ func Path() string {
 }
 
 // Run executes program and subscribe exit signals.
-func Run(p Program, signals ...os.Signal) {
-	RunFunc(p.Run, p.Close, signals...)
+func Run(s Server, signals ...os.Signal) {
+	RunFunc(s.Serve, s.Close, signals...)
 }
 
 // RunFunc executes program and subscribe exit signals.
-func RunFunc(runner Runner, closer Closer, signals ...os.Signal) {
+func RunFunc(runner ServeFunc, closer CloseFunc, signals ...os.Signal) {
 	// print banner
 	if config.GetBool("banner") {
 		fmt.Print(auxo.Banner)
@@ -81,9 +84,9 @@ func RunFunc(runner Runner, closer Closer, signals ...os.Signal) {
 
 	logger.Info("app > Exiting program...")
 	if closer != nil {
-		closer(time.Second * 30)
+		closer(Timeout)
 	}
-	logger.Info("app > Program stopped")
+	logger.Info("app > Server stopped")
 }
 
 // OnClose subscribes close events

@@ -371,8 +371,8 @@ func (s *Server) execute(c *context, route router.Route) {
 	}
 }
 
-// Run starts the HTTP server.
-func (s *Server) Run() error {
+// Serve starts the HTTP server.
+func (s *Server) Serve() error {
 	servers, err := s.buildServers()
 	if err != nil {
 		return err

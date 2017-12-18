@@ -25,6 +25,9 @@ type Requester interface {
 	// Request returns `*http.Request`.
 	Request() *http.Request
 
+	// SetRequest replace default `*http.Request`.
+	SetRequest(r *http.Request)
+
 	// IsTLS returns true if HTTP connection is TLS otherwise false.
 	IsTLS() bool
 
@@ -205,6 +208,10 @@ type context struct {
 
 func (c *context) Request() *http.Request {
 	return c.request
+}
+
+func (c *context) SetRequest(r *http.Request) {
+	c.request = r
 }
 
 func (c *context) Response() ResponseWriter {

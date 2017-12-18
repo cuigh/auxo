@@ -5,12 +5,12 @@ import (
 )
 
 type Pool struct {
-	pool *sync.Pool
+	pool sync.Pool
 }
 
 func NewPool(size int) *Pool {
 	return &Pool{
-		pool: &sync.Pool{
+		pool: sync.Pool{
 			New: func() interface{} {
 				return make([]byte, 0, size)
 			},
