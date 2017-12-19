@@ -54,6 +54,10 @@ func unmarshal(v reflect.Value, valuer func(name string) interface{}) error {
 			name = sf.Tag.Get("option") // todo: support default value
 		)
 
+		if sf.PkgPath != "" {
+			continue
+		}
+
 		if name == "" {
 			name = texts.Rename(sf.Name, texts.Lower)
 		}
