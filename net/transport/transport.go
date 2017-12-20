@@ -18,14 +18,14 @@ var (
 )
 
 type Dialer interface {
-	Dial(ctx context.Context, addr string, opts data.Options) (net.Conn, error)
+	Dial(ctx context.Context, addr string, opts data.Map) (net.Conn, error)
 }
 
 func RegisterDialer(schema string, dialer Dialer) {
 	dialers[schema] = dialer
 }
 
-func Dial(ctx context.Context, uri string, opts data.Options) (net.Conn, error) {
+func Dial(ctx context.Context, uri string, opts data.Map) (net.Conn, error) {
 	schema, addr := parseAddr(uri)
 	dialer := dialers[schema]
 	if dialer == nil {
@@ -35,14 +35,14 @@ func Dial(ctx context.Context, uri string, opts data.Options) (net.Conn, error) 
 }
 
 type Listener interface {
-	Listen(addr string, opts data.Options) (net.Listener, error)
+	Listen(addr string, opts data.Map) (net.Listener, error)
 }
 
 func RegisterListener(schema string, listener Listener) {
 	listeners[schema] = listener
 }
 
-func Listen(uri string, opts data.Options) (net.Listener, error) {
+func Listen(uri string, opts data.Map) (net.Listener, error) {
 	schema, addr := parseAddr(uri)
 	listener := listeners[schema]
 	if listener == nil {
@@ -58,7 +58,7 @@ type simpleDialer struct {
 	network string
 }
 
-func (d *simpleDialer) Dial(ctx context.Context, addr string, opts data.Options) (net.Conn, error) {
+func (d *simpleDialer) Dial(ctx context.Context, addr string, opts data.Map) (net.Conn, error) {
 	c, err := loadTLSConfig(opts)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ type simpleListener struct {
 	network string
 }
 
-func (l *simpleListener) Listen(addr string, opts data.Options) (net.Listener, error) {
+func (l *simpleListener) Listen(addr string, opts data.Map) (net.Listener, error) {
 	c, err := loadTLSConfig(opts)
 	if err != nil {
 		return nil, err
@@ -107,10 +107,10 @@ func parseAddr(uri string) (schema, addr string) {
 	return
 }
 
-func loadTLSConfig(opts data.Options) (*tls.Config, error) {
+func loadTLSConfig(opts data.Map) (*tls.Config, error) {
 	var c *tls.Config
-	certFile := opts.Get("tls_cert")
-	keyFile := opts.Get("tls_key")
+	certFile := cast.ToString(opts.Get("tls_cert"))
+	keyFile := cast.ToString(opts.Get("tls_key"))
 	verify := cast.ToBool(opts.Get("tls_verify"), false)
 	if certFile != "" && keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)

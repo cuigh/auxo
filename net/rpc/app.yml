@@ -1,0 +1,54 @@
+rpc:
+  client:
+    test:
+      desc: "test service"
+#      address: ["localhost:9000"]
+      address:
+      - url: "localhost:9000"
+      - url: "tls://localhost:9001"
+        options:
+          tls_key: "test.key"
+          tls_cert: "test.cert"
+      codec:
+        name: proto
+        options:
+          max_size: 2m
+      version: >=1.0
+      group: api
+      fail: fast
+      balancer: random
+      resolver:
+        name: etcd2
+        options:
+          x: 1
+      registry:
+        name: etcd2
+        options:
+          x: 1
+      dial_timeout: 10s
+      read_timeout: 10s
+      write_timeout: 10s
+  server:
+    test:
+      desc: "test service"
+#      address: [":9000", "tls://:9001"]
+      address:
+      - url: :9000
+      - url: tls://:9001
+        register: true
+        options:
+#          register: true
+          tls_key: "test.key"
+          tls_cert: "test.cert"
+      - url: unix:///var/run/test.sock
+        register: false
+      version: 1.0
+      registry:
+        name: etcd2
+        options:
+          x: 1
+      heartbeat: 30s
+      read_timeout: 10s
+      write_timeout: 10s
+      max_clients: 1000
+      max_jobs: 10000
