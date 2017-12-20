@@ -54,15 +54,15 @@ type Stream interface {
 type RequestHead struct {
 	//Type    byte         `json:"type"` // 0-rpc, 1-heartbeat
 	ID      []byte       `json:"id"` // len(ID) == 0 for a heartbeat response
-	Service string       `json:"service"`
-	Method  string       `json:"method"`
-	Labels  data.Options `json:"labels"`
+	Service string       `json:"service,omitempty"`
+	Method  string       `json:"method,omitempty"`
+	Labels  data.Options `json:"labels,omitempty"`
 	//TraceID []byte
 }
 
 type Request struct {
 	Head RequestHead   `json:"head"`
-	Args []interface{} `json:"args"`
+	Args []interface{} `json:"args,omitempty"`
 }
 
 type ResponseHead struct {
@@ -71,8 +71,8 @@ type ResponseHead struct {
 }
 
 type Result struct {
-	Value interface{}        `json:"value"`
-	Error *errors.CodedError `json:"error"`
+	Value interface{}        `json:"value,omitempty"`
+	Error *errors.CodedError `json:"error,omitempty"`
 }
 
 type Response struct {
