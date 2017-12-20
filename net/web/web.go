@@ -123,17 +123,17 @@ type Router interface {
 	Group(prefix string, filters ...Filter) *Group
 	Use(filters ...Filter)
 
-	Get(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Post(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Delete(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Put(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Head(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Options(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Patch(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Trace(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer
-	Any(path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer
-	Match(methods []string, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer
+	Get(path string, h HandlerFunc, opts ...HandlerOption)
+	Post(path string, h HandlerFunc, opts ...HandlerOption)
+	Delete(path string, h HandlerFunc, opts ...HandlerOption)
+	Put(path string, h HandlerFunc, opts ...HandlerOption)
+	Head(path string, h HandlerFunc, opts ...HandlerOption)
+	Options(path string, h HandlerFunc, opts ...HandlerOption)
+	Patch(path string, h HandlerFunc, opts ...HandlerOption)
+	Trace(path string, h HandlerFunc, opts ...HandlerOption)
+	Connect(path string, h HandlerFunc, opts ...HandlerOption)
+	Any(path string, handler HandlerFunc, opts ...HandlerOption)
+	Match(methods []string, path string, h HandlerFunc, opts ...HandlerOption)
 	Handle(path string, controller interface{}, filters ...Filter)
 
 	Static(prefix, root string)

@@ -29,58 +29,58 @@ func (g *Group) UseFunc(filters ...FilterFunc) {
 }
 
 // Connect registers a route that matches 'CONNECT' method.
-func (g *Group) Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodConnect, path, h, filters...)
+func (g *Group) Connect(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodConnect)
 }
 
 // Delete registers a route that matches 'DELETE' method.
-func (g *Group) Delete(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodDelete, path, h, filters...)
+func (g *Group) Delete(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodDelete)
 }
 
 // Get registers a route that matches 'GET' method.
-func (g *Group) Get(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodGet, path, h, filters...)
+func (g *Group) Get(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodGet)
 }
 
 // Head registers a route that matches 'HEAD' method.
-func (g *Group) Head(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodHead, path, h, filters...)
+func (g *Group) Head(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodHead)
 }
 
 // Options registers a route that matches 'OPTIONS' method.
-func (g *Group) Options(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodOptions, path, h, filters...)
+func (g *Group) Options(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodOptions)
 }
 
 // Patch registers a route that matches 'PATCH' method.
-func (g *Group) Patch(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodPatch, path, h, filters...)
+func (g *Group) Patch(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodPatch)
 }
 
 // Post registers a route that matches 'POST' method.
-func (g *Group) Post(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodPost, path, h, filters...)
+func (g *Group) Post(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodPost)
 }
 
 // Put registers a route that matches 'PUT' method.
-func (g *Group) Put(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodPut, path, h, filters...)
+func (g *Group) Put(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodPut)
 }
 
 // Trace registers a route that matches 'TRACE' method.
-func (g *Group) Trace(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.add(http.MethodTrace, path, h, filters...)
+func (g *Group) Trace(path string, h HandlerFunc, opts ...HandlerOption) {
+	g.add(path, h, opts, http.MethodTrace)
 }
 
 // Any registers a route that matches all the HTTP methods.
-func (g *Group) Any(path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.server.Any(g.prefix+path, handler, g.mergeFilters(filters)...)
+func (g *Group) Any(path string, handler HandlerFunc, opts ...HandlerOption) {
+	g.Match(methods[:], path, handler, opts...)
 }
 
 // Match registers a route that matches specific methods.
-func (g *Group) Match(methods []string, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.server.Match(methods, g.prefix+path, handler, g.mergeFilters(filters)...)
+func (g *Group) Match(methods []string, path string, handler HandlerFunc, opts ...HandlerOption) {
+	g.add(path, handler, opts, methods...)
 }
 
 // Handle registers routes from controller.
@@ -104,8 +104,9 @@ func (g *Group) FileSystem(path string, fs http.FileSystem) {
 	g.server.FileSystem(g.prefix+path, fs)
 }
 
-func (g *Group) add(method, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return g.server.register(method, g.prefix+path, handler, g.mergeFilters(filters)...)
+func (g *Group) add(path string, handler HandlerFunc, opts []HandlerOption, methods ...string) {
+	info := newHandlerInfo(handler, opts, g.filters...)
+	g.server.registerInfo(g.prefix+path, info, methods...)
 }
 
 func (g *Group) mergeFilters(filters []Filter) []Filter {

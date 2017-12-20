@@ -93,7 +93,7 @@ func RunFunc(runner ServeFunc, closer CloseFunc, signals ...os.Signal) {
 	if closer != nil {
 		closer(Timeout)
 	}
-	logger.Info("app > Server stopped")
+	logger.Info("app > Program exited")
 }
 
 // OnClose subscribes close events

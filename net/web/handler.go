@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	notFound         = &handlerInfo{action: WrapError(ErrNotFound)}
-	methodNotAllowed = &handlerInfo{action: WrapError(ErrMethodNotAllowed)}
+	notFound         = &handlerInfo{name: "404", action: WrapError(ErrNotFound), authorize: AuthAnonymous}
+	methodNotAllowed = &handlerInfo{name: "405", action: WrapError(ErrMethodNotAllowed), authorize: AuthAnonymous}
 )
 
 // WrapError wraps an `Error` into `web.HandlerFunc`.
@@ -74,21 +74,12 @@ func (h HandlerFunc) Chain(filters ...Filter) HandlerFunc {
 	return handler
 }
 
-// HandlerCustomizer is the interface that customizes handler.
-type HandlerCustomizer interface {
-	SetName(name string) HandlerCustomizer
-	SetAuthorize(mode AuthorizeMode) HandlerCustomizer
-	SetOption(name, value string) HandlerCustomizer
-	SetData(name string, value interface{}) HandlerCustomizer
-}
-
 // HandlerInfo is the interface for handler info.
 type HandlerInfo interface {
 	Action() HandlerFunc
 	Name() string
 	Authorize() AuthorizeMode
 	Option(name string) string
-	Data(name string) interface{}
 }
 
 const (
@@ -136,7 +127,18 @@ type handlerInfo struct {
 	name      string
 	authorize AuthorizeMode
 	options   data.Options
-	data      data.Map
+}
+
+func newHandlerInfo(handler HandlerFunc, opts []HandlerOption, filters ...Filter) *handlerInfo {
+	info := &handlerInfo{
+		name:   handler.Name(),
+		action: handler,
+	}
+	for _, opt := range opts {
+		opt(info)
+	}
+	info.action = info.action.Chain(filters...)
+	return info
 }
 
 func (h *handlerInfo) Action() HandlerFunc {
@@ -151,36 +153,44 @@ func (h *handlerInfo) Authorize() AuthorizeMode {
 	return h.authorize
 }
 
-func (h *handlerInfo) SetName(name string) HandlerCustomizer {
-	h.name = name
-	return h
-}
-
-func (h *handlerInfo) SetAuthorize(mode AuthorizeMode) HandlerCustomizer {
-	h.authorize = mode
-	return h
-}
-
 func (h *handlerInfo) Option(name string) string {
 	return h.options.Get(name)
 }
 
-func (h *handlerInfo) SetOption(name, value string) HandlerCustomizer {
+func (h *handlerInfo) addOption(name, value string) {
 	h.options = append(h.options, data.Option{Name: name, Value: value})
-	return h
 }
 
-func (h *handlerInfo) Data(name string) (d interface{}) {
-	if h.data != nil {
-		d = h.data.Get(name)
+type HandlerOption func(*handlerInfo)
+
+func WithName(name string) HandlerOption {
+	return func(info *handlerInfo) {
+		info.name = name
 	}
-	return
 }
 
-func (h *handlerInfo) SetData(name string, value interface{}) HandlerCustomizer {
-	if h.data == nil {
-		h.data = data.Map{}
+func WithFilter(filters ...Filter) HandlerOption {
+	return func(info *handlerInfo) {
+		info.action = info.action.Chain(filters...)
 	}
-	h.data.Set(name, value)
-	return h
+}
+
+func WithFilterFunc(filters ...FilterFunc) HandlerOption {
+	return func(info *handlerInfo) {
+		for i := len(filters) - 1; i >= 0; i-- {
+			info.action = info.action.Chain(filters[i])
+		}
+	}
+}
+
+func WithAuthorize(mode AuthorizeMode) HandlerOption {
+	return func(info *handlerInfo) {
+		info.authorize = mode
+	}
+}
+
+func WithOption(name, value string) HandlerOption {
+	return func(info *handlerInfo) {
+		info.options = append(info.options, data.Option{Name: name, Value: value})
+	}
 }

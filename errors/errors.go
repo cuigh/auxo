@@ -97,7 +97,7 @@ func (e *wrappedError) Cause() error {
 }
 
 // Coded return an coded error.
-func Coded(code int, msg string, detail ...string) *CodedError {
+func Coded(code int32, msg string, detail ...string) *CodedError {
 	e := &CodedError{
 		Code:    code,
 		Message: msg,
@@ -109,8 +109,8 @@ func Coded(code int, msg string, detail ...string) *CodedError {
 }
 
 type CodedError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
+	Code    int32  `json:"code"`
+	Message string `json:"message,omitempty"`
 	Detail  string `json:"detail,omitempty"`
 }
 

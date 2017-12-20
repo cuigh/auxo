@@ -27,10 +27,15 @@ func (e *Error) Error() string {
 	return (*errors.CodedError)(e).Error()
 }
 
+func (e *Error) Status() int {
+	ce := (*errors.CodedError)(e)
+	return int(ce.Code)
+}
+
 // NewError creates a new Error instance.
 func NewError(code int, msg ...string) *Error {
 	e := &errors.CodedError{
-		Code: code,
+		Code: int32(code),
 	}
 	switch len(msg) {
 	case 0:
@@ -91,7 +96,7 @@ func (h *ErrorHandler) handle(c Context, err error) {
 
 	if h.codes != nil {
 		if e, ok := err.(*Error); ok {
-			if fn := h.codes[e.Code]; fn != nil {
+			if fn := h.codes[e.Status()]; fn != nil {
 				fn(c, err)
 				return
 			}
@@ -113,9 +118,9 @@ func (h *ErrorHandler) handle(c Context, err error) {
 
 	// default handler
 	if e, ok := err.(*Error); ok {
-		h.handleError(c, e.Code, 0, e.Message, e.Detail)
+		h.handleError(c, e.Status(), 0, e.Message, e.Detail)
 	} else if e, ok := err.(*errors.CodedError); ok {
-		h.handleError(c, http.StatusInternalServerError, e.Code, e.Message, e.Detail)
+		h.handleError(c, http.StatusInternalServerError, int(e.Code), e.Message, e.Detail)
 	} else {
 		h.handleError(c, http.StatusInternalServerError, 0, err.Error(), "")
 	}

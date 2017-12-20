@@ -93,63 +93,59 @@ func (s *Server) UseFunc(filters ...FilterFunc) {
 }
 
 // Connect registers a route that matches 'CONNECT' method.
-func (s *Server) Connect(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodConnect, path, h, filters...)
+func (s *Server) Connect(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodConnect, path, h, opts...)
 }
 
 // Delete registers a route that matches 'DELETE' method.
-func (s *Server) Delete(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodDelete, path, h, filters...)
+func (s *Server) Delete(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodDelete, path, h, opts...)
 }
 
 // Get registers a route that matches 'GET' method.
-func (s *Server) Get(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodGet, path, h, filters...)
+func (s *Server) Get(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodGet, path, h, opts...)
 }
 
 // Head registers a route that matches 'HEAD' method.
-func (s *Server) Head(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodHead, path, h, filters...)
+func (s *Server) Head(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodHead, path, h, opts...)
 }
 
 // Options registers a route that matches 'OPTIONS' method.
-func (s *Server) Options(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodOptions, path, h, filters...)
+func (s *Server) Options(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodOptions, path, h, opts...)
 }
 
 // Patch registers a route that matches 'PATCH' method.
-func (s *Server) Patch(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodPatch, path, h, filters...)
+func (s *Server) Patch(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodPatch, path, h, opts...)
 }
 
 // Post registers a route that matches 'POST' method.
-func (s *Server) Post(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodPost, path, h, filters...)
+func (s *Server) Post(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodPost, path, h, opts...)
 }
 
 // Put registers a route that matches 'PUT' method.
-func (s *Server) Put(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodPut, path, h, filters...)
+func (s *Server) Put(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodPut, path, h, opts...)
 }
 
 // Trace registers a route that matches 'TRACE' method.
-func (s *Server) Trace(path string, h HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.register(http.MethodTrace, path, h, filters...)
+func (s *Server) Trace(path string, h HandlerFunc, opts ...HandlerOption) {
+	s.register(http.MethodTrace, path, h, opts...)
 }
 
 // Any registers a route that matches all the HTTP methods.
-func (s *Server) Any(path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	return s.Match(methods[:], path, handler, filters...)
+func (s *Server) Any(path string, handler HandlerFunc, opts ...HandlerOption) {
+	s.Match(methods[:], path, handler, opts...)
 }
 
 // Match registers a route that matches specific methods.
-func (s *Server) Match(methods []string, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	info := &handlerInfo{
-		name:   handler.Name(),
-		action: handler.Chain(filters...),
-	}
+func (s *Server) Match(methods []string, path string, handler HandlerFunc, opts ...HandlerOption) {
+	info := newHandlerInfo(handler, opts)
 	s.registerInfo(path, info, methods...)
-	return info
 }
 
 // Handle registers routes from controller.
@@ -203,7 +199,7 @@ func (s *Server) handleField(prefix string, t reflect.Type, sf *reflect.StructFi
 		case "method", "m":
 			methods = strings.Split(strings.ToUpper(v), ",")
 		default:
-			info.SetOption(k, v)
+			info.addOption(k, v)
 		}
 	}
 
@@ -253,13 +249,9 @@ func (s *Server) FileSystem(prefix string, fs http.FileSystem) {
 	s.Get(p, handler)
 }
 
-func (s *Server) register(method, path string, handler HandlerFunc, filters ...Filter) HandlerCustomizer {
-	info := &handlerInfo{
-		name:   handler.Name(),
-		action: handler.Chain(filters...),
-	}
+func (s *Server) register(method, path string, handler HandlerFunc, opts ...HandlerOption) {
+	info := newHandlerInfo(handler, opts)
 	s.registerInfo(path, info, method)
-	return info
 }
 
 func (s *Server) registerInfo(path string, info *handlerInfo, methods ...string) {
