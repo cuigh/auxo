@@ -15,12 +15,19 @@ import (
 const PkgName = "auxo.app"
 
 var (
-	Version  string
-	Revision string
+	// Version is the version of application
+	Version string
+	// SCMRevision is commit hash of source tree
+	SCMRevision string
+	// SCMBranch is current branch name the code is built off
+	SCMBranch string
+	// BuildTime is RFC3339 formatted UTC date, e.g. 2017-12-01T13:04:23Z
+	BuildTime string
+)
 
+var (
 	// Timeout is the amount of time allowed to wait graceful shutdown.
-	Timeout = time.Second * 30
-
+	Timeout     = time.Second * 30
 	closeEvents []func()
 )
 
@@ -152,7 +159,7 @@ func handleCommonFlags(ctx *Context) {
 }
 
 func printVersion() {
-	rev := Revision
+	rev := SCMRevision
 	if rev == "" {
 		rev = "?"
 	}
