@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"bufio"
+
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/errors"
 )
@@ -15,6 +17,7 @@ func RegisterCodec(name string, cb CodecBuilder) {
 
 type Stream interface {
 	// read
+	Reader() *bufio.Reader
 	Peek(n int) ([]byte, error)
 	Read(p []byte) (n int, err error)
 	ReadByte() (byte, error)
@@ -36,6 +39,7 @@ type Stream interface {
 	//func (b *Reader) WriteTo(w io.Writer) (n int64, err error)
 
 	// write
+	Writer() *bufio.Writer
 	Write(p []byte) (n int, err error)
 	WriteByte(c byte) error
 	WriteString(s string) (int, error)

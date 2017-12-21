@@ -106,6 +106,9 @@ func (c *context) Reset(ch *Channel, sc ServerCodec) {
 	c.action = nil
 	c.ctx = ct.Background()
 	c.req.Args = nil
+	if c.req.Head.Labels != nil {
+		c.req.Head.Labels = c.req.Head.Labels[:0]
+	}
 	c.resp.Result.Value = nil
 	c.resp.Result.Error = nil
 }

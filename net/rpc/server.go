@@ -13,6 +13,7 @@ import (
 	"github.com/cuigh/auxo/ext/times"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/transport"
+	"github.com/cuigh/auxo/util/debug"
 )
 
 var (
@@ -242,7 +243,7 @@ func (s *Server) handleSession(ch *Channel, sc ServerCodec) {
 		s.sessions.Remove(sn)
 		ch.Close()
 		if e := recover(); e != nil {
-			s.logger.Error("server > failed to handle session: ", e)
+			s.logger.Errorf("server > failed to handle session: %v, stack: %s", e, debug.StackSkip(1))
 		}
 	}()
 

@@ -14,12 +14,23 @@ type request struct {
 	Args []json.RawMessage `json:"args"`
 }
 
+func (r *request) reset() {
+	if r.Args != nil {
+		r.Args = r.Args[:0]
+	}
+}
+
 type response struct {
 	Head   rpc.ResponseHead `json:"head"`
 	Result struct {
 		Value json.RawMessage    `json:"value"`
 		Error *errors.CodedError `json:"error"`
 	} `json:"result"`
+}
+
+func (r *response) reset() {
+	r.Result.Value = nil
+	r.Result.Error = nil
 }
 
 type ClientCodec struct {
@@ -42,6 +53,7 @@ func (c *ClientCodec) Encode(req *rpc.Request) (err error) {
 }
 
 func (c *ClientCodec) DecodeHead(head *rpc.ResponseHead) error {
+	c.resp.reset()
 	err := c.dec.Decode(c.resp)
 	if err != nil {
 		return err
@@ -82,6 +94,7 @@ func (c *ServerCodec) Encode(resp *rpc.Response) (err error) {
 }
 
 func (c *ServerCodec) DecodeHead(head *rpc.RequestHead) error {
+	c.req.reset()
 	err := c.dec.Decode(c.req)
 	if err != nil {
 		return err

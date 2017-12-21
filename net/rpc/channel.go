@@ -31,6 +31,14 @@ func (c *Channel) ID() string {
 	return c.id
 }
 
+func (c *Channel) Reader() *bufio.Reader {
+	return c.r
+}
+
+func (c *Channel) Writer() *bufio.Writer {
+	return c.w
+}
+
 func (c *Channel) Peek(n int) ([]byte, error) {
 	return c.r.Peek(n)
 }
