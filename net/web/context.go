@@ -11,13 +11,12 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/log"
+	"github.com/cuigh/auxo/util/cast"
 )
 
 // Requester holds all methods for reading request.
@@ -403,12 +402,12 @@ func (c *context) Render(name string, data interface{}) (err error) {
 }
 
 func (c *context) HTML(html string) (err error) {
-	b := *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&html))))
+	b := cast.StringToBytes(html)
 	return c.SetContentType(MIMETextHTMLCharsetUTF8).Data(b)
 }
 
-func (c *context) Text(s string) (err error) {
-	b := *(*[]byte)(unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&s))))
+func (c *context) Text(text string) (err error) {
+	b := cast.StringToBytes(text)
 	return c.SetContentType(MIMETextPlainCharsetUTF8).Data(b)
 }
 

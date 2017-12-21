@@ -1,12 +1,9 @@
 package router
 
 import (
-	"net/http"
-	"unsafe"
-
-	"io"
-
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/cuigh/auxo/errors"
 )
@@ -28,7 +25,7 @@ type Options struct {
 type Route interface {
 	//Method() string
 	Path() string
-	Handler() unsafe.Pointer
+	Handler() interface{}
 	Params() []string
 	URL(params ...interface{}) string
 }
@@ -47,7 +44,7 @@ func (t *Tree) MaxParam() int {
 }
 
 // Add register a route with specific methods to the tree.
-func (t *Tree) Add(path string, handler unsafe.Pointer, methods ...string) error {
+func (t *Tree) Add(path string, handler interface{}, methods ...string) error {
 	if path[0] != '/' {
 		return errors.New("path must start with '/'")
 	}

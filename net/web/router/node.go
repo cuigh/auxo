@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"unsafe"
 
 	"github.com/cuigh/auxo/errors"
 )
@@ -19,17 +18,17 @@ const (
 
 type route struct {
 	m       *routeMap
-	handler unsafe.Pointer
+	handler interface{}
 }
 
-func newRoute(m *routeMap, handler unsafe.Pointer) *route {
+func newRoute(m *routeMap, handler interface{}) *route {
 	return &route{
 		m:       m,
 		handler: handler,
 	}
 }
 
-func (r *route) Handler() unsafe.Pointer {
+func (r *route) Handler() interface{} {
 	return r.handler
 }
 
@@ -90,7 +89,7 @@ func newRouteMap(parent *node) *routeMap {
 	return m
 }
 
-func (m *routeMap) set(method string, handler unsafe.Pointer) {
+func (m *routeMap) set(method string, handler interface{}) {
 	switch method {
 	case http.MethodGet:
 		m.get.handler = handler
@@ -150,7 +149,7 @@ type node struct {
 	children
 }
 
-func newNode(kind nodeKind, text string, parent *node, methods []string, handler unsafe.Pointer) *node {
+func newNode(kind nodeKind, text string, parent *node, methods []string, handler interface{}) *node {
 	n := &node{
 		kind:   kind,
 		text:   text,
@@ -236,7 +235,7 @@ func (n *node) getRoute(method string) *route {
 	return n.routes.find(method)
 }
 
-func (n *node) setHandler(methods []string, handler unsafe.Pointer) error {
+func (n *node) setHandler(methods []string, handler interface{}) error {
 	if handler == nil {
 		return nil
 	}
@@ -264,7 +263,7 @@ func (n *node) correctPath() {
 	}
 }
 
-func (n *node) add(methods []string, path string, handler unsafe.Pointer) (*node, error) {
+func (n *node) add(methods []string, path string, handler interface{}) (*node, error) {
 	var (
 		err         error
 		c           = n
@@ -300,7 +299,7 @@ func (n *node) add(methods []string, path string, handler unsafe.Pointer) (*node
 	return c.addSegment(path[start:], methods, handler)
 }
 
-func (n *node) addSegment(path string, methods []string, handler unsafe.Pointer) (*node, error) {
+func (n *node) addSegment(path string, methods []string, handler interface{}) (*node, error) {
 	if path == "" {
 		return n, nil
 	}
@@ -391,7 +390,7 @@ func (c *children) getStatic(text string) *node {
 	return nil
 }
 
-func (c *children) setParam(parent *node, text string, methods []string, handler unsafe.Pointer) (*node, error) {
+func (c *children) setParam(parent *node, text string, methods []string, handler interface{}) (*node, error) {
 	if c.param != nil {
 		if c.param.text != text {
 			return nil, errors.Format("route conflict: %s <=> %s", c.param.path, c.param.parent.path+text)
@@ -403,7 +402,7 @@ func (c *children) setParam(parent *node, text string, methods []string, handler
 	return c.param, nil
 }
 
-func (c *children) setAny(parent *node, text string, methods []string, handler unsafe.Pointer) (*node, error) {
+func (c *children) setAny(parent *node, text string, methods []string, handler interface{}) (*node, error) {
 	if c.any != nil {
 		if c.any.text != text {
 			return nil, errors.Format("route conflict: %s <=> %s", c.any.path, c.any.parent.path+text)
@@ -415,7 +414,7 @@ func (c *children) setAny(parent *node, text string, methods []string, handler u
 	return c.any, nil
 }
 
-func (c *children) addStatic(parent *node, text string, methods []string, handler unsafe.Pointer) (*node, error) {
+func (c *children) addStatic(parent *node, text string, methods []string, handler interface{}) (*node, error) {
 	node := newNode(kindStatic, text, parent, methods, handler)
 	c.static = append(c.static, node)
 	return node, nil

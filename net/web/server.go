@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/errors"
@@ -255,7 +254,7 @@ func (s *Server) register(method, path string, handler HandlerFunc, opts ...Hand
 }
 
 func (s *Server) registerInfo(path string, info *handlerInfo, methods ...string) {
-	err := s.router.Add(path, unsafe.Pointer(info), methods...)
+	err := s.router.Add(path, info, methods...)
 	if err != nil {
 		panic(err)
 	}
@@ -280,7 +279,7 @@ func (s *Server) URL(name string, params ...interface{}) string {
 func (s *Server) Handler(name string) (handler HandlerInfo) {
 	routes := s.getRoutes()
 	if r := routes[name]; r != nil {
-		handler = (*handlerInfo)(r.Handler())
+		handler = r.Handler().(*handlerInfo)
 	}
 	return
 }
@@ -290,7 +289,7 @@ func (s *Server) getRoutes() map[string]router.Route {
 	if s.routes == nil {
 		s.routes = make(map[string]router.Route)
 		s.router.Walk(func(r router.Route, m string) {
-			handler := (*handlerInfo)(r.Handler())
+			handler := r.Handler().(*handlerInfo)
 			if handler.name != "" {
 				s.routes[handler.name] = r
 			}
@@ -342,8 +341,8 @@ func (s *Server) redirect(c *context, p string) {
 
 func (s *Server) execute(c *context, route router.Route) {
 	if route != nil {
-		if ptr := route.Handler(); ptr != nil {
-			c.handler = (*handlerInfo)(ptr)
+		if h := route.Handler(); h != nil {
+			c.handler = h.(*handlerInfo)
 		} else if s.cfg.MethodNotAllowed {
 			c.handler = methodNotAllowed
 		}
@@ -479,7 +478,7 @@ func (s *Server) getTLSConfig(entry *Entry) (tlsConfig *tls.Config, err error) {
 
 func (s *Server) printRoutes() {
 	s.router.Walk(func(r router.Route, m string) {
-		handler := (*handlerInfo)(r.Handler())
+		handler := r.Handler().(*handlerInfo)
 		s.Logger.Debugf("web > [%s] %s -> %s", texts.PadCenter(m, ' ', 7), r.Path(), handler.Name())
 	})
 }

@@ -2,17 +2,15 @@ package router_test
 
 import (
 	"net/http"
-	"testing"
-	"unsafe"
-
 	"os"
+	"testing"
 
 	"github.com/cuigh/auxo/net/web/router"
 	"github.com/cuigh/auxo/test/assert"
 )
 
 var (
-	placeholder = unsafe.Pointer(new(testHandler))
+	placeholder = new(testHandler)
 
 	// see: http://developer.github.com/v3/
 	githubAPI = []struct {
