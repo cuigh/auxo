@@ -1,17 +1,19 @@
-package json
+package jsoniter
 
 import (
-	"encoding/json"
 	"sync"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/net/rpc"
+	"github.com/json-iterator/go"
 )
 
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
+
 type request struct {
-	Head rpc.RequestHead   `json:"head"`
-	Args []json.RawMessage `json:"args"`
+	Head rpc.RequestHead       `json:"head"`
+	Args []jsoniter.RawMessage `json:"args"`
 }
 
 func (r *request) reset() {
@@ -29,8 +31,8 @@ func (r *request) reset() {
 type response struct {
 	Head   rpc.ResponseHead `json:"head"`
 	Result struct {
-		Value json.RawMessage    `json:"value"`
-		Error *errors.CodedError `json:"error"`
+		Value jsoniter.RawMessage `json:"value"`
+		Error *errors.CodedError  `json:"error"`
 	} `json:"result"`
 }
 
@@ -42,8 +44,8 @@ func (r *response) reset() {
 
 type ClientCodec struct {
 	rpc.Stream
-	enc  *json.Encoder
-	dec  *json.Decoder
+	enc  *jsoniter.Encoder
+	dec  *jsoniter.Decoder
 	resp *response
 	lock sync.Mutex // protect for writing
 }
@@ -83,8 +85,8 @@ func (*ClientCodec) DiscardResult() error {
 
 type ServerCodec struct {
 	rpc.Stream
-	enc  *json.Encoder
-	dec  *json.Decoder
+	enc  *jsoniter.Encoder
+	dec  *jsoniter.Decoder
 	req  *request
 	lock sync.Mutex // protect for writing
 }
