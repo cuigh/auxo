@@ -1,0 +1,12 @@
+trace:
+  jaeger:
+    enabled: true
+    rpc_metrics: false
+    sampler:
+      type: const
+      param: 1
+    reporter:
+      log: false
+      queue_size: 1000
+      flush_interval: 10s
+      address: 192.168.99.100:6831
