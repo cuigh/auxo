@@ -67,3 +67,15 @@ func NewError(code StatusCode, format string, args ...interface{}) *errors.Coded
 		return errors.Coded(int32(code), fmt.Sprintf(format, args...))
 	}
 }
+
+type AsyncError interface {
+	Wait() error
+}
+
+type asyncError struct {
+	error
+}
+
+func (ae asyncError) Wait() error {
+	return ae.error
+}

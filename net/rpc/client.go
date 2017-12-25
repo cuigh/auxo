@@ -16,7 +16,6 @@ import (
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/transport"
-	"github.com/cuigh/auxo/util/cast"
 	"github.com/cuigh/auxo/util/retry"
 )
 
@@ -77,11 +76,15 @@ var (
 )
 
 //type ClientFilters struct {
-//	BeforeDial   func(n *Node)
-//	AfterDial    func(n *Node)
-//	BeforeSend   func(ctx ct.Context, req *Request)
-//	AfterReceive func(resp *Response)
+//	BeforeDial func(n *Node)
+//	AfterDial  func(n *Node)
+//	BeforeCall []CFilter
+//	AfterCall  []CFilter
 //}
+
+//type DialFilter func(DialHandler) DialHandler
+
+//type DialHandler func(n *Node) error
 
 type Address struct {
 	// URL is the server address on which a connection will be established.
@@ -112,18 +115,6 @@ func GUID() []byte {
 	return guid.New().Slice()
 }
 
-type AsyncError interface {
-	Wait() error
-}
-
-type asyncError struct {
-	error
-}
-
-func (ae asyncError) Wait() error {
-	return ae.error
-}
-
 //// CallOption configures a Call before it starts or extracts information from
 //// a Call after it completes.
 //type CallOption interface {
@@ -136,101 +127,6 @@ func (ae asyncError) Wait() error {
 //	after(*call)
 //}
 
-type call struct {
-	n *Node
-	Request
-	ctx   ct.Context
-	reply interface{}
-	err   chan error
-	//done  data.Chan
-}
-
-func (c *call) finish(err error) {
-	c.err <- err
-	//c.done.TrySend()
-}
-
-// Wait implements interface of AsyncError.
-func (c *call) Wait() (err error) {
-	ctx, cancel := ct.WithTimeout(c.ctx, time.Second*10)
-	defer cancel()
-
-	select {
-	case err = <-c.err:
-	case <-ctx.Done():
-		c.n.pending.remove(c)
-		if err = ctx.Err(); err == ct.Canceled {
-			err = NewError(StatusCanceled, err.Error())
-		} else {
-			err = NewError(StatusDeadlineExceeded, err.Error())
-		}
-	}
-	c.n.calls.put(c)
-	return
-}
-
-func (c *call) reset(ctx ct.Context, id []byte, service, method string, args []interface{}, reply interface{}) {
-	//c.Head.Type = 0
-	c.Head.ID = id
-	c.Head.Service = service
-	c.Head.Method = method
-	c.Args = args
-	c.ctx = ctx
-	c.reply = reply
-	c.err = make(chan error, 1)
-	//c.err = nil
-	//c.done = make(data.Chan, 1)
-}
-
-type callPool struct {
-	p sync.Pool
-}
-
-func (cp *callPool) get() *call {
-	return cp.p.Get().(*call)
-}
-
-func (cp *callPool) put(c *call) {
-	cp.p.Put(c)
-}
-
-type callMap struct {
-	sync.Mutex
-	m map[string]*call
-}
-
-func (m *callMap) get(id []byte) (c *call) {
-	key := cast.BytesToString(id)
-	m.Lock()
-	c = m.m[key]
-	if c != nil {
-		delete(m.m, key)
-	}
-	m.Unlock()
-	return
-}
-
-func (m *callMap) put(c *call) {
-	m.Lock()
-	m.m[cast.BytesToString(c.Head.ID)] = c
-	m.Unlock()
-}
-
-func (m *callMap) remove(c *call) {
-	m.Lock()
-	delete(m.m, cast.BytesToString(c.Head.ID))
-	m.Unlock()
-}
-
-func (m *callMap) clear(fn func(c *call)) {
-	m.Lock()
-	for k, c := range m.m {
-		fn(c)
-		delete(m.m, k)
-	}
-	m.Unlock()
-}
-
 type NodeOptions struct {
 	Codec struct {
 		Name    string
@@ -242,37 +138,40 @@ type NodeOptions struct {
 }
 
 type Node struct {
-	lock    sync.Mutex // protect dial
+	c       *Client
 	opts    NodeOptions
 	state   nodeState
 	logger  *log.Logger
-	id      Identifier
-	ch      *Channel
-	codec   ClientCodec
-	pending callMap
-	calls   callPool
+	handler CHandler
+	calls   *callPool
+
+	lock  sync.Mutex // protect dial
+	ch    *Channel
+	codec ClientCodec
 }
 
-func newNode(opts NodeOptions) *Node {
+func newNode(c *Client, opts NodeOptions) *Node {
 	n := &Node{
+		c:      c,
 		opts:   opts,
 		logger: log.Get(PkgName),
-		//id:     Uint64(),
-		state: stateIdle,
+		state:  stateIdle,
 	}
-	n.pending.m = make(map[string]*call)
-	n.calls.p.New = func() interface{} {
-		return &call{n: n}
-	}
+	n.calls = newCallPool(n)
 	return n
 }
 
-func (n *Node) dial(ctx ct.Context) error {
+func (n *Node) initialize(ctx ct.Context) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
 
 	if n.state == stateReady {
 		return nil
+	}
+
+	n.handler = n.do
+	for i := len(n.c.filters) - 1; i >= 0; i-- {
+		n.handler = n.c.filters[i](n.handler)
 	}
 
 	cb := codecs[n.opts.Codec.Name]
@@ -296,33 +195,33 @@ func (n *Node) dial(ctx ct.Context) error {
 //	return n.state
 //}
 
-func (n *Node) Go(ctx ct.Context, service, method string, args []interface{}, reply interface{}) AsyncError {
-	c := n.calls.get()
-	c.reset(ctx, n.id(), service, method, args, reply)
-	n.pending.put(c)
-
-	err := n.send(&c.Request)
-	if err != nil {
-		n.pending.remove(c)
-		n.calls.put(c)
-		return asyncError{err}
-	}
-	return c
-}
+//func (n *Node) Go(ctx ct.Context, service, method string, args []interface{}, reply interface{}) AsyncError {
+//	c := n.calls.Acquire(n.c.id())
+//	c.reset(ctx, service, method, args, reply)
+//	err := n.handler(c)
+//	err := n.send(c.req)
+//	if err != nil {
+//		return asyncError{err}
+//	}
+//	return c
+//}
 
 func (n *Node) Call(ctx ct.Context, service, method string, args []interface{}, reply interface{}) (err error) {
-	c := n.calls.get()
-	c.reset(ctx, n.id(), service, method, args, reply)
-	n.pending.put(c)
+	c := n.calls.Acquire(n.c.id())
+	c.reset(ctx, service, method, args, reply)
+	defer n.calls.Release(c)
+	err = n.handler(c)
+	//n.calls.Release(c)
+	return
+}
 
-	err = n.send(&c.Request)
+// default handler
+func (n *Node) do(c *Call) error {
+	err := n.send(c.req)
 	if err == nil {
 		err = c.Wait()
-	} else {
-		n.pending.remove(c)
-		n.calls.put(c)
 	}
-	return
+	return err
 }
 
 //func (n *Node) Login(ctx ct.Context, name, pwd string) error {
@@ -351,7 +250,7 @@ func (n *Node) handle() {
 			continue
 		}
 
-		c := n.pending.get(resp.Head.ID)
+		c := n.calls.Find(resp.Head.ID)
 		if c == nil { // unknown response or request is timeout.
 			n.codec.DiscardResult()
 			n.logger.Error("client > unknown request: ", resp.Head.ID)
@@ -368,7 +267,7 @@ func (n *Node) handle() {
 		c.finish(err)
 	}
 
-	n.pending.clear(func(c *call) {
+	n.calls.Clear(func(c *Call) {
 		c.finish(ErrNodeShutdown)
 	})
 }
@@ -436,13 +335,14 @@ func (co *ClientOptions) AddAddress(uri string, options data.Map) {
 }
 
 type Client struct {
-	opts   ClientOptions
-	logger *log.Logger
-	id     Identifier
-	nodes  []*Node
-	lb     Balancer
-	fail   FailMode
-	retry  int32
+	opts    ClientOptions
+	logger  *log.Logger
+	id      Identifier
+	nodes   []*Node
+	lb      Balancer
+	fail    FailMode
+	retry   int32
+	filters []CFilter
 }
 
 // NewClient creates Client with options.
@@ -460,8 +360,7 @@ func NewClient(opts ClientOptions) *Client {
 			Address: addr,
 			Codec:   opts.Codec,
 		}
-		n := newNode(nodeOpts)
-		n.id = c.id
+		n := newNode(c, nodeOpts)
 		c.nodes = append(c.nodes, n)
 	}
 	c.initBalancer()
@@ -484,8 +383,12 @@ func AutoClient(name string) (*Client, error) {
 	return manager.Get(name)
 }
 
-func (c *Client) notify(addrs []*Address) {
+//func (c *Client) notify(addrs []*Address) {
+//
+//}
 
+func (c *Client) Use(filter ...CFilter) {
+	c.filters = append(c.filters, filter...)
 }
 
 // todo: need to find a better way to handle retry when call with asynchronous.
@@ -534,7 +437,7 @@ func (c *Client) getNode() (n *Node, err error) {
 			ctx, cancel = ct.WithTimeout(ct.TODO(), c.opts.DialTimeout)
 			defer cancel()
 		}
-		err = n.dial(ctx)
+		err = n.initialize(ctx)
 	}
 	return
 }

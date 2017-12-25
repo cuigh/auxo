@@ -24,9 +24,9 @@ func defaultNewer(t reflect.Type) interface{} {
 	return reflect.New(t).Interface()
 }
 
-type Handler func(c Context) (interface{}, error)
+type SHandler func(c Context) (interface{}, error)
 
-type Filter func(Handler) Handler
+type SFilter func(SHandler) SHandler
 
 type ActionSet interface {
 	Get(name string) Action
@@ -60,7 +60,7 @@ func (s *actionSet) Range(fn func(a Action) bool) {
 	}
 }
 
-func (s *actionSet) RegisterFunc(service, method string, fn interface{}, filter ...Filter) error {
+func (s *actionSet) RegisterFunc(service, method string, fn interface{}, filter ...SFilter) error {
 	v := reflect.ValueOf(fn)
 	if v.Kind() != reflect.Func {
 		return errors.New("fn must be a function")
@@ -69,7 +69,7 @@ func (s *actionSet) RegisterFunc(service, method string, fn interface{}, filter 
 	return nil
 }
 
-func (s *actionSet) RegisterService(name string, svc interface{}, filter ...Filter) error {
+func (s *actionSet) RegisterService(name string, svc interface{}, filter ...SFilter) error {
 	if name == "" {
 		name = reflect.TypeOf(svc).Name()
 	}
@@ -95,7 +95,7 @@ func (s *actionSet) RegisterService(name string, svc interface{}, filter ...Filt
 	return nil
 }
 
-func (s *actionSet) registerAction(service, method string, fn reflect.Value, filter ...Filter) {
+func (s *actionSet) registerAction(service, method string, fn reflect.Value, filter ...SFilter) {
 	a := newAction(service, method, fn, filter...)
 	s.actions[a.name] = a
 	log.Get(PkgName).Debugf("register method: %s.%s", service, method)
@@ -114,7 +114,7 @@ type Action interface {
 	// Error returns true if the last out-arg is `error`
 	Error() bool
 	// Handler returns real executor of the action
-	Handler() Handler
+	Handler() SHandler
 	fillArgs(c *context) (args []interface{})
 	//do(c Context) (interface{}, error)
 }
@@ -123,7 +123,7 @@ type action struct {
 	name    string
 	service string
 	method  string
-	handler Handler
+	handler SHandler
 	v       reflect.Value
 	in      []reflect.Type
 	out     []reflect.Type
@@ -132,7 +132,7 @@ type action struct {
 	err     bool
 }
 
-func newAction(service, method string, v reflect.Value, filter ...Filter) *action {
+func newAction(service, method string, v reflect.Value, filter ...SFilter) *action {
 	a := &action{
 		name:    service + "." + method,
 		service: service,
@@ -173,7 +173,7 @@ func (a *action) Name() string {
 	return a.name
 }
 
-func (a *action) Handler() Handler {
+func (a *action) Handler() SHandler {
 	return a.handler
 }
 

@@ -61,7 +61,7 @@ type Server struct {
 	logger    *log.Logger
 	matchers  []matchInfo
 	ctxPool   *contextPool
-	filters   []Filter
+	filters   []SFilter
 	listeners []net.Listener
 	sessions  *sessionMap
 	actions   *actionSet
@@ -195,15 +195,15 @@ func (s *Server) Match(m Matcher, codec string, opts ...data.Map) {
 	s.matchers = append(s.matchers, mi)
 }
 
-func (s *Server) Use(filter ...Filter) {
+func (s *Server) Use(filter ...SFilter) {
 	s.filters = append(s.filters, filter...)
 }
 
-func (s *Server) RegisterService(name string, svc interface{}, filter ...Filter) error {
+func (s *Server) RegisterService(name string, svc interface{}, filter ...SFilter) error {
 	return s.actions.RegisterService(name, svc, filter...)
 }
 
-func (s *Server) RegisterFunc(service, method string, fn interface{}, filter ...Filter) error {
+func (s *Server) RegisterFunc(service, method string, fn interface{}, filter ...SFilter) error {
 	return s.actions.RegisterFunc(service, method, fn, filter...)
 }
 
