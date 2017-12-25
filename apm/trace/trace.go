@@ -2,148 +2,217 @@ package trace
 
 import (
 	"context"
-	"math/rand"
-	"time"
 
-	"github.com/cuigh/auxo/data/guid"
+	"github.com/cuigh/auxo/log"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+)
+
+const (
+	PkgName = "auxo.apm.trace"
+
+	Binary      = opentracing.Binary
+	TextMap     = opentracing.TextMap
+	HTTPHeaders = opentracing.HTTPHeaders
 )
 
 var (
-	ctxKey  = contextKey{}
-	tracer  Tracer
-	sampler Sampler = func() bool {
-		return rand.Int31n(1000) < 10 // 1%
-	}
-	identifier Identifier = func() []byte {
-		return guid.New().Slice()
-	}
+	global *Tracer
 )
 
-type contextKey struct{}
+//var (
+//	TagKindClient   = opentracing.Tag{Key: "span.kind", Value: "client"}
+//	TagKindServer   = opentracing.Tag{Key: "span.kind", Value: "server"}
+//	TagKindProducer = opentracing.Tag{Key: "span.kind", Value: "producer"}
+//	TagKindConsumer = opentracing.Tag{Key: "span.kind", Value: "consumer"}
+//)
 
-type Tracer interface {
-	Report(s *Span)
+type HTTPHeadersCarrier = opentracing.HTTPHeadersCarrier
+type TextMapCarrier = opentracing.TextMapCarrier
+
+func SetTracer(t opentracing.Tracer) {
+	opentracing.SetGlobalTracer(t)
+	global.Tracer = t
 }
 
-type Sampler func() bool
-
-type Identifier func() []byte
-
-func SetTracer(t Tracer) {
-	tracer = t
+func GetTracer() *Tracer {
+	if global == nil {
+		global = NewTracer(opentracing.GlobalTracer())
+	}
+	return global
 }
 
-func SetSampler(s Sampler) {
-	if s == nil {
-		panic("sampler can't be nil")
-	}
-	sampler = s
+func StartSpan(operation string, opts ...opentracing.StartSpanOption) opentracing.Span {
+	return opentracing.StartSpan(operation, opts...)
 }
 
-func SetIdentifier(i Identifier) {
-	if i == nil {
-		panic("identifier can't be nil")
+func StartChild(parent opentracing.Span, operation string) (span opentracing.Span) {
+	if parent == nil {
+		span = opentracing.StartSpan(operation)
+	} else {
+		span = opentracing.StartSpan(operation, opentracing.ChildOf(parent.Context()))
 	}
-	identifier = i
+	return
 }
 
-type Span struct {
-	ID       []byte    `json:"id"`
-	TraceID  []byte    `json:"tid"`
-	ParentID []byte    `json:"pid"`
-	Name     string    `json:"name"`
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
-	Labels   map[string]string
-
-	sample bool
+// StartChildFromContext starts and returns a Span with `operation`, using
+// any Span found within `ctx` as a ChildOfRef. If no such parent could be
+// found, StartChildFromContext creates a root (parentless) Span.
+//
+// Example usage:
+//
+//    SomeFunction(ctx context.Context, ...) {
+//        sp := trace.StartChildFromContext(ctx, "SomeFunction")
+//        defer sp.Finish()
+//        ...
+//    }
+func StartChildFromContext(ctx context.Context, operation string, opts ...opentracing.StartSpanOption) (span opentracing.Span) {
+	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+		opts = append(opts, opentracing.ChildOf(parent.Context()))
+		span = opentracing.StartSpan(operation, opts...)
+	} else {
+		span = opentracing.StartSpan(operation, opts...)
+	}
+	return
 }
 
-func NewRoot(name string) *Span {
-	if tracer == nil {
-		return nil
+func StartFollow(follow opentracing.Span, operation string) (span opentracing.Span) {
+	if follow == nil {
+		span = opentracing.StartSpan(operation)
+	} else {
+		span = opentracing.StartSpan(operation, opentracing.FollowsFrom(follow.Context()))
 	}
-
-	return &Span{
-		ID:      identifier(),
-		TraceID: identifier(),
-		Name:    name,
-		Start:   time.Now(),
-		sample:  sampler(),
-	}
+	return
 }
 
-func NewChild(name string, tid, pid []byte) *Span {
-	if tracer == nil {
-		return nil
-	}
-
-	return &Span{
-		ID:       identifier(),
-		TraceID:  tid,
-		ParentID: pid,
-		Name:     name,
-		Start:    time.Now(),
-		sample:   true,
-	}
+func Extract(format, carrier interface{}) opentracing.SpanContext {
+	return GetTracer().Extract(format, carrier)
 }
 
-func (s *Span) Finish() {
-	if s == nil || !s.End.IsZero() {
-		return
-	}
-	s.End = time.Now()
-
-	if tracer != nil && s.sample {
-		tracer.Report(s)
-	}
+func Inject(sc opentracing.SpanContext, format, carrier interface{}) {
+	GetTracer().Inject(sc, format, carrier)
 }
 
-func (s *Span) NewChild(name string) *Span {
-	if s == nil {
-		return nil
-	}
-
-	return &Span{
-		ID:       identifier(),
-		TraceID:  s.TraceID,
-		ParentID: s.ID,
-		Name:     name,
-		Start:    time.Now(),
-		sample:   s.sample,
-	}
+func ContextWithSpan(ctx context.Context, span opentracing.Span) context.Context {
+	return opentracing.ContextWithSpan(ctx, span)
 }
 
-func (s *Span) SetLabel(k, v string) *Span {
-	if s.Labels == nil {
-		s.Labels = make(map[string]string)
-	}
-	s.Labels[k] = v
-	return s
+func SpanFromContext(ctx context.Context) opentracing.Span {
+	return opentracing.SpanFromContext(ctx)
 }
 
-func (s *Span) GetLabel(k string) string {
-	if s.Labels == nil {
-		return ""
-	}
-	return s.Labels[k]
+// StartServer extracts SpanContext from carrier, then starts and returns a server Span with `operation`,
+// using any Span found within `SpanContext` as a ChildOfRef. If no such parent could be
+// found, StartChildFromContext creates a root (parentless) Span.
+//
+// Example usage:
+//
+//    SomeFunction(ctx context.Context, ...) {
+//        sp := trace.StartServer("SomeFunction", trace.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
+//        defer sp.Finish()
+//        ...
+//    }
+func StartServer(operation string, format, carrier interface{}) opentracing.Span {
+	return GetTracer().StartServer(operation, format, carrier)
 }
 
-func NewContext(ctx context.Context, span *Span) context.Context {
-	return context.WithValue(ctx, ctxKey, span)
-}
-
-func FromContext(ctx context.Context) *Span {
-	if v := ctx.Value(ctxKey); v != nil {
-		return v.(*Span)
-	}
-	return nil
-}
-
-//func ToRequest(r *http.Request, span *Span) *http.Request {
-//	return r.WithContext(NewContext(r.Context(), span))
+//func RequestWithSpan(r *http.Request, span opentracing.Span) *http.Request {
+//	return r.WithContext(ContextWithSpan(r.Context(), span))
 //}
 //
-//func FromRequest(r *http.Request) *Span {
-//	return FromContext(r.Context())
+//func SpanFromRequest(r *http.Request) opentracing.Span {
+//	return SpanFromContext(r.Context())
 //}
+
+//func SetSpanKind(span opentracing.Span, enum ext.SpanKindEnum) {
+//	span.SetTag("span.kind", enum)
+//	ext.SpanKindRPCClient.Set(span)
+//}
+
+type Tracer struct {
+	opentracing.Tracer
+	logger *log.Logger
+}
+
+func NewTracer(tracer opentracing.Tracer) *Tracer {
+	if tracer == nil {
+		tracer = opentracing.GlobalTracer()
+	}
+	return &Tracer{
+		Tracer: tracer,
+		logger: log.Get(PkgName),
+	}
+}
+
+func (t *Tracer) StartChild(parent opentracing.Span, operation string) opentracing.Span {
+	var span opentracing.Span
+	if parent == nil {
+		span = t.StartSpan(operation)
+	} else {
+		span = t.StartSpan(operation, opentracing.ChildOf(parent.Context()))
+	}
+	return span
+}
+
+func (t *Tracer) StartFollow(follow opentracing.Span, operation string) opentracing.Span {
+	var span opentracing.Span
+	if follow == nil {
+		span = t.StartSpan(operation)
+	} else {
+		span = t.StartSpan(operation, opentracing.FollowsFrom(follow.Context()))
+	}
+	return span
+}
+
+// StartChildFromContext starts and returns a Span with `operation`, using
+// any Span found within `ctx` as a ChildOfRef. If no such parent could be
+// found, StartChildFromContext creates a root (parentless) Span.
+//
+// Example usage:
+//
+//    SomeFunction(ctx context.Context, ...) {
+//        sp := trace.StartChildFromContext(ctx, "SomeFunction")
+//        defer sp.Finish()
+//        ...
+//    }
+func (t *Tracer) StartChildFromContext(ctx context.Context, operation string, opts ...opentracing.StartSpanOption) opentracing.Span {
+	var span opentracing.Span
+	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+		opts = append(opts, opentracing.ChildOf(parent.Context()))
+		span = t.StartSpan(operation, opts...)
+	} else {
+		span = t.StartSpan(operation, opts...)
+	}
+	return span
+}
+
+// StartServer extracts SpanContext from carrier, then starts and returns a server Span with `operation`,
+// using any Span found within `SpanContext` as a ChildOfRef. If no such parent could be
+// found, StartChildFromContext creates a root (parentless) Span.
+//
+// Example usage:
+//
+//    SomeFunction(ctx context.Context, ...) {
+//        sp := trace.StartServer("SomeFunction", trace.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
+//        defer sp.Finish()
+//        ...
+//    }
+func (t *Tracer) StartServer(operation string, format, carrier interface{}) opentracing.Span {
+	ctx := t.Extract(format, carrier)
+	return t.StartSpan(operation, ext.RPCServerOption(ctx))
+}
+
+func (t *Tracer) Extract(format, carrier interface{}) opentracing.SpanContext {
+	sc, err := t.Tracer.Extract(format, carrier)
+	if err != nil {
+		t.logger.Warn("tracer extract failed: ", err)
+	}
+	return sc
+}
+
+func (t *Tracer) Inject(sc opentracing.SpanContext, format, carrier interface{}) {
+	err := t.Tracer.Inject(sc, format, carrier)
+	if err != nil {
+		t.logger.Warn("tracer inject failed: ", err)
+	}
+}
