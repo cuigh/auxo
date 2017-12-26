@@ -1,6 +1,7 @@
 package gsd
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"reflect"
@@ -48,7 +49,8 @@ type selectContext struct {
 	Builder
 	info SelectInfo
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *selectContext) Reset() {
@@ -260,7 +262,7 @@ func (c *selectContext) row() (row *sql.Row, err error) {
 	if err = c.db.p.BuildSelect(&c.Builder, &c.info); err != nil {
 		return
 	}
-	return c.queryRow(c.Builder.String(), c.Builder.Args...), nil
+	return c.QueryRow(c.Context, c.Builder.String(), c.Builder.Args...), nil
 }
 
 func (c *selectContext) rows() (rows *sql.Rows, err error) {
@@ -269,7 +271,7 @@ func (c *selectContext) rows() (rows *sql.Rows, err error) {
 	if err = c.db.p.BuildSelect(&c.Builder, &c.info); err != nil {
 		return
 	}
-	return c.query(c.Builder.String(), c.Builder.Args...)
+	return c.QueryRows(c.Context, c.Builder.String(), c.Builder.Args...)
 }
 
 type countContext selectContext

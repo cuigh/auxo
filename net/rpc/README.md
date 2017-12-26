@@ -7,9 +7,9 @@
 * Support port multiplexing (Multiple protocols on the same port)
 * Support multiple codecs: JSON, HTTP, Protocol Buffers...
 * Load balance: Random, RoundRobin...
+* OpenTracing support
 * Service discovery and governance with etcd, consul... (TODO)
 * Support authentication and authorization (TODO)
-* OpenTracing support (TODO)
 * Circuit breaker (TODO)
 * Rate limit (TODO)
 

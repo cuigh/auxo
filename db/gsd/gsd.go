@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"sync"
 
+	"context"
+
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/errors"
@@ -75,9 +77,9 @@ func newContextPool() *contextPool {
 	return p
 }
 
-func (p *contextPool) GetInsert(db *database, q executor) (ctx *insertContext) {
+func (p *contextPool) GetInsert(c context.Context, db *database, q Executor) (ctx *insertContext) {
 	ctx = p.inserts.Get().(*insertContext)
-	ctx.db, ctx.executor = db, q
+	ctx.Context, ctx.db, ctx.Executor = c, db, q
 	return
 }
 
@@ -86,9 +88,9 @@ func (p *contextPool) PutInsert(c *insertContext) {
 	p.inserts.Put(c)
 }
 
-func (p *contextPool) GetDelete(db *database, q executor) (ctx *deleteContext) {
+func (p *contextPool) GetDelete(c context.Context, db *database, q Executor) (ctx *deleteContext) {
 	ctx = p.deletes.Get().(*deleteContext)
-	ctx.db, ctx.executor = db, q
+	ctx.Context, ctx.db, ctx.Executor = c, db, q
 	return ctx
 }
 
@@ -97,9 +99,9 @@ func (p *contextPool) PutDelete(c *deleteContext) {
 	p.deletes.Put(c)
 }
 
-func (p *contextPool) GetUpdate(db *database, q executor) (ctx *updateContext) {
+func (p *contextPool) GetUpdate(c context.Context, db *database, q Executor) (ctx *updateContext) {
 	ctx = p.updates.Get().(*updateContext)
-	ctx.db, ctx.executor = db, q
+	ctx.Context, ctx.db, ctx.Executor = c, db, q
 	return ctx
 }
 
@@ -108,9 +110,9 @@ func (p *contextPool) PutUpdate(c *updateContext) {
 	p.updates.Put(c)
 }
 
-func (p *contextPool) GetSelect(db *database, q executor) (ctx *selectContext) {
+func (p *contextPool) GetSelect(c context.Context, db *database, q Executor) (ctx *selectContext) {
 	ctx = p.selects.Get().(*selectContext)
-	ctx.db, ctx.executor = db, q
+	ctx.Context, ctx.db, ctx.Executor = c, db, q
 	return ctx
 }
 
@@ -119,9 +121,9 @@ func (p *contextPool) PutSelect(c *selectContext) {
 	p.selects.Put(c)
 }
 
-func (p *contextPool) GetCall(db *database, q executor) (ctx *callContext) {
+func (p *contextPool) GetCall(c context.Context, db *database, q Executor) (ctx *callContext) {
 	ctx = p.calls.Get().(*callContext)
-	ctx.db, ctx.executor = db, q
+	ctx.Context, ctx.db, ctx.Executor = c, db, q
 	return ctx
 }
 
@@ -142,10 +144,33 @@ func (b *Builder) Reset() {
 	}
 }
 
-type executor interface {
-	exec(query string, args ...interface{}) (sql.Result, error)
-	query(query string, args ...interface{}) (*sql.Rows, error)
-	queryRow(query string, args ...interface{}) *sql.Row
+type Executor interface {
+	Database() string
+	Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row
+	QueryRows(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+}
+
+type Interceptor func(Executor) Executor
+
+type Interceptors []Interceptor
+
+func (is Interceptors) Apply(e Executor) Executor {
+	for i := len(is) - 1; i >= 0; i-- {
+		e = is[i](e)
+	}
+	return e
+}
+
+var interceptors = make(map[string]Interceptors)
+
+func Use(filters ...Interceptor) {
+	UseDB("", filters...)
+}
+
+func UseDB(db string, filters ...Interceptor) {
+	v := interceptors[db]
+	interceptors[db] = append(v, filters...)
 }
 
 type Factory struct {
@@ -182,13 +207,19 @@ func New(opts *Options) (DB, error) {
 		db.SetConnMaxLifetime(opts.ConnLifetime)
 	}
 
-	return &database{
+	d := &database{
 		logger: log.Get(PkgName),
 		opts:   opts,
 		p:      pb(opts.Options),
 		db:     db,
 		stmts:  newStmtMap(db),
-	}, nil
+	}
+	d.Interceptors = interceptors[""]
+	if d.opts.Name != "" {
+		d.Interceptors = append(d.Interceptors, interceptors[d.opts.Name]...)
+	}
+	d.e = d.Interceptors.Apply(d)
+	return d, nil
 }
 
 func Open(name string) (db DB, err error) {
@@ -248,5 +279,6 @@ func (f *Factory) loadOptions(name string) (*Options, error) {
 	if err != nil {
 		return nil, err
 	}
+	opts.Name = name
 	return opts, nil
 }

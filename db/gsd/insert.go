@@ -1,6 +1,9 @@
 package gsd
 
-import "reflect"
+import (
+	"context"
+	"reflect"
+)
 
 type InsertInfo struct {
 	Table   string
@@ -13,7 +16,8 @@ type insertContext struct {
 	Builder
 	info InsertInfo
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *insertContext) Reset() {
@@ -107,5 +111,5 @@ func (c *insertContext) Result() (r InsertResult, err error) {
 	if err = c.db.p.BuildInsert(&c.Builder, &c.info); err != nil {
 		return
 	}
-	return c.exec(c.Builder.String(), c.Builder.Args...)
+	return c.Exec(c.Context, c.Builder.String(), c.Builder.Args...)
 }

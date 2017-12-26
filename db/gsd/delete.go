@@ -1,6 +1,7 @@
 package gsd
 
 import (
+	"context"
 	"reflect"
 )
 
@@ -13,7 +14,8 @@ type deleteContext struct {
 	Builder
 	info DeleteInfo
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *deleteContext) Reset() {
@@ -64,5 +66,5 @@ func (c *deleteContext) Result() (r Result, err error) {
 	if err != nil {
 		return
 	}
-	return c.exec(c.Builder.String(), c.Builder.Args...)
+	return c.Exec(c, c.Builder.String(), c.Builder.Args...)
 }

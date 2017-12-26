@@ -1,5 +1,7 @@
 package gsd
 
+import "context"
+
 type ExecuteInfo struct {
 	query string
 	args  []interface{}
@@ -9,7 +11,8 @@ type executeContext struct {
 	sql  string
 	args []interface{}
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *executeContext) Reset() {
@@ -23,11 +26,11 @@ func (c *executeContext) Value() (v Value) {
 }
 
 func (c *executeContext) Result() (ExecuteResult, error) {
-	return c.exec(c.sql, c.args...)
+	return c.Exec(c.Context, c.sql, c.args...)
 }
 
 func (c *executeContext) Scan(dst ...interface{}) error {
-	return c.queryRow(c.sql, c.args...).Scan(dst...)
+	return c.QueryRow(c.Context, c.sql, c.args...).Scan(dst...)
 }
 
 func (c *executeContext) Fill(i interface{}) error {
@@ -44,7 +47,7 @@ func (c *executeContext) Fill(i interface{}) error {
 }
 
 func (c *executeContext) Reader() (Reader, error) {
-	rows, err := c.query(c.sql, c.args...)
+	rows, err := c.QueryRows(c.Context, c.sql, c.args...)
 	return (*reader)(rows), err
 }
 

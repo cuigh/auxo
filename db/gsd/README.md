@@ -2,6 +2,10 @@
 
 gsd is a lightweight, fluent SQL data access library. It supports various types of database, like mysql/mssql/sqlite etc.
 
+* High performance
+* Support context.Context
+* Support opentracing
+
 ## Configure
 
 **gsd** use **auxo/config** package to manage database options. There is a sample config file in the package(app.yml):
@@ -153,4 +157,4 @@ if err != nil {
 
 ## TODO
 
-* Support context.Context.
+* More proxy actions.

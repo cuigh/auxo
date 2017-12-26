@@ -1,6 +1,9 @@
 package gsd
 
-import "reflect"
+import (
+	"context"
+	"reflect"
+)
 
 type updateValue struct {
 	Value interface{}
@@ -21,7 +24,8 @@ type updateContext struct {
 	Builder
 	info UpdateInfo
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *updateContext) Reset() {
@@ -112,5 +116,5 @@ func (c *updateContext) Result() (r Result, err error) {
 	if err = c.db.p.BuildUpdate(&c.Builder, &c.info); err != nil {
 		return
 	}
-	return c.exec(c.Builder.String(), c.Builder.Args...)
+	return c.Exec(c.Context, c.Builder.String(), c.Builder.Args...)
 }

@@ -1,6 +1,9 @@
 package gsd
 
-import "database/sql"
+import (
+	"context"
+	"database/sql"
+)
 
 type CallInfo struct {
 	SP   string
@@ -11,7 +14,8 @@ type callContext struct {
 	Builder
 	info CallInfo
 	db   *database
-	executor
+	Executor
+	context.Context
 }
 
 func (c *callContext) Reset() {
@@ -49,7 +53,7 @@ func (c *callContext) result() (sql.Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.exec(c.Builder.String(), c.Builder.Args...)
+	return c.Exec(c.Context, c.Builder.String(), c.Builder.Args...)
 }
 
 func (c *callContext) row() (*sql.Row, error) {
@@ -59,5 +63,5 @@ func (c *callContext) row() (*sql.Row, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.queryRow(c.Builder.String(), c.Builder.Args...), nil
+	return c.QueryRow(c.Context, c.Builder.String(), c.Builder.Args...), nil
 }
