@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 // isNil checks if a specified object is nil or not, without Failing.
@@ -43,12 +42,7 @@ func isEmpty(value interface{}) bool {
 	case reflect.Interface, reflect.Ptr:
 		return v.IsNil()
 	}
-
-	if t, ok := value.(time.Time); ok {
-		return t.IsZero()
-	}
-
-	return false
+	return reflect.DeepEqual(value, reflect.Zero(v.Type()).Interface())
 }
 
 // contains try loop over the list check if the list includes the element.

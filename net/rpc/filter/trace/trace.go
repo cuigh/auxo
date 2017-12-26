@@ -7,8 +7,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-const PkgName = "auxo.net.rpc.filter.trace"
-
 type Options struct {
 	*trace.Tracer
 }
@@ -44,8 +42,7 @@ func Server(opts Options) rpc.SFilter {
 			ext.Component.Set(span, component)
 			c.SetContext(trace.ContextWithSpan(c.Context(), span))
 			defer func() {
-				ext.Error.Set(span, err != nil)
-				//span.SetTag("rpc.status_code", xxx)
+				span.SetTag("rpc.status_code", rpc.StatusOf(err))
 				span.Finish()
 			}()
 
@@ -72,8 +69,7 @@ func Client(opts Options) rpc.CFilter {
 			tracer.Inject(span.Context(), trace.TextMap, (*rpcLabels)(&req.Head.Labels))
 			//c.SetContext(trace.ContextWithSpan(c.Context(), span))
 			defer func() {
-				ext.Error.Set(span, err != nil)
-				//span.SetTag("rpc.status_code", xxx)
+				span.SetTag("rpc.status_code", rpc.StatusOf(err))
 				span.Finish()
 			}()
 

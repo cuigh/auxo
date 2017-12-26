@@ -34,6 +34,9 @@ func (t *Trace) Apply(next web.HandlerFunc) web.HandlerFunc {
 			span.Finish()
 		}()
 
-		return next(c)
+		if err := next(c); err != nil {
+			c.Error(err)
+		}
+		return nil
 	}
 }

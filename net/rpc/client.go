@@ -404,19 +404,19 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 	}
 
 	err = n.Call(ctx, service, method, args, reply)
-	if err == nil || c.errorCode(err) > 100 || c.fail == FailFast {
+	if err == nil || c.fail == FailFast || StatusOf(err) > 100 {
 		return err
 	}
 
 	if c.fail == FailTry {
-		// todo: retry count
+		// todo: allow customizing retry count
 		return retry.Do(2, nil, func() error {
 			return n.Call(ctx, service, method, args, reply)
 		})
 	} else if c.fail == FailOver {
 		for _, n := range c.nodes {
 			err = n.Call(ctx, service, method, args, reply)
-			if err == nil || c.errorCode(err) > 100 {
+			if err == nil || StatusOf(err) > 100 {
 				return err
 			}
 		}
@@ -440,13 +440,6 @@ func (c *Client) getNode() (n *Node, err error) {
 		err = n.initialize(ctx)
 	}
 	return
-}
-
-func (c *Client) errorCode(err error) int32 {
-	if e, ok := err.(*errors.CodedError); ok {
-		return e.Code
-	}
-	return 0
 }
 
 func (c *Client) Close() {

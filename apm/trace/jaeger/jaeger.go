@@ -48,13 +48,15 @@ func (opts *Options) ensure() {
 }
 
 func InitGlobal(name string, options ...Options) (io.Closer, error) {
-	cfg := loadConfig(options...)
+	if name == "" {
+		name = config.GetString("name")
+	}
 
 	// Example metrics factory. Use github.com/uber/jaeger-lib/metrics respectively
 	// to bind to real logging and metrics frameworks.
 	// metricsFactory := metrics.NullFactory
 
-	// Initialize tracer with a logger and a metrics factory
+	cfg := loadConfig(options...)
 	return cfg.InitGlobalTracer(
 		name,
 		jc.Logger(getLogger()),
@@ -71,6 +73,9 @@ func MustInitGlobal(name string, options ...Options) io.Closer {
 }
 
 func Init(name string, options ...Options) (opentracing.Tracer, io.Closer, error) {
+	if name == "" {
+		name = config.GetString("name")
+	}
 	cfg := loadConfig(options...)
 	return cfg.New(name, jc.Logger(getLogger()))
 }

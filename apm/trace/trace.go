@@ -202,10 +202,12 @@ func (t *Tracer) StartServer(operation string, format, carrier interface{}) open
 	return t.StartSpan(operation, ext.RPCServerOption(ctx))
 }
 
+// Extract() returns a SpanContext instance given `format` and `carrier`.
+// If there was simply no SpanContext to extract or errors occurred, Extract() returns nil.
 func (t *Tracer) Extract(format, carrier interface{}) opentracing.SpanContext {
 	sc, err := t.Tracer.Extract(format, carrier)
 	if err != nil {
-		t.logger.Warn("tracer extract failed: ", err)
+		t.logger.Debug("trace > ", err)
 	}
 	return sc
 }
@@ -213,6 +215,6 @@ func (t *Tracer) Extract(format, carrier interface{}) opentracing.SpanContext {
 func (t *Tracer) Inject(sc opentracing.SpanContext, format, carrier interface{}) {
 	err := t.Tracer.Inject(sc, format, carrier)
 	if err != nil {
-		t.logger.Warn("tracer inject failed: ", err)
+		t.logger.Debug("trace > ", err)
 	}
 }

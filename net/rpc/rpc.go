@@ -68,6 +68,15 @@ func NewError(code StatusCode, format string, args ...interface{}) *errors.Coded
 	}
 }
 
+func StatusOf(err error) int32 {
+	if err == nil {
+		return int32(StatusOK)
+	} else if e, ok := err.(*errors.CodedError); ok {
+		return e.Code
+	}
+	return int32(StatusUnknown)
+}
+
 type AsyncError interface {
 	Wait() error
 }
