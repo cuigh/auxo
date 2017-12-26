@@ -2,8 +2,6 @@ package web
 
 import (
 	"net/http"
-	"reflect"
-	"runtime"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/errors"
@@ -57,14 +55,6 @@ func (f FilterFunc) Apply(h HandlerFunc) HandlerFunc {
 
 // HandlerFunc defines a function to server HTTP requests.
 type HandlerFunc func(Context) error
-
-func (h HandlerFunc) Name() string {
-	t := reflect.ValueOf(h).Type()
-	if t.Kind() == reflect.Func {
-		return runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
-	}
-	return t.String()
-}
 
 func (h HandlerFunc) Chain(filters ...Filter) HandlerFunc {
 	handler := h
@@ -131,7 +121,6 @@ type handlerInfo struct {
 
 func newHandlerInfo(handler HandlerFunc, opts []HandlerOption, filters ...Filter) *handlerInfo {
 	info := &handlerInfo{
-		name:   handler.Name(),
 		action: handler,
 	}
 	for _, opt := range opts {

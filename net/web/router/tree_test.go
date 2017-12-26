@@ -288,25 +288,25 @@ func (h *testHandler) Handle() {}
 
 func TestTree_Add(t *testing.T) {
 	cases := []struct {
-		Route  string
 		Method string
+		Route  string
 		Error  bool
 	}{
-		{"/", http.MethodGet, false},
-		{"/", http.MethodPost, false},
-		{"/user", http.MethodGet, false},
-		{"/user", http.MethodGet, true},
-		{"/user/:user", http.MethodGet, false},
-		{"/user/:user/detail", http.MethodGet, false},
-		{"/user/:user/blog/:blog", http.MethodGet, false},
-		{"/user/:id/edit", http.MethodGet, true},
-		{"/doc/*doc", http.MethodGet, false},
-		{"/doc/*name", http.MethodPost, true},
+		{http.MethodGet, "/", false},
+		{http.MethodPost, "/", false},
+		{http.MethodGet, "/user", false},
+		{http.MethodGet, "/user", true},
+		{http.MethodGet, "/user/:user", false},
+		{http.MethodGet, "/user/:user/detail", false},
+		{http.MethodGet, "/user/:user/blog/:blog", false},
+		{http.MethodGet, "/user/:id/edit", true},
+		{http.MethodGet, "/doc/*doc", false},
+		{http.MethodPost, "/doc/*name", true},
 	}
 
 	tree := router.New(router.Options{})
 	for _, c := range cases {
-		err := tree.Add(c.Route, placeholder, c.Method)
+		_, err := tree.Add(c.Method, c.Route, placeholder)
 		if c.Error {
 			assert.Error(t, err)
 			t.Log(err)
@@ -360,7 +360,7 @@ func TestTree_Find(t *testing.T) {
 
 	tree := router.New(router.Options{})
 	for _, c := range cases {
-		tree.Add(c.Route, placeholder, http.MethodGet)
+		tree.Add(http.MethodGet, c.Route, placeholder)
 	}
 	tree.Print(os.Stdout)
 
@@ -386,7 +386,7 @@ func TestTree_Find(t *testing.T) {
 
 func TestTree_Walk(t *testing.T) {
 	tree := router.New(router.Options{})
-	tree.Add("/", placeholder, http.MethodGet)
+	tree.Add(http.MethodGet, "/", placeholder)
 	i := 0
 	tree.Walk(func(r router.Route, m string) {
 		i++
@@ -397,7 +397,7 @@ func TestTree_Walk(t *testing.T) {
 func TestTree_Print(t *testing.T) {
 	tree := router.New(router.Options{})
 	for _, api := range githubAPI {
-		err := tree.Add(api.Path, placeholder, api.Method)
+		_, err := tree.Add(api.Method, api.Path, placeholder)
 		assert.NoError(t, err)
 	}
 	tree.Print(os.Stdout)
@@ -455,7 +455,7 @@ func BenchmarkFindParam(b *testing.B) {
 func buildGithubRoute(t assert.Tester) *router.Tree {
 	tree := router.New(router.Options{})
 	for _, api := range githubAPI {
-		err := tree.Add(api.Path, placeholder, api.Method)
+		_, err := tree.Add(api.Method, api.Path, placeholder)
 		assert.NoError(t, err)
 	}
 	return tree

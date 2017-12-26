@@ -149,7 +149,7 @@ type node struct {
 	children
 }
 
-func newNode(kind nodeKind, text string, parent *node, methods []string, handler interface{}) *node {
+func newNode(kind nodeKind, text string, parent *node) *node {
 	n := &node{
 		kind:   kind,
 		text:   text,
@@ -163,9 +163,6 @@ func newNode(kind nodeKind, text string, parent *node, methods []string, handler
 	}
 	if kind != kindStatic {
 		n.params = append(n.params, text[1:])
-	}
-	if handler != nil {
-		n.setHandler(methods, handler)
 	}
 	return n
 }
@@ -235,25 +232,18 @@ func (n *node) getRoute(method string) *route {
 	return n.routes.find(method)
 }
 
-func (n *node) setHandler(methods []string, handler interface{}) error {
-	if handler == nil {
-		return nil
-	}
-
+func (n *node) setHandler(method string, handler interface{}) (*route, error) {
 	if n.routes == nil {
 		n.routes = newRouteMap(n)
 	}
 
-	for _, method := range methods {
-		if r := n.getRoute(method); r.handler != nil {
-			return errors.Format("route conflict: %s > %s", method, n.path)
-		}
+	r := n.getRoute(method)
+	if r.handler != nil {
+		return nil, errors.Format("route conflict: %s > %s", method, n.path)
 	}
 
-	for _, method := range methods {
-		n.routes.set(method, handler)
-	}
-	return nil
+	r.handler = handler
+	return r, nil
 }
 
 func (n *node) correctPath() {
@@ -263,7 +253,7 @@ func (n *node) correctPath() {
 	}
 }
 
-func (n *node) add(methods []string, path string, handler interface{}) (*node, error) {
+func (n *node) add(path string) (*node, error) {
 	var (
 		err         error
 		c           = n
@@ -271,37 +261,31 @@ func (n *node) add(methods []string, path string, handler interface{}) (*node, e
 	)
 	for ; i < l; i++ {
 		if path[i] == ':' {
-			c, err = c.addSegment(path[start:i], nil, nil)
-			if err != nil {
-				return nil, err
-			}
+			c = c.addSegment(path[start:i])
 			start = i
 
 			for ; i < l && path[i] != '/'; i++ {
 			}
 			if i == l {
-				return c.children.setParam(c, path[start:i], methods, handler)
+				return c.children.setParam(c, path[start:i])
 			}
-			c, err = c.children.setParam(c, path[start:i], nil, nil)
+			c, err = c.children.setParam(c, path[start:i])
 			if err != nil {
 				return nil, err
 			}
 			start = i
 		} else if path[i] == '*' {
-			c, err = c.addSegment(path[start:i], nil, nil)
-			if err != nil {
-				return nil, err
-			}
-			return c.setAny(c, path[i:], methods, handler)
+			c = c.addSegment(path[start:i])
+			return c.setAny(c, path[i:])
 		}
 	}
 
-	return c.addSegment(path[start:], methods, handler)
+	return c.addSegment(path[start:]), nil
 }
 
-func (n *node) addSegment(path string, methods []string, handler interface{}) (*node, error) {
+func (n *node) addSegment(path string) *node {
 	if path == "" {
-		return n, nil
+		return n
 	}
 
 	for _, c := range n.children.static {
@@ -314,19 +298,19 @@ func (n *node) addSegment(path string, methods []string, handler interface{}) (*
 
 		if i == ln {
 			if ln == lp {
-				return c, c.setHandler(methods, handler)
+				return c
 			}
-			return c.addSegment(path[i:], methods, handler)
+			return c.addSegment(path[i:])
 		} else if i == lp {
 			c.split(i)
-			return c, c.setHandler(methods, handler)
+			return c
 		} else {
 			c.split(i)
-			return c.children.addStatic(c, path[i:], methods, handler)
+			return c.children.addStatic(c, path[i:])
 		}
 	}
 
-	return n.children.addStatic(n, path, methods, handler)
+	return n.children.addStatic(n, path)
 }
 
 func (n *node) split(i int) *node {
@@ -390,32 +374,32 @@ func (c *children) getStatic(text string) *node {
 	return nil
 }
 
-func (c *children) setParam(parent *node, text string, methods []string, handler interface{}) (*node, error) {
+func (c *children) setParam(parent *node, text string) (*node, error) {
 	if c.param != nil {
 		if c.param.text != text {
 			return nil, errors.Format("route conflict: %s <=> %s", c.param.path, c.param.parent.path+text)
 		}
-		return c.param, c.param.setHandler(methods, handler)
+		return c.param, nil
 	}
 
-	c.param = newNode(kindParam, text, parent, methods, handler)
+	c.param = newNode(kindParam, text, parent)
 	return c.param, nil
 }
 
-func (c *children) setAny(parent *node, text string, methods []string, handler interface{}) (*node, error) {
+func (c *children) setAny(parent *node, text string) (*node, error) {
 	if c.any != nil {
 		if c.any.text != text {
 			return nil, errors.Format("route conflict: %s <=> %s", c.any.path, c.any.parent.path+text)
 		}
-		return c.any, c.any.setHandler(methods, handler)
+		return c.any, nil
 	}
 
-	c.any = newNode(kindAny, text, parent, methods, handler)
+	c.any = newNode(kindAny, text, parent)
 	return c.any, nil
 }
 
-func (c *children) addStatic(parent *node, text string, methods []string, handler interface{}) (*node, error) {
-	node := newNode(kindStatic, text, parent, methods, handler)
-	c.static = append(c.static, node)
-	return node, nil
+func (c *children) addStatic(parent *node, text string) (n *node) {
+	n = newNode(kindStatic, text, parent)
+	c.static = append(c.static, n)
+	return
 }

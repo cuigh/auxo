@@ -33,7 +33,7 @@ type Route interface {
 // New creates a route tree.
 func New(opts Options) *Tree {
 	return &Tree{
-		root: newNode(kindStatic, "/", nil, nil, nil),
+		root: newNode(kindStatic, "/", nil),
 		opts: opts,
 	}
 }
@@ -44,24 +44,27 @@ func (t *Tree) MaxParam() int {
 }
 
 // Add register a route with specific methods to the tree.
-func (t *Tree) Add(path string, handler interface{}, methods ...string) error {
+func (t *Tree) Add(method, path string, handler interface{}) (Route, error) {
 	if path[0] != '/' {
-		return errors.New("path must start with '/'")
+		return nil, errors.New("path must start with '/'")
 	}
 
 	if path == "/" {
-		return t.root.setHandler(methods, handler)
+		return t.root.setHandler(method, handler)
 	}
 
-	n, err := t.root.add(methods, path[1:], handler)
+	n, err := t.root.add(path[1:])
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if l := len(n.params); l > t.maxParam {
-		t.maxParam = l
+	r, err := n.setHandler(method, handler)
+	if err == nil {
+		if l := len(n.params); l > t.maxParam {
+			t.maxParam = l
+		}
 	}
-	return nil
+	return r, err
 }
 
 // Find tries to find a matched route in the tree.

@@ -68,6 +68,7 @@ func New(c *Options) (s *Server) {
 		Logger: log.Get(PkgName),
 		Binder: new(binder),
 		router: router.New(router.Options{}),
+		routes: make(map[string]router.Route),
 	}
 	s.stdLogger = slog.New(s.Logger, "web > ", 0)
 	s.ctxPool = newContextPool(s)
@@ -203,7 +204,7 @@ func (s *Server) handleField(prefix string, t reflect.Type, sf *reflect.StructFi
 	}
 
 	if info.name == "" {
-		info.name = strings.ToLower(t.PkgPath() + "." + strings.TrimSuffix(t.Name(), "Controller") + "." + sf.Name)
+		info.name = strings.ToLower(strings.TrimSuffix(t.Name(), "Controller")) + "." + texts.Rename(sf.Name, texts.Lower)
 	}
 	if p == "" {
 		p = "/" + strings.ToLower(sf.Name)
@@ -254,9 +255,20 @@ func (s *Server) register(method, path string, handler HandlerFunc, opts ...Hand
 }
 
 func (s *Server) registerInfo(path string, info *handlerInfo, methods ...string) {
-	err := s.router.Add(path, info, methods...)
-	if err != nil {
-		panic(err)
+	for _, m := range methods {
+		r, err := s.router.Add(m, path, info)
+		if err != nil {
+			panic(err)
+		}
+
+		if info.name == "" {
+			info.name = m + ":" + path
+		}
+		if _, ok := s.routes[info.name]; ok {
+			s.Logger.Warnf("web > A handler with name '%s' already exists", info.name)
+		} else {
+			s.routes[info.name] = r
+		}
 	}
 }
 
@@ -269,33 +281,17 @@ func (s *Server) Group(prefix string, filters ...Filter) (g *Group) {
 
 // URL generates an URL from handler name and provided parameters.
 func (s *Server) URL(name string, params ...interface{}) string {
-	routes := s.getRoutes()
-	if r := routes[name]; r != nil {
+	if r := s.routes[name]; r != nil {
 		return r.URL(params)
 	}
 	return ""
 }
 
 func (s *Server) Handler(name string) (handler HandlerInfo) {
-	routes := s.getRoutes()
-	if r := routes[name]; r != nil {
+	if r := s.routes[name]; r != nil {
 		handler = r.Handler().(*handlerInfo)
 	}
 	return
-}
-
-func (s *Server) getRoutes() map[string]router.Route {
-	// TODO: add locker
-	if s.routes == nil {
-		s.routes = make(map[string]router.Route)
-		s.router.Walk(func(r router.Route, m string) {
-			handler := r.Handler().(*handlerInfo)
-			if handler.name != "" {
-				s.routes[handler.name] = r
-			}
-		})
-	}
-	return s.routes
 }
 
 // AcquireContext returns an `Context` instance from the pool.
