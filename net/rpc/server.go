@@ -36,7 +36,7 @@ type ServerOptions struct {
 	Desc    string `json:"desc" yaml:"desc"`
 	Version string `json:"version" yaml:"version"`
 	//Address     []string
-	Address  []Address
+	Address  []transport.Address
 	Registry struct {
 		Name    string   `json:"name" yaml:"name"`
 		Options data.Map `json:"options" yaml:"options"`
@@ -50,7 +50,7 @@ type ServerOptions struct {
 }
 
 func (so *ServerOptions) AddAddress(uri string, options data.Map) {
-	so.Address = append(so.Address, Address{
+	so.Address = append(so.Address, transport.Address{
 		URL:     uri,
 		Options: options,
 	})
@@ -81,7 +81,7 @@ func NewServer(opts ServerOptions) *Server {
 	return s
 }
 
-func Listen(addrs ...Address) *Server {
+func Listen(addrs ...transport.Address) *Server {
 	opts := ServerOptions{
 		Address: addrs,
 	}
@@ -147,7 +147,7 @@ func (s *Server) Serve() error {
 func (s *Server) initListeners() (err error) {
 	s.listeners = make([]net.Listener, len(s.opts.Address))
 	for i, addr := range s.opts.Address {
-		s.listeners[i], err = transport.Listen(addr.URL, addr.Options)
+		s.listeners[i], err = transport.Listen(addr)
 		if err != nil {
 			break
 		}

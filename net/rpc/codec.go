@@ -105,14 +105,15 @@ type CodecBuilder interface {
 	NewServer(s Stream, opts data.Map) ServerCodec
 }
 
-type Peeker interface {
+type ReadPeeker interface {
+	Read(p []byte) (n int, err error)
 	Peek(n int) ([]byte, error)
 }
 
 // Matcher matches a connection based on it's content.
-type Matcher func(p Peeker) bool
+type Matcher func(p ReadPeeker) bool
 
 // Any is an always matched Matcher.
-func Any(_ Peeker) bool {
+func Any(_ ReadPeeker) bool {
 	return true
 }

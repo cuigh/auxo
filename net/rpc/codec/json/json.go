@@ -125,7 +125,7 @@ func (*ServerCodec) DiscardArgs() error {
 }
 
 // Matcher is a JSON Matcher.
-func Matcher(p rpc.Peeker) bool {
+func Matcher(p rpc.ReadPeeker) bool {
 	b, err := p.Peek(1)
 	return err == nil && b[0] == '{'
 }

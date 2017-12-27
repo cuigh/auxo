@@ -160,7 +160,7 @@ func (c *ServerCodec) DiscardArgs() error {
 }
 
 // Matcher is an HTTP Matcher.
-func Matcher(p rpc.Peeker) bool {
+func Matcher(p rpc.ReadPeeker) bool {
 	b, err := p.Peek(5)
 	if err != nil {
 		return false

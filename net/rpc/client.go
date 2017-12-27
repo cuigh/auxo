@@ -4,17 +4,18 @@ import (
 	ct "context"
 	"encoding/binary"
 	"io"
+	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"strings"
 
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/data/guid"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
+	"github.com/cuigh/auxo/net/rpc/resolver"
 	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/util/retry"
 )
@@ -71,30 +72,16 @@ var (
 	ErrNodeUnavailable = NewError(StatusNodeUnavailable, "rpc: no node is available")
 	// ErrNodeShutdown indicates Node is shut down.
 	ErrNodeShutdown = NewError(StatusNodeShutdown, "rpc: node is shut down")
-
-	//GlobalClientFilters ClientFilters
 )
 
 //type ClientFilters struct {
 //	BeforeDial func(n *Node)
 //	AfterDial  func(n *Node)
-//	BeforeCall []CFilter
-//	AfterCall  []CFilter
 //}
 
 //type DialFilter func(DialHandler) DialHandler
 
 //type DialHandler func(n *Node) error
-
-type Address struct {
-	// URL is the server address on which a connection will be established.
-	URL string
-	// Codec is the codec name of this address.
-	//Codec string
-	// Options is the information associated with Address, which may be used
-	// to make load balancing decision.
-	Options data.Map
-}
 
 type Identifier func() []byte
 
@@ -115,31 +102,20 @@ func GUID() []byte {
 	return guid.New().Slice()
 }
 
-//// CallOption configures a Call before it starts or extracts information from
-//// a Call after it completes.
-//type CallOption interface {
-//	// before is called before the call is sent to any server.  If before
-//	// returns a non-nil error, the RPC fails with that error.
-//	before(*call) error
-//
-//	// after is called after the call has completed.  after cannot return an
-//	// error, so any failures should be reported via output parameters.
-//	after(*call)
-//}
-
 type NodeOptions struct {
 	Codec struct {
 		Name    string
 		Options data.Map
 	}
-	Address Address
+	Address transport.Address
 	//ReadTimeout  time.Duration
 	//WriteTimeout time.Duration
 }
 
 type Node struct {
-	c       *Client
-	opts    NodeOptions
+	c *Client
+	//opts    NodeOptions
+	addr    transport.Address
 	state   nodeState
 	logger  *log.Logger
 	handler CHandler
@@ -150,10 +126,10 @@ type Node struct {
 	codec ClientCodec
 }
 
-func newNode(c *Client, opts NodeOptions) *Node {
+func newNode(c *Client, addr transport.Address) *Node {
 	n := &Node{
 		c:      c,
-		opts:   opts,
+		addr:   addr,
 		logger: log.Get(PkgName),
 		state:  stateIdle,
 	}
@@ -174,18 +150,18 @@ func (n *Node) initialize(ctx ct.Context) error {
 		n.handler = n.c.filters[i](n.handler)
 	}
 
-	cb := codecs[n.opts.Codec.Name]
+	cb := codecs[n.c.opts.Codec.Name]
 	if cb == nil {
-		return NewError(StatusCodecNotRegistered, "rpc: codec '%s' not registered", n.opts.Codec.Name)
+		return NewError(StatusCodecNotRegistered, "rpc: codec '%s' not registered", n.c.opts.Codec.Name)
 	}
 
-	conn, err := transport.Dial(ctx, n.opts.Address.URL, n.opts.Address.Options)
+	conn, err := transport.Dial(ctx, n.addr)
 	if err != nil {
 		return err
 	}
 
 	n.ch = newChannel(conn)
-	n.codec = cb.NewClient(n.ch, n.opts.Codec.Options)
+	n.codec = cb.NewClient(n.ch, n.c.opts.Codec.Options)
 	go n.handle()
 	n.state = stateReady
 	return nil
@@ -303,22 +279,16 @@ type ClientOptions struct {
 	Version string
 	Group   string
 	Fail    FailMode
-	//Address   []string // todo: etcd://, swarm://, tcp://?
-	Address  []Address
-	Balancer string
-	//Balancer struct{
-	//	Name string
-	//	Options data.Map
-	//}
-	Codec struct {
+	Address []transport.Address
+	Codec   struct {
+		Name    string
+		Options data.Map
+	}
+	Balancer struct {
 		Name    string
 		Options data.Map
 	}
 	Resolver struct {
-		Name    string
-		Options data.Map
-	}
-	Registry struct {
 		Name    string
 		Options data.Map
 	}
@@ -328,7 +298,7 @@ type ClientOptions struct {
 }
 
 func (co *ClientOptions) AddAddress(uri string, options data.Map) {
-	co.Address = append(co.Address, Address{
+	co.Address = append(co.Address, transport.Address{
 		URL:     uri,
 		Options: options,
 	})
@@ -338,11 +308,13 @@ type Client struct {
 	opts    ClientOptions
 	logger  *log.Logger
 	id      Identifier
-	nodes   []*Node
-	lb      Balancer
-	fail    FailMode
-	retry   int32
 	filters []CFilter
+
+	lock     sync.Mutex
+	addrs    []transport.Address
+	nodes    []*Node
+	resolver resolver.Resolver
+	lb       Balancer
 }
 
 // NewClient creates Client with options.
@@ -352,24 +324,11 @@ func NewClient(opts ClientOptions) *Client {
 		opts:   opts,
 		id:     Uint64(),
 	}
-	for _, addr := range c.opts.Address {
-		if addr.Options.Get("codec") == "" {
-			addr.Options["codec"] = c.opts.Codec.Name
-		}
-		nodeOpts := NodeOptions{
-			Address: addr,
-			Codec:   opts.Codec,
-		}
-		n := newNode(c, nodeOpts)
-		c.nodes = append(c.nodes, n)
-	}
-	c.initBalancer()
-	c.lb.Update(c.nodes)
 	return c
 }
 
 // Dial creates Client with codec and addrs.
-func Dial(codec string, addrs ...Address) *Client {
+func Dial(codec string, addrs ...transport.Address) *Client {
 	opts := ClientOptions{
 		Address: addrs,
 	}
@@ -382,10 +341,6 @@ func Dial(codec string, addrs ...Address) *Client {
 func AutoClient(name string) (*Client, error) {
 	return manager.Get(name)
 }
-
-//func (c *Client) notify(addrs []*Address) {
-//
-//}
 
 func (c *Client) Use(filter ...CFilter) {
 	c.filters = append(c.filters, filter...)
@@ -404,16 +359,16 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 	}
 
 	err = n.Call(ctx, service, method, args, reply)
-	if err == nil || c.fail == FailFast || StatusOf(err) > 100 {
+	if err == nil || c.opts.Fail == FailFast || StatusOf(err) > 100 {
 		return err
 	}
 
-	if c.fail == FailTry {
+	if c.opts.Fail == FailTry {
 		// todo: allow customizing retry count
 		return retry.Do(2, nil, func() error {
 			return n.Call(ctx, service, method, args, reply)
 		})
-	} else if c.fail == FailOver {
+	} else if c.opts.Fail == FailOver {
 		for _, n := range c.nodes {
 			err = n.Call(ctx, service, method, args, reply)
 			if err == nil || StatusOf(err) > 100 {
@@ -425,6 +380,18 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 }
 
 func (c *Client) getNode() (n *Node, err error) {
+	if len(c.nodes) == 0 {
+		c.lock.Lock()
+		defer c.lock.Unlock()
+
+		if len(c.nodes) == 0 {
+			err = c.init()
+			if err != nil {
+				return
+			}
+		}
+	}
+
 	n, err = c.lb.Next()
 	if err != nil {
 		return
@@ -446,15 +413,123 @@ func (c *Client) Close() {
 	for _, n := range c.nodes {
 		n.Close()
 	}
+	c.nodes = nil
+
+	if c.resolver != nil {
+		c.resolver.Close()
+		c.resolver = nil
+	}
+}
+
+func (c *Client) init() error {
+	if c.lb == nil {
+		c.initBalancer()
+	}
+
+	if c.resolver == nil {
+		err := c.initResolver()
+		if err != nil {
+			return err
+		}
+		c.resolver.Watch(c.notify)
+	}
+
+	addrs, err := c.resolver.Resolve()
+	if err != nil {
+		return err
+	}
+	if len(addrs) == 0 {
+		return ErrNodeUnavailable
+	}
+
+	c.updateNodes(addrs)
+	return nil
 }
 
 func (c *Client) initBalancer() {
-	b := GetBalancer(c.opts.Balancer)
+	b := GetBalancer(c.opts.Balancer.Name)
 	if b == nil {
 		c.logger.Warn("client > use default balancer: random")
 		b = GetBalancer("random")
 	}
-	c.lb = b.Build(data.Map{})
+	c.lb = b.Build(c.opts.Balancer.Options)
+}
+
+func (c *Client) initResolver() error {
+	name := c.opts.Resolver.Name
+	if name == "" || name == "direct" {
+		c.resolver = resolver.Direct(c.opts.Address...)
+		return nil
+	}
+
+	if b := resolver.Get(name); b != nil {
+		c.resolver = b.Build(resolver.Client{
+			Server:  c.opts.Name,
+			Version: c.opts.Version,
+			Group:   c.opts.Group,
+		}, c.opts.Resolver.Options)
+		return nil
+	}
+	return errors.Format("rpc: unknown resolver '%s'", name)
+}
+
+func (c *Client) notify(addrs []transport.Address) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// prevent dropping all nodes
+	if len(addrs) == 0 {
+		return
+	}
+
+	var updated bool
+	if len(addrs) == len(c.addrs) {
+		sort.Slice(addrs, func(i, j int) bool { return addrs[i].URL < addrs[j].URL })
+		for i, addr := range c.addrs {
+			if addrs[i].URL != addr.URL {
+				updated = true
+				break
+			}
+		}
+	} else {
+		updated = true
+	}
+
+	if updated {
+		c.updateNodes(addrs)
+	}
+}
+
+func (c *Client) updateNodes(addrs []transport.Address) {
+	addrMap := make(map[string]*transport.Address)
+	for _, addr := range addrs {
+		addrMap[addr.URL] = &addr
+	}
+
+	var nodes, invalid []*Node
+	// keep the nodes still valid
+	for _, n := range c.nodes {
+		u := n.addr.URL
+		if addr, ok := addrMap[u]; ok {
+			n.addr.Options = addr.Options
+			nodes = append(nodes, n)
+			delete(addrMap, u)
+		} else {
+			invalid = append(invalid, n)
+		}
+	}
+	// add new nodes
+	for _, addr := range addrMap {
+		nodes = append(nodes, newNode(c, *addr))
+	}
+	c.addrs = addrs
+	c.nodes = nodes
+	c.lb.Update(nodes)
+
+	// close all invalid nodes
+	for _, n := range invalid {
+		n.Close()
+	}
 }
 
 type clientManager struct {

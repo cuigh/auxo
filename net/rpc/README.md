@@ -24,7 +24,7 @@ func (TestService) Hello(ctx context.Context, name string) string {
 }
 
 func main() {
-	s := rpc.Listen(rpc.Address{URL: ":9000"})
+	s := rpc.Listen(transport.Address{URL: ":9000"})
 	s.Match(json.Matcher, "json")
 	//s.Match(jsoniter.Matcher, "json")
 	//s.Match(proto.Matcher, "proto")
@@ -40,7 +40,7 @@ func main() {
 ## Client
 
 ```go
-c := rpc.Dial("json", rpc.Address{URL: "127.0.0.1:9000"})
+c := rpc.Dial("json", transport.Address{URL: "127.0.0.1:9000"})
 
 var s string
 err := c.Call(context.Background(), "Test", "Hello", []interface{}{"auxo"}, &s)

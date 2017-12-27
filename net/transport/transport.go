@@ -17,21 +17,26 @@ var (
 	//ErrUnknownSchema = errors.New("transport: unknown schema")
 )
 
+type Address struct {
+	URL     string   `json:"url"` // http://10.10.30.1, tcp://10.10.30.1, tls://10.10.30.1, quic://10.10.30.1, ss://10.10.30.1
+	Options data.Map `json:"options"`
+}
+
 type Dialer interface {
-	Dial(ctx context.Context, addr string, opts data.Map) (net.Conn, error)
+	Dial(ctx context.Context, host string, opts data.Map) (net.Conn, error)
 }
 
 func RegisterDialer(schema string, dialer Dialer) {
 	dialers[schema] = dialer
 }
 
-func Dial(ctx context.Context, uri string, opts data.Map) (net.Conn, error) {
-	schema, addr := parseAddr(uri)
+func Dial(ctx context.Context, addr Address) (net.Conn, error) {
+	schema, host := parseURI(addr.URL)
 	dialer := dialers[schema]
 	if dialer == nil {
 		dialer = &simpleDialer{network: schema}
 	}
-	return dialer.Dial(ctx, addr, opts)
+	return dialer.Dial(ctx, host, addr.Options)
 }
 
 type Listener interface {
@@ -42,13 +47,13 @@ func RegisterListener(schema string, listener Listener) {
 	listeners[schema] = listener
 }
 
-func Listen(uri string, opts data.Map) (net.Listener, error) {
-	schema, addr := parseAddr(uri)
+func Listen(addr Address) (net.Listener, error) {
+	schema, host := parseURI(addr.URL)
 	listener := listeners[schema]
 	if listener == nil {
 		listener = &simpleListener{network: schema}
 	}
-	return listener.Listen(addr, opts)
+	return listener.Listen(host, addr.Options)
 }
 
 // simpleDialer dials to addr with net.Dialer. It returns a tls.Conn if TLS cert & key is configured.
@@ -97,12 +102,12 @@ func (l *simpleListener) Listen(addr string, opts data.Map) (net.Listener, error
 	return ln, err
 }
 
-func parseAddr(uri string) (schema, addr string) {
+func parseURI(uri string) (schema, host string) {
 	parts := strings.SplitN(uri, "://", 2)
 	if len(parts) == 1 {
-		schema, addr = "tcp", uri
+		schema, host = "tcp", uri
 	} else {
-		schema, addr = parts[0], parts[1]
+		schema, host = parts[0], parts[1]
 	}
 	return
 }
