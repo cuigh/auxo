@@ -15,7 +15,7 @@ const (
 	// StatusOK is returned on success.
 	StatusOK StatusCode = 0
 
-	// StatusUnknown error.  An example of where this error may be returned is
+	// StatusUnknown indicates an unknown error. An example of where this error may be returned is
 	// if a Status value received from another address space belongs to
 	// an error-space that is not known in this address space.  Also
 	// errors raised by APIs that do not return enough error information
@@ -32,26 +32,26 @@ const (
 	// long enough for the deadline to expire.
 	StatusDeadlineExceeded StatusCode = 3
 
+	// StatusNodeUnavailable indicates no node is available for call.
+	StatusNodeUnavailable StatusCode = 4
+
+	// StatusNodeShutdown indicates Node is shut down.
+	StatusNodeShutdown StatusCode = 5
+
+	// StatusCodecNotRegistered indicates codec is not registered.
+	StatusCodecNotRegistered StatusCode = 6
+
+	// StatusServerClosed indicates server is closed.
+	StatusServerClosed StatusCode = 7
+
+	// StatusMethodNotFound indicates calling method is unregistered on server.
+	StatusMethodNotFound StatusCode = 8
+
 	// StatusInvalidArgument indicates client specified an invalid argument.
 	// Note that this differs from FailedPrecondition. It indicates arguments
 	// that are problematic regardless of the state of the system
 	// (e.g., a malformed file name).
-	StatusInvalidArgument StatusCode = 4
-
-	// StatusNodeUnavailable indicates no node is available for call.
-	StatusNodeUnavailable StatusCode = 5
-
-	// StatusNodeShutdown indicates Node is shut down.
-	StatusNodeShutdown StatusCode = 6
-
-	// StatusCodecNotRegistered indicates codec is not registered.
-	StatusCodecNotRegistered StatusCode = 7
-
-	// StatusServerClosed indicates server is closed.
-	StatusServerClosed StatusCode = 8
-
-	// StatusMethodNotFound indicates calling method is unregistered on server.
-	StatusMethodNotFound StatusCode = 9
+	StatusInvalidArgument StatusCode = 9
 
 	// StatusUnauthorized indicates client is unauthorized.
 	StatusUnauthorized StatusCode = 10

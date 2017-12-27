@@ -380,11 +380,11 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 }
 
 func (c *Client) getNode() (n *Node, err error) {
-	if len(c.nodes) == 0 {
+	if c.nodes == nil {
 		c.lock.Lock()
 		defer c.lock.Unlock()
 
-		if len(c.nodes) == 0 {
+		if c.nodes == nil {
 			err = c.init()
 			if err != nil {
 				return
@@ -447,10 +447,15 @@ func (c *Client) init() error {
 }
 
 func (c *Client) initBalancer() {
-	b := GetBalancer(c.opts.Balancer.Name)
-	if b == nil {
-		c.logger.Warn("client > use default balancer: random")
+	var b BalancerBuilder
+	if c.opts.Balancer.Name == "" {
 		b = GetBalancer("random")
+	} else {
+		b = GetBalancer(c.opts.Balancer.Name)
+		if b == nil {
+			b = GetBalancer("random")
+			c.logger.Warn("rpc > unknown balancer '%s', use 'random' instead", c.opts.Balancer.Name)
+		}
 	}
 	c.lb = b.Build(c.opts.Balancer.Options)
 }
