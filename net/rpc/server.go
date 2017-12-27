@@ -12,6 +12,7 @@ import (
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/times"
 	"github.com/cuigh/auxo/log"
+	"github.com/cuigh/auxo/net/rpc/registry"
 	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/util/debug"
 )
@@ -32,20 +33,19 @@ type Stats struct {
 }
 
 type ServerOptions struct {
-	Name    string `json:"name" yaml:"name"`
-	Desc    string `json:"desc" yaml:"desc"`
-	Version string `json:"version" yaml:"version"`
-	//Address     []string
+	Name     string `json:"name" yaml:"name"`
+	Desc     string `json:"desc" yaml:"desc"`
+	Version  string `json:"version" yaml:"version"`
 	Address  []transport.Address
 	Registry struct {
 		Name    string   `json:"name" yaml:"name"`
 		Options data.Map `json:"options" yaml:"options"`
 	} `json:"registry" yaml:"registry"`
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
+	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 	Heartbeat    time.Duration `json:"heartbeat" yaml:"heartbeat"`
 	Concurrency  int32
-	MaxClients   int32
+	MaxClients   int32 `json:"max_clients" yaml:"max_clients"`
 	MaxJobs      int32
 }
 
@@ -60,6 +60,7 @@ type Server struct {
 	opts      ServerOptions
 	logger    *log.Logger
 	matchers  []matchInfo
+	registry  registry.Registry
 	ctxPool   *contextPool
 	filters   []SFilter
 	listeners []net.Listener
@@ -108,6 +109,30 @@ func (s *Server) Sessions() SessionMap {
 	return s.sessions
 }
 
+func (s *Server) initRegistry() {
+	if s.opts.Registry.Name == "" {
+		return
+	}
+
+	if b := registry.Get(s.opts.Registry.Name); b != nil {
+		s.registry = b.Build(registry.Server{
+			Name:      s.opts.Name,
+			Version:   s.opts.Version,
+			Addresses: s.opts.Address,
+			Options: func() data.Map {
+				return data.Map{
+					"desc":        s.opts.Desc,
+					"max_clients": s.opts.MaxClients,
+					"clients":     s.sessions.Count(),
+				}
+			},
+		}, s.opts.Registry.Options)
+		s.registry.Register()
+		return
+	}
+	s.logger.Warnf("rpc > Unknown registry '%v'", s.opts.Registry.Name)
+}
+
 // todo
 //func (s *Server) ErrorHandler()  {
 //}
@@ -134,6 +159,8 @@ func (s *Server) Serve() error {
 			errs <- s.serve(l)
 		}(l)
 	}
+
+	s.initRegistry()
 
 	err = <-errs
 	if err != ErrServerClosed {
@@ -166,6 +193,11 @@ func (s *Server) initListeners() (err error) {
 func (s *Server) Close(timeout time.Duration) {
 	if !atomic.CompareAndSwapInt32(&s.listening, 1, 0) {
 		return
+	}
+
+	if s.registry != nil {
+		s.registry.Close()
+		s.registry = nil
 	}
 
 	for _, l := range s.listeners {
@@ -444,6 +476,13 @@ func (m *sessionMap) Close() {
 		c.Close()
 	}
 	m.lock.Unlock()
+}
+
+func (m *sessionMap) Count() int {
+	m.lock.RLock()
+	c := len(m.channels)
+	m.lock.RUnlock()
+	return c
 }
 
 func (m *sessionMap) Range(fn func(s Session) bool) {
