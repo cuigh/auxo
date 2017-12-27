@@ -206,7 +206,7 @@ func (t *Tracer) StartServer(operation string, format, carrier interface{}) open
 // If there was simply no SpanContext to extract or errors occurred, Extract() returns nil.
 func (t *Tracer) Extract(format, carrier interface{}) opentracing.SpanContext {
 	sc, err := t.Tracer.Extract(format, carrier)
-	if err != nil {
+	if err != nil && err != opentracing.ErrSpanContextNotFound {
 		t.logger.Debug("trace > ", err)
 	}
 	return sc
