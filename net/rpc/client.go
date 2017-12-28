@@ -292,16 +292,36 @@ type ClientOptions struct {
 		Name    string
 		Options data.Map
 	}
+	Channels     int
 	DialTimeout  time.Duration
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 }
 
-func (co *ClientOptions) AddAddress(uri string, options data.Map) {
-	co.Address = append(co.Address, transport.Address{
+func (opts *ClientOptions) AddAddress(uri string, options data.Map) {
+	opts.Address = append(opts.Address, transport.Address{
 		URL:     uri,
 		Options: options,
 	})
+}
+
+func (opts *ClientOptions) ensure() error {
+	if opts.Codec.Name == "" {
+		return errors.New("rpc: codec must be set for client")
+	}
+	if opts.Channels <= 0 {
+		opts.Channels = 1
+	}
+	if opts.DialTimeout <= 0 {
+		opts.DialTimeout = 10 * time.Second
+	}
+	if opts.ReadTimeout <= 0 {
+		opts.ReadTimeout = 10 * time.Second
+	}
+	if opts.WriteTimeout <= 0 {
+		opts.WriteTimeout = 10 * time.Second
+	}
+	return nil
 }
 
 type Client struct {
@@ -318,17 +338,21 @@ type Client struct {
 }
 
 // NewClient creates Client with options.
-func NewClient(opts ClientOptions) *Client {
-	c := &Client{
+func NewClient(opts ClientOptions) (*Client, error) {
+	err := opts.ensure()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{
 		logger: log.Get(PkgName),
 		opts:   opts,
 		id:     Uint64(),
-	}
-	return c
+	}, nil
 }
 
 // Dial creates Client with codec and addrs.
-func Dial(codec string, addrs ...transport.Address) *Client {
+func Dial(codec string, addrs ...transport.Address) (*Client, error) {
 	opts := ClientOptions{
 		Address: addrs,
 	}
@@ -518,14 +542,18 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 		if addr, ok := addrMap[u]; ok {
 			n.addr.Options = addr.Options
 			nodes = append(nodes, n)
-			delete(addrMap, u)
+			addrMap[u] = nil
 		} else {
 			invalid = append(invalid, n)
 		}
 	}
 	// add new nodes
 	for _, addr := range addrMap {
-		nodes = append(nodes, newNode(c, *addr))
+		if addr != nil {
+			for i := 0; i < c.opts.Channels; i++ {
+				nodes = append(nodes, newNode(c, *addr))
+			}
+		}
 	}
 	c.addrs = addrs
 	c.nodes = nodes
@@ -584,5 +612,5 @@ func (m *clientManager) create(name string) (c *Client, err error) {
 		return nil, err
 	}
 	opts.Name = name
-	return NewClient(opts), nil
+	return NewClient(opts)
 }

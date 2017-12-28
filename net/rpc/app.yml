@@ -21,10 +21,10 @@ rpc:
         name: etcd2
         options:
           address: 127.0.0.1:2379
+      channels: 4
       dial_timeout: 10s
       read_timeout: 10s
       write_timeout: 10s
-      channels: 4
   server:
     test:
       desc: "test service"
@@ -46,5 +46,4 @@ rpc:
       read_timeout: 10s
       write_timeout: 10s
       max_clients: 1000
-      max_jobs: 10000
-#      max_requests: 10000
+      max_requests: 10000
