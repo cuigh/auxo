@@ -27,8 +27,10 @@ var (
 
 var (
 	// Timeout is the amount of time allowed to wait graceful shutdown.
-	Timeout     = time.Second * 30
-	closeEvents []func()
+	Timeout = time.Second * 30
+
+	initializers []func() error
+	closers      []func()
 )
 
 type (
@@ -84,11 +86,6 @@ func RunFunc(runner ServeFunc, closer CloseFunc, signals ...os.Signal) {
 
 	sig := <-stop // wait for signals
 	logger.Info("app > Received signal: ", sig.String())
-
-	for _, fn := range closeEvents {
-		fn()
-	}
-
 	logger.Info("app > Exiting program...")
 	if closer != nil {
 		closer(Timeout)
@@ -96,10 +93,17 @@ func RunFunc(runner ServeFunc, closer CloseFunc, signals ...os.Signal) {
 	logger.Info("app > Program exited")
 }
 
+// OnInit register an initializer which execute on app start. If fn return an error, the app will panic.
+func OnInit(fn func() error) {
+	if fn != nil {
+		initializers = append(initializers, fn)
+	}
+}
+
 // OnClose subscribes close events
 func OnClose(fn func()) {
 	if fn != nil {
-		closeEvents = append(closeEvents, fn)
+		closers = append(closers, fn)
 	}
 }
 
@@ -131,9 +135,23 @@ func Start() {
 		cmd.Flags.Parse(args[i:])
 		config.BindFlags(cmd.Flags.Inner())
 	}
+
+	// trigger initializers
+	for _, fn := range initializers {
+		if err := fn(); err != nil {
+			panic(err)
+		}
+	}
+	defer func() {
+		// trigger closers
+		for _, fn := range closers {
+			fn()
+		}
+	}()
+
+	ctx := &Context{cmd: cmd}
+	handleCommonFlags(ctx)
 	if cmd.Action != nil {
-		ctx := &Context{cmd: cmd}
-		handleCommonFlags(ctx)
 		cmd.Action(ctx)
 	}
 }
