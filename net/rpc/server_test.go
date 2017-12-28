@@ -7,11 +7,12 @@ import (
 
 	"github.com/cuigh/auxo/net/rpc"
 	_ "github.com/cuigh/auxo/net/rpc/codec/json"
+	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/test/assert"
 )
 
 func TestServer_Match(t *testing.T) {
-	s := rpc.Listen(rpc.Address{URL: ":9000"})
+	s := rpc.Listen(transport.Address{URL: ":9000"})
 	s.Match(rpc.Any, "json")
 	//s.Use(filter.Test())
 	hs := HelloService{

@@ -44,13 +44,32 @@ type ServerOptions struct {
 	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 	Heartbeat    time.Duration `json:"heartbeat" yaml:"heartbeat"`
+	MaxClients   int32         `json:"max_clients" yaml:"max_clients"`
 	Concurrency  int32
-	MaxClients   int32 `json:"max_clients" yaml:"max_clients"`
-	MaxJobs      int32
+	MaxRequests  int32
 }
 
-func (so *ServerOptions) AddAddress(uri string, options data.Map) {
-	so.Address = append(so.Address, transport.Address{
+func (opts *ServerOptions) ensure() error {
+	if len(opts.Address) == 0 {
+		return errors.New("rpc: address must be set for server")
+	}
+	if opts.MaxClients <= 0 {
+		opts.MaxClients = 1000
+	}
+	if opts.MaxRequests <= 0 {
+		opts.MaxRequests = 10000
+	}
+	if opts.ReadTimeout <= 0 {
+		opts.ReadTimeout = 10 * time.Second
+	}
+	if opts.WriteTimeout <= 0 {
+		opts.WriteTimeout = 10 * time.Second
+	}
+	return nil
+}
+
+func (opts *ServerOptions) AddAddress(uri string, options data.Map) {
+	opts.Address = append(opts.Address, transport.Address{
 		URL:     uri,
 		Options: options,
 	})
@@ -71,7 +90,12 @@ type Server struct {
 	listening int32
 }
 
-func NewServer(opts ServerOptions) *Server {
+func NewServer(opts ServerOptions) (*Server, error) {
+	err := opts.ensure()
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Server{
 		logger:   log.Get(PkgName),
 		opts:     opts,
@@ -79,10 +103,10 @@ func NewServer(opts ServerOptions) *Server {
 		actions:  newActionSet(),
 	}
 	s.ctxPool = newContextPool(s)
-	return s
+	return s, nil
 }
 
-func Listen(addrs ...transport.Address) *Server {
+func Listen(addrs ...transport.Address) (*Server, error) {
 	opts := ServerOptions{
 		Address: addrs,
 	}
@@ -102,7 +126,7 @@ func AutoServer(name string) (*Server, error) {
 		return nil, err
 	}
 	opts.Name = name
-	return NewServer(opts), nil
+	return NewServer(opts)
 }
 
 func (s *Server) Sessions() SessionMap {
@@ -251,6 +275,8 @@ func (s *Server) serve(l net.Listener) (err error) {
 			}
 			break
 		}
+
+		// todo: close connection when reach max clients
 
 		ch := newChannel(conn)
 		c := s.findCodec(ch)
