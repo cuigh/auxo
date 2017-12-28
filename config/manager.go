@@ -299,7 +299,9 @@ func (m *Manager) Get(key string) interface{} {
 	if m.flags != nil {
 		f := m.flags.Lookup(key)
 		if f != nil {
-			return f.Value.String()
+			if v := f.Value.String(); v != "" {
+				return v
+			}
 		}
 	}
 

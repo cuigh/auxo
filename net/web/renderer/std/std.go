@@ -115,7 +115,7 @@ func (r *Renderer) compile() (*template.Template, error) {
 
 				name := rel[0 : len(rel)-len(ext)]
 				// fmt.Println("name: ", filepath.ToSlash(name))
-				tpl := r.tree.New(filepath.ToSlash(name))
+				tpl := tree.New(filepath.ToSlash(name))
 				tpl.Funcs(r.funcs)
 
 				// Break out if this parsing fails. We don't want any silent server starts.
