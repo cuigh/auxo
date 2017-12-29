@@ -158,7 +158,7 @@ func Start() {
 
 func handleCommonFlags(ctx *Context) {
 	if ctx.Help() {
-		ctx.cmd.Flags.Usage()
+		ctx.Usage()
 		os.Exit(0)
 	}
 

@@ -28,6 +28,16 @@ const (
 	All = Help | Version | Profile | Config
 )
 
+// UsageStyle defines the usage style.
+type UsageStyle int32
+
+const (
+	// Compact: left-right style
+	Compact UsageStyle = iota
+	// Manual: up-down style
+	Manual
+)
+
 var Default = Wrap(flag.CommandLine, "")
 
 // Register adds common flags like help/version/profile/config etc.
@@ -118,6 +128,7 @@ type Set struct {
 	Desc  string
 	flags []*Flag
 	inner *flag.FlagSet
+	style UsageStyle
 }
 
 func NewSet(name, desc string, errorHandling ErrorHandling) *Set {
@@ -128,6 +139,7 @@ func Wrap(fs *flag.FlagSet, desc string) *Set {
 	f := &Set{
 		Desc:  desc,
 		inner: fs,
+		style: Compact,
 	}
 	f.inner.Usage = f.Usage
 	return f
@@ -264,17 +276,21 @@ func (s *Set) DurationVar(p *time.Duration, full, short string, value time.Durat
 // Register adds common flags like help/version/profile/config etc.
 func (s *Set) Register(f CommonFlag) {
 	if f&Help > 0 {
-		s.Bool("help", "h", false, "show help")
+		s.Bool("help", "h", false, "Show help")
 	}
 	if f&Version > 0 {
-		s.Bool("version", "v", false, "print version info")
+		s.Bool("version", "v", false, "Print version information")
 	}
 	if f&Profile > 0 {
-		s.String("profile", "p", "", "set active profiles")
+		s.String("profile", "p", "", "Set active profiles")
 	}
 	if f&Config > 0 {
-		s.String("config", "c", "", "set configuration directory")
+		s.String("config", "c", "", "Set configuration directory")
 	}
+}
+
+func (s *Set) SetUsageStyle(style UsageStyle) {
+	s.style = style
 }
 
 func (s *Set) addFlag(full, short string, value interface{}, usage string) {
@@ -331,10 +347,14 @@ func (s *Set) Usage() {
 			fmt.Printf("[=%v]", v)
 		}
 
-		fmt.Println()
-		fmt.Println("     ", f.Usage)
-		if i != len(s.flags)-1 {
+		if s.style == Compact {
+			fmt.Println("\r\t\t\t\t" + f.Usage)
+		} else if s.style == Manual {
 			fmt.Println()
+			fmt.Println("     ", f.Usage)
+			if i != len(s.flags)-1 {
+				fmt.Println()
+			}
 		}
 	}
 }

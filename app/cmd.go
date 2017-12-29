@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/cuigh/auxo/app/flag"
@@ -62,6 +63,12 @@ func (c *Context) Args() []string {
 // Usage prints usage to os.Stdout.
 func (c *Context) Usage() {
 	c.cmd.Flags.Usage()
+	if len(c.cmd.children) > 0 {
+		fmt.Print("\nCommands:\n\n")
+		for name, child := range c.cmd.children {
+			fmt.Println("  " + name + "\r\t\t" + child.Desc)
+		}
+	}
 }
 
 // Config returns the help argument.
