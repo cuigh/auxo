@@ -1,102 +1,144 @@
 package std
 
 import (
+	"errors"
 	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
+	"github.com/cuigh/auxo/app"
+	"github.com/cuigh/auxo/ext/files"
 	"github.com/cuigh/auxo/net/web"
 )
 
-type Renderer struct {
-	dir        string
-	extensions []string
-	debug      bool
-	tree       *template.Template
-	funcs      template.FuncMap
-	locker     sync.Locker
+type Options struct {
+	debug bool
+	dir   string
+	exts  []string
+	fm    template.FuncMap
 }
 
-func New(dir string) (r *Renderer, err error) {
-	r = &Renderer{
-		dir:        dir,
-		extensions: []string{".html", ".gohtml"},
+func (opts *Options) ensure() error {
+	if opts.dir == "" {
+		d := filepath.Dir(app.Path())
+		p := filepath.Join(d, "views")
+		if files.Exist(p) {
+			opts.dir = p
+		} else {
+			p = filepath.Join(d, "resources/views")
+			if files.Exist(p) {
+				opts.dir = p
+			}
+		}
 	}
-	r.tree, err = r.compile()
+	if opts.dir == "" {
+		return errors.New("std: can't locate templates directory")
+	}
+	if len(opts.exts) == 0 {
+		opts.exts = []string{".html", ".gohtml"}
+	}
+	return nil
+}
+
+type Option func(opts *Options)
+
+func Dir(dir string) Option {
+	return func(opts *Options) {
+		opts.dir = dir
+	}
+}
+
+func Ext(ext ...string) Option {
+	return func(opts *Options) {
+		opts.exts = ext
+	}
+}
+
+func Debug(b ...bool) Option {
+	return func(opts *Options) {
+		opts.debug = len(b) == 0 || b[0]
+	}
+}
+
+func Func(name string, fn interface{}) Option {
+	return func(opts *Options) {
+		opts.fm[name] = fn
+	}
+}
+
+func FuncMap(m map[string]interface{}) Option {
+	return func(opts *Options) {
+		for k, v := range m {
+			opts.fm[k] = v
+		}
+	}
+}
+
+type Renderer struct {
+	opts *Options
+	t    *template.Template
+}
+
+func New(opts ...Option) (r *Renderer, err error) {
+	options := &Options{
+		fm: make(template.FuncMap),
+	}
+	for _, opt := range opts {
+		opt(options)
+	}
+	err = options.ensure()
 	if err != nil {
-		return nil, err
+		return
+	}
+
+	r = &Renderer{
+		opts: options,
+	}
+	if !r.opts.debug {
+		r.t, err = r.compile()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return r, nil
 }
 
-func Must(dir string) *Renderer {
-	r, err := New(dir)
+func Must(opts ...Option) *Renderer {
+	r, err := New(opts...)
 	if err != nil {
 		panic(err)
 	}
 	return r
 }
 
-func (r *Renderer) SetDebug(b bool) *Renderer {
-	r.debug = b
-	return r
-}
-
-func (r *Renderer) SetExtensions(ext ...string) *Renderer {
-	if len(ext) == 0 {
-		ext = []string{".html", ".gohtml"}
-	}
-	r.extensions = ext
-	return r
-}
-
-func (r *Renderer) AddFunc(name string, fn interface{}) *Renderer {
-	r.funcs[name] = fn
-	return r
-}
-
-func (r *Renderer) Render(w io.Writer, name string, data interface{}, ctx web.Context) error {
-	// on debug mode, always recompile templates
-	if r.debug {
-		tree, err := r.compile()
+func (r *Renderer) Render(w io.Writer, name string, data interface{}, ctx web.Context) (err error) {
+	var t *template.Template
+	if r.opts.debug {
+		// on debug mode, always recompile templates
+		t, err = r.compile()
 		if err != nil {
-			return err
+			return
 		}
-		return tree.ExecuteTemplate(w, name, data)
+	} else {
+		t = r.t
 	}
-
-	if r.tree != nil {
-		return r.tree.ExecuteTemplate(w, name, data)
-	}
-
-	r.locker.Lock()
-	defer r.locker.Unlock()
-
-	if r.tree == nil {
-		tree, err := r.compile()
-		if err != nil {
-			return err
-		}
-		r.tree = tree
-	}
-	return r.tree.ExecuteTemplate(w, name, data)
+	return t.ExecuteTemplate(w, name, data)
 }
 
 func (r *Renderer) compile() (*template.Template, error) {
-	tree := template.New(r.dir)
+	t := template.New(r.opts.dir)
 	// Walk the supplied directory and compile any files that match our extension list.
-	if err := filepath.Walk(r.dir, func(path string, info os.FileInfo, err error) error {
+	if err := filepath.Walk(r.opts.dir, func(path string, info os.FileInfo, err error) error {
 		// fmt.Println("path: ", path)
 		// if is a dir, return immediately.(dir is not a valid golang template)
 		if info == nil || info.IsDir() {
 			return nil
 		}
 
-		rel, err := filepath.Rel(r.dir, path)
+		rel, err := filepath.Rel(r.opts.dir, path)
 		if err != nil {
 			return err
 		}
@@ -106,8 +148,8 @@ func (r *Renderer) compile() (*template.Template, error) {
 			ext = filepath.Ext(rel)
 		}
 
-		for _, extension := range r.extensions {
-			if ext == extension {
+		for _, e := range r.opts.exts {
+			if ext == e {
 				buf, err := ioutil.ReadFile(path)
 				if err != nil {
 					panic(err)
@@ -115,8 +157,8 @@ func (r *Renderer) compile() (*template.Template, error) {
 
 				name := rel[0 : len(rel)-len(ext)]
 				// fmt.Println("name: ", filepath.ToSlash(name))
-				tpl := tree.New(filepath.ToSlash(name))
-				tpl.Funcs(r.funcs)
+				tpl := t.New(filepath.ToSlash(name))
+				tpl.Funcs(r.opts.fm)
 
 				// Break out if this parsing fails. We don't want any silent server starts.
 				template.Must(tpl.Parse(string(buf)))
@@ -127,5 +169,5 @@ func (r *Renderer) compile() (*template.Template, error) {
 	}); err != nil {
 		return nil, err
 	}
-	return tree, nil
+	return t, nil
 }

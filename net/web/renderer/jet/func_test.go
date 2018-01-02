@@ -23,7 +23,7 @@ func TestEqual(t *testing.T) {
 	}
 
 	set := jet.NewHTMLSet()
-	set.AddGlobalFunc("eq", Equal)
+	set.AddGlobalFunc("eq", equal)
 
 	tpl, err := set.LoadTemplate("test", `{{ if eq(.X, .Y) }}true{{ else }}false{{ end }}`)
 	assert.NoError(t, err)

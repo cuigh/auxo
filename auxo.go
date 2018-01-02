@@ -9,5 +9,5 @@ const (
  /  _____  \ |  '--'  |  /  .  \  |  '--'  |
 /__/     \__\ \______/  /__/ \__\  \______/  `
 	// Version is the version of auxo.
-	Version = "0.6.2"
+	Version = "0.6.3"
 )

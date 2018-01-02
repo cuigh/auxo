@@ -13,93 +13,101 @@ import (
 	"github.com/cuigh/auxo/net/web/renderer"
 )
 
-//var VariableKey = "$jet$"
-
 type Renderer struct {
-	set   *jet.Set
-	trans jet.Translator
+	set *jet.Set
 }
 
 type Options struct {
-	Debug bool
+	debug bool
+	dirs  []string
+	vars  map[string]interface{}
 }
 
-func New(dir ...string) *Renderer {
-	if len(dir) == 0 {
+func (opts *Options) ensure() error {
+	if len(opts.dirs) == 0 {
 		d := filepath.Dir(app.Path())
 		p := filepath.Join(d, "views")
 		if files.Exist(p) {
-			dir = append(dir, p)
+			opts.dirs = append(opts.dirs, p)
 		} else {
 			p = filepath.Join(d, "resources/views")
 			if files.Exist(p) {
-				dir = append(dir, p)
+				opts.dirs = append(opts.dirs, p)
 			}
 		}
 	}
-	if len(dir) == 0 {
-		panic(errors.New("jet: templates directory is missing."))
+	if len(opts.dirs) == 0 {
+		return errors.New("jet: can't locate templates directory")
+	}
+	return nil
+}
+
+type Option func(opts *Options)
+
+func Dir(dir ...string) Option {
+	return func(opts *Options) {
+		opts.dirs = append(opts.dirs, dir...)
+	}
+}
+
+func Debug(b ...bool) Option {
+	return func(opts *Options) {
+		opts.debug = len(b) == 0 || b[0]
+	}
+}
+
+func Var(name string, value interface{}) Option {
+	return func(opts *Options) {
+		opts.vars[name] = value
+	}
+}
+
+func VarMap(m map[string]interface{}) Option {
+	return func(opts *Options) {
+		for k, v := range m {
+			opts.vars[k] = v
+		}
+	}
+}
+
+func New(opts ...Option) (*Renderer, error) {
+	options := Options{
+		vars: make(map[string]interface{}),
+	}
+	for _, opt := range opts {
+		opt(&options)
+	}
+	err := options.ensure()
+	if err != nil {
+		return nil, err
 	}
 
-	r := &Renderer{
-		set: jet.NewHTMLSet(dir...),
-	}
+	set := jet.NewHTMLSet(options.dirs...)
+	set.SetDevelopmentMode(options.debug)
 	// Add common functions
-	r.set.AddGlobalFunc("eq", equal)
-	r.set.AddGlobalFunc("or", or)
-	r.AddFunc("printf", fmt.Sprintf)
-	r.AddFunc("limit", renderer.Limit)
-	r.AddFunc("slice", renderer.Slice)
+	set.AddGlobalFunc("eq", equal)
+	set.AddGlobalFunc("or", or)
+	set.AddGlobal("printf", fmt.Sprintf)
+	set.AddGlobal("limit", renderer.Limit)
+	set.AddGlobal("slice", renderer.Slice)
+	for k, v := range options.vars {
+		set.AddGlobal(k, v)
+	}
+	return &Renderer{set: set}, nil
+}
+
+func Must(opts ...Option) *Renderer {
+	r, err := New(opts...)
+	if err != nil {
+		panic(err)
+	}
 	return r
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, ctx web.Context) error {
 	tpl, err := r.set.GetTemplate(name)
 	if err == nil {
-		//var variables = ctx.Get(VariableKey)
-		//trans := ctx.Get("$translator")
-		//err = tpl.ExecuteI18N(r.trans, w, variables, data)
 		err = tpl.Execute(w, nil, data)
 	}
 	return err
-}
-
-func (r *Renderer) SetDebug(b bool) *Renderer {
-	r.set.SetDevelopmentMode(b)
-	return r
-}
-
-//func (r *Renderer) SetTranslator(translator jet.Translator) *Renderer {
-//	r.trans = translator
-//	return r
-//}
-
-func (r *Renderer) AddFuncs(fns map[string]interface{}) *Renderer {
-	for name, fn := range fns {
-		r.set.AddGlobal(name, fn)
-	}
-	return r
-}
-
-func (r *Renderer) AddFunc(name string, fn interface{}) *Renderer {
-	r.set.AddGlobal(name, fn)
-	return r
-}
-
-// add fast func
-//func (r *Renderer) AddFunc(name string, fn jet.Func) *Renderer {
-//	r.set.AddGlobalFunc(name, fn)
-//	return r
-//}
-
-func (r *Renderer) AddVariable(name string, value interface{}) *Renderer {
-	r.set.AddGlobal(name, value)
-	return r
-}
-
-func (r *Renderer) AddVariables(vars map[string]interface{}) *Renderer {
-	for name, value := range vars {
-		r.set.AddGlobal(name, value)
-	}
-	return r
 }
