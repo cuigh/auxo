@@ -33,12 +33,12 @@ type DB interface {
 	CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error
 	Delete(table string) DeleteClause
 	DeleteContext(ctx context.Context, table string) DeleteClause
-	Remove(i interface{}) ResultClause
-	RemoveContext(ctx context.Context, i interface{}) ResultClause
+	Remove(i interface{}) (r Result, err error)
+	RemoveContext(ctx context.Context, i interface{}) (r Result, err error)
 	Update(table string) UpdateClause
 	UpdateContext(ctx context.Context, table string) UpdateClause
-	Modify(i interface{}, filter ...ColumnFilter) ResultClause
-	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) ResultClause
+	Modify(i interface{}, filter ...ColumnFilter) (r Result, err error)
+	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
 	Select(cols ...string) SelectClause
 	SelectContext(ctx context.Context, cols ...string) SelectClause
 	//Distinct(cols ...string) SelectClause
@@ -118,10 +118,10 @@ func (d *database) DeleteContext(ctx context.Context, table string) DeleteClause
 	return ctxPool.GetDelete(ctx, d, d.e).Delete(table)
 }
 
-func (d *database) Remove(i interface{}) ResultClause {
+func (d *database) Remove(i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(context.Background(), d, d.e).Remove(i)
 }
-func (d *database) RemoveContext(ctx context.Context, i interface{}) ResultClause {
+func (d *database) RemoveContext(ctx context.Context, i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(ctx, d, d.e).Remove(i)
 }
 
@@ -133,10 +133,10 @@ func (d *database) UpdateContext(ctx context.Context, table string) UpdateClause
 	return ctxPool.GetUpdate(ctx, d, d.e).Update(table)
 }
 
-func (d *database) Modify(i interface{}, filter ...ColumnFilter) ResultClause {
+func (d *database) Modify(i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(context.Background(), d, d.e).Modify(i, filter...)
 }
-func (d *database) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) ResultClause {
+func (d *database) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(ctx, d, d.e).Modify(i, filter...)
 }
 

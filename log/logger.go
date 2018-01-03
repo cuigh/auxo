@@ -208,7 +208,7 @@ func Find(name string) *Logger {
 }
 
 func initialize() {
-	if loggers == nil {
+	if loggers == nil && config.Exist("log") {
 		opts := &Config{}
 		err := config.UnmarshalOption("log", opts)
 		if err == nil {

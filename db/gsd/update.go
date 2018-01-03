@@ -70,7 +70,7 @@ func (c *updateContext) Where(w Filters) ResultClause {
 	return c
 }
 
-func (c *updateContext) Modify(i interface{}, filter ...ColumnFilter) ResultClause {
+func (c *updateContext) Modify(i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	if len(filter) > 0 {
 		c.info.Filter = filter[0]
 	}
@@ -102,12 +102,7 @@ func (c *updateContext) Modify(i interface{}, filter ...ColumnFilter) ResultClau
 		where.Equal(key, values[i])
 	}
 	c.info.Where = where
-	return c
-}
-
-func (c *updateContext) Submit() (err error) {
-	_, err = c.Result()
-	return
+	return c.Result()
 }
 
 func (c *updateContext) Result() (r Result, err error) {

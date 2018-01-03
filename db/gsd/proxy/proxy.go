@@ -270,7 +270,7 @@ func buildRemoveProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 
 		db, err := lazy.Try()
 		if err == nil {
-			err = db.Remove(ins[0].Interface()).Submit()
+			_, err = db.Remove(ins[0].Interface())
 		}
 		outs[0] = reflects.Error(err)
 		return
@@ -303,7 +303,7 @@ func buildModifyProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 
 		db, err := lazy.Try()
 		if err == nil {
-			err = db.Modify(ins[0].Interface()).Submit()
+			_, err = db.Modify(ins[0].Interface())
 		}
 		outs[0] = reflects.Error(err)
 		return

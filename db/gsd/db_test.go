@@ -73,13 +73,13 @@ func TestDB_Remove(t *testing.T) {
 	user := &User{
 		ID: 3,
 	}
-	err := db.Remove(user).Submit()
+	_, err := db.Remove(user)
 	t.Log(err)
 }
 
 func TestDB_Delete(t *testing.T) {
 	db := gsd.MustOpen("test")
-	err := db.Delete("user").Where(Equal("id", 1)).Submit()
+	_, err := db.Delete("user").Where(Equal("id", 1)).Result()
 	t.Log(err)
 }
 

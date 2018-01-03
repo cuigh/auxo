@@ -3,7 +3,6 @@ package gsd
 /********** Common **********/
 
 type ResultClause interface {
-	Submit() error
 	Result() (Result, error)
 }
 

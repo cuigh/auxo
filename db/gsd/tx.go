@@ -18,12 +18,12 @@ type TX interface {
 	CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error
 	Delete(table string) DeleteClause
 	DeleteContext(ctx context.Context, table string) DeleteClause
-	Remove(i interface{}) ResultClause
-	RemoveContext(ctx context.Context, i interface{}) ResultClause
+	Remove(i interface{}) (r Result, err error)
+	RemoveContext(ctx context.Context, i interface{}) (r Result, err error)
 	Update(table string) UpdateClause
 	UpdateContext(ctx context.Context, table string) UpdateClause
-	Modify(i interface{}, filter ...ColumnFilter) ResultClause
-	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) ResultClause
+	Modify(i interface{}, filter ...ColumnFilter) (r Result, err error)
+	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
 	Select(cols ...string) SelectClause
 	SelectContext(ctx context.Context, cols ...string) SelectClause
 	Query(cols *Columns, distinct ...bool) SelectClause
@@ -104,11 +104,11 @@ func (t *transaction) DeleteContext(ctx context.Context, table string) DeleteCla
 	return ctxPool.GetDelete(ctx, t.db, t.e).Delete(table)
 }
 
-func (t *transaction) Remove(i interface{}) ResultClause {
+func (t *transaction) Remove(i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(context.Background(), t.db, t.e).Remove(i)
 }
 
-func (t *transaction) RemoveContext(ctx context.Context, i interface{}) ResultClause {
+func (t *transaction) RemoveContext(ctx context.Context, i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(ctx, t.db, t.e).Remove(i)
 }
 
@@ -120,11 +120,11 @@ func (t *transaction) UpdateContext(ctx context.Context, table string) UpdateCla
 	return ctxPool.GetUpdate(ctx, t.db, t.e).Update(table)
 }
 
-func (t *transaction) Modify(i interface{}, filter ...ColumnFilter) ResultClause {
+func (t *transaction) Modify(i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(context.Background(), t.db, t.e).Modify(i, filter...)
 }
 
-func (t *transaction) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) ResultClause {
+func (t *transaction) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(ctx, t.db, t.e).Modify(i, filter...)
 }
 

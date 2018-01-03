@@ -33,7 +33,7 @@ func (c *deleteContext) Where(w Filters) ResultClause {
 	return c
 }
 
-func (c *deleteContext) Remove(i interface{}) ResultClause {
+func (c *deleteContext) Remove(i interface{}) (r Result, err error) {
 	t := reflect.TypeOf(i)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -51,12 +51,7 @@ func (c *deleteContext) Remove(i interface{}) ResultClause {
 		where.Equal(key, values[i])
 	}
 	c.info.Where = where
-	return c
-}
-
-func (c *deleteContext) Submit() (err error) {
-	_, err = c.Result()
-	return
+	return c.Result()
 }
 
 func (c *deleteContext) Result() (r Result, err error) {

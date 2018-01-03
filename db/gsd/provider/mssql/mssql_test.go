@@ -68,25 +68,25 @@ func TestDB_Remove(t *testing.T) {
 	user := &User{
 		ID: 3,
 	}
-	err := db.Remove(user).Submit()
+	_, err := db.Remove(user)
 	t.Log(err)
 }
 
 func TestDB_Delete(t *testing.T) {
 	db := gsd.MustOpen(DBName)
-	err := db.Delete("user").Where(Equal("id", 1)).Submit()
+	_, err := db.Delete("user").Where(Equal("id", 1)).Result()
 	t.Log(err)
 }
 
 func TestDB_Update(t *testing.T) {
 	db := gsd.MustOpen(DBName)
-	err := db.Update("user").
+	_, err := db.Update("user").
 		Set("name", "xyz").
 		Inc("c1", 1).
 		Dec("c2", 1).
 		Expr("c3", "c4+10").
 		Where(Equal("id", 1)).
-		Submit()
+		Result()
 	t.Log(err)
 }
 
@@ -97,10 +97,10 @@ func TestDB_Modify(t *testing.T) {
 		Name: "abc",
 	}
 
-	err := db.Modify(user).Submit()
+	_, err := db.Modify(user)
 	t.Log(err)
 
-	err = db.Modify(user, Omit("code")).Submit()
+	_, err = db.Modify(user, Omit("code"))
 	t.Log(err)
 }
 

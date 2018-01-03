@@ -69,7 +69,7 @@ err := db.Create(user)
 ### DELETE
 
 ```go
-err := db.Delete("user").Where(Equal("id", 1)).Submit()
+r, err := db.Delete("user").Where(Equal("id", 1)).Result()
 // ...
 ```
 
@@ -79,27 +79,27 @@ OR
 user := &User{
 	ID: 3,
 }
-err := db.Remove(user).Submit()
+r, err := db.Remove(user)
 ```
 
 ### UPDATE
 
 ```go
-err := db.Update("user").
+r, err := db.Update("user").
 		Set("name", "xyz").
 		Inc("c1", 1).
 		Dec("c2", 1).
 		Expr("c3", "c4+10").
 		Where(Equal("id", 1)).
-		Submit()
+		Result()
 ```
 
 OR
 
 ```go
-err := db.Modify(user).Submit()
+r, err := db.Modify(user).Result()
 // or specify columns
-err = db.Modify(user, Omit("code")).Submit()
+r, err = db.Modify(user, Omit("code"))
 ```
 
 ### SELECT
