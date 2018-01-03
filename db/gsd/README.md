@@ -97,7 +97,7 @@ r, err := db.Update("user").
 OR
 
 ```go
-r, err := db.Modify(user).Result()
+r, err := db.Modify(user)
 // or specify columns
 r, err = db.Modify(user, Omit("code"))
 ```
