@@ -53,7 +53,7 @@ func newField(name string, option string) (Field, error) {
 		return newTimeField(fn, args...), nil
 	case fieldFile, "file":
 		return newFileField(fn, args...), nil
-	case fieldNewline:
+	case fieldNewline, "newline":
 		return newStringField(fn, "\n"), nil
 	case "text":
 		return newStringField(fn, args[0]), nil
@@ -144,7 +144,7 @@ func newLevelField(name string, args ...string) *levelField {
 	f := &levelField{
 		baseField: baseField(name),
 	}
-	if len(args) < 1 || args[0] == "S" {
+	if len(args) == 0 || args[0] == "S" || args[0] == "s" || args[0] == "short" {
 		f.texts = levelShortNames
 	} else {
 		f.texts = levelLongNames
@@ -198,16 +198,12 @@ type fileField struct {
 }
 
 func newFileField(name string, args ...string) *fileField {
-	// todo: 增加最小 level 控制
+	// todo: support set min level
 	//{F:S|L=E}
 	f := &fileField{
 		baseField: baseField(name),
 		skip:      7,
-	}
-	if len(args) == 0 {
-		f.full = true
-	} else {
-		f.full = args[0] == "F"
+		full:      len(args) == 0 || args[0] == "F" || args[0] == "full",
 	}
 	return f
 }
