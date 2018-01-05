@@ -1,5 +1,6 @@
 trace:
   jaeger:
+    name: test
     enabled: true
     rpc_metrics: false
     sampler:

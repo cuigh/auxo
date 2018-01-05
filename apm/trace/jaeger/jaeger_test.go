@@ -9,11 +9,11 @@ import (
 )
 
 func TestTrace(t *testing.T) {
-	opts := jaeger.Options{Enabled: true}
+	opts := jaeger.Options{Name: "test", Enabled: true}
 	opts.Sampler.Type = "const"
 	opts.Sampler.Param = 1
 	opts.Reporter.Address = "192.168.99.100:6831"
-	tracer, closer := jaeger.MustInit("test", opts)
+	tracer, closer := jaeger.MustInit(opts)
 	defer closer.Close()
 
 	parent := newSpan(tracer, nil, "parent", time.Millisecond*100)
