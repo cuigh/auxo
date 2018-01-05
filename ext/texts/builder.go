@@ -26,6 +26,10 @@ func PutBuilder(b *Builder) {
 	builders.Put(b)
 }
 
+func (b *Builder) Write(p []byte) (n int, err error) {
+	return (*bytes.Buffer)(b).Write(p)
+}
+
 func (b *Builder) Reset() *Builder {
 	(*bytes.Buffer)(b).Reset()
 	return b
@@ -62,6 +66,10 @@ func (b *Builder) AppendFormat(format string, args ...interface{}) *Builder {
 	s := fmt.Sprintf(format, args...)
 	(*bytes.Buffer)(b).WriteString(s)
 	return b
+}
+
+func (b *Builder) Bytes() []byte {
+	return (*bytes.Buffer)(b).Bytes()
 }
 
 func (b *Builder) String() string {

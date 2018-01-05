@@ -164,12 +164,14 @@ func (l *Logger) Fatalf(format string, args ...interface{}) {
 
 // Write implement io.Writer interface
 func (l *Logger) Write(p []byte) (n int, err error) {
+	l.locker.Lock()
 	for _, w := range l.writers {
 		n, err = w.Output().Write(p)
 		if err != nil {
 			return
 		}
 	}
+	l.locker.Unlock()
 	return
 }
 
