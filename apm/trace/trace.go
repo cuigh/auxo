@@ -3,6 +3,8 @@ package trace
 import (
 	"context"
 
+	"io"
+
 	"github.com/cuigh/auxo/log"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -20,25 +22,17 @@ var (
 	global *Tracer
 )
 
-//var (
-//	TagKindClient   = opentracing.Tag{Key: "span.kind", Value: "client"}
-//	TagKindServer   = opentracing.Tag{Key: "span.kind", Value: "server"}
-//	TagKindProducer = opentracing.Tag{Key: "span.kind", Value: "producer"}
-//	TagKindConsumer = opentracing.Tag{Key: "span.kind", Value: "consumer"}
-//)
-
+type Span = opentracing.Span
+type StartSpanOption = opentracing.StartSpanOption
 type HTTPHeadersCarrier = opentracing.HTTPHeadersCarrier
 type TextMapCarrier = opentracing.TextMapCarrier
 
 func SetTracer(t opentracing.Tracer) {
 	opentracing.SetGlobalTracer(t)
-	global.Tracer = t
+	global = NewTracer(t)
 }
 
 func GetTracer() *Tracer {
-	if global == nil {
-		global = NewTracer(opentracing.GlobalTracer())
-	}
 	return global
 }
 
@@ -131,12 +125,13 @@ func StartServer(operation string, format, carrier interface{}) opentracing.Span
 
 type Tracer struct {
 	opentracing.Tracer
+	closer io.Closer
 	logger *log.Logger
 }
 
 func NewTracer(tracer opentracing.Tracer) *Tracer {
 	if tracer == nil {
-		tracer = opentracing.GlobalTracer()
+		panic("nil tracer")
 	}
 	return &Tracer{
 		Tracer: tracer,

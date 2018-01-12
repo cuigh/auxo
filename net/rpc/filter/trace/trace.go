@@ -7,10 +7,6 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
-type Options struct {
-	*trace.Tracer
-}
-
 type rpcLabels data.Options
 
 // Set implements opentracing.TextMapWriter interface.
@@ -28,15 +24,11 @@ func (c rpcLabels) ForeachKey(handler func(key, val string) error) error {
 	return nil
 }
 
-func Server(opts Options) rpc.SFilter {
-	const component = "rpc/server"
-
-	tracer := opts.Tracer
-	if tracer == nil {
-		tracer = trace.GetTracer()
-	}
-
+func Server() rpc.SFilter {
 	return func(next rpc.SHandler) rpc.SHandler {
+		const component = "rpc/server"
+		tracer := trace.GetTracer()
+
 		return func(c rpc.Context) (r interface{}, err error) {
 			span := tracer.StartServer(c.Action().Name(), trace.TextMap, rpcLabels(c.Request().Head.Labels))
 			ext.Component.Set(span, component)
@@ -52,15 +44,11 @@ func Server(opts Options) rpc.SFilter {
 	}
 }
 
-func Client(opts Options) rpc.CFilter {
-	const component = "rpc/client"
-
-	tracer := opts.Tracer
-	if tracer == nil {
-		tracer = trace.GetTracer()
-	}
-
+func Client() rpc.CFilter {
 	return func(next rpc.CHandler) rpc.CHandler {
+		const component = "rpc/client"
+		tracer := trace.GetTracer()
+
 		return func(c *rpc.Call) (err error) {
 			req := c.Request()
 			span := tracer.StartChildFromContext(c.Context(), req.Head.Service+"."+req.Head.Method)

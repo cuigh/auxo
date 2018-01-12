@@ -6,26 +6,16 @@ import (
 
 	"github.com/cuigh/auxo/apm/trace"
 	"github.com/cuigh/auxo/db/gsd"
-	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 )
 
 const component = "gsd"
 
-type Options struct {
-	*trace.Tracer
-}
-
-func Trace(opts Options) gsd.Interceptor {
-	tracer := opts.Tracer
-	if tracer == nil {
-		tracer = trace.GetTracer()
-	}
-
+func Trace() gsd.Interceptor {
 	return func(e gsd.Executor) gsd.Executor {
 		return &executor{
 			Executor: e,
-			Tracer:   tracer,
+			Tracer:   trace.GetTracer(),
 		}
 	}
 }
@@ -64,7 +54,7 @@ func (e *executor) QueryRows(ctx context.Context, query string, args ...interfac
 	return
 }
 
-func (e *executor) startSpan(operation string, ctx context.Context, query string, args ...interface{}) opentracing.Span {
+func (e *executor) startSpan(operation string, ctx context.Context, query string, args ...interface{}) trace.Span {
 	span := e.Tracer.StartChildFromContext(ctx, operation)
 	ext.Component.Set(span, component)
 	ext.DBType.Set(span, "sql")

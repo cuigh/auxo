@@ -6,22 +6,13 @@ import (
 	"github.com/opentracing/opentracing-go/ext"
 )
 
+const component = "web"
+
 type Trace struct {
-	*trace.Tracer
-	Component string
 }
 
 func (t *Trace) Apply(next web.HandlerFunc) web.HandlerFunc {
-	tracer := t.Tracer
-	if tracer == nil {
-		tracer = trace.GetTracer()
-	}
-
-	component := t.Component
-	if component == "" {
-		component = "web"
-	}
-
+	tracer := trace.GetTracer()
 	return func(c web.Context) error {
 		r := c.Request()
 		span := tracer.StartServer(c.Handler().Name(), trace.HTTPHeaders, trace.HTTPHeadersCarrier(r.Header))

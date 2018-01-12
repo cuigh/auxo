@@ -2,6 +2,8 @@
 
 **auxo** is an all-in-one Go package for simplifying program development.
 
+> **WARNING**: This package is a work in progress. It's API may still break in backwards-incompatible ways without warnings. Please use dependency management tools such as **[dep](https://github.com/golang/dep)** or **[glide](https://github.com/Masterminds/glide)** to lock version.
+
 ## Quick start
 
 Here is a little demo app developed with **auxo**.

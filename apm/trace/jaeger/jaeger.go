@@ -4,11 +4,11 @@ import (
 	"io"
 	"time"
 
+	"github.com/cuigh/auxo/apm/trace"
 	"github.com/cuigh/auxo/app"
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
-	"github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-client-go"
 	jc "github.com/uber/jaeger-client-go/config"
 )
@@ -27,8 +27,9 @@ type Options struct {
 	Enabled    bool   `json:"enabled"yaml:"enabled"`
 	RPCMetrics bool   `json:"rpc_metrics" yaml:"rpc_metrics"`
 	Sampler    struct {
-		Type  string  `json:"type" yaml:"type"`
-		Param float64 `json:"param" yaml:"param"`
+		ServerURL string  `json:"server_url" yaml:"server_url"`
+		Type      string  `json:"type" yaml:"type"`
+		Param     float64 `json:"param" yaml:"param"`
 	} `json:"sampler" yaml:"sampler"`
 	Reporter struct {
 		Address       string        `json:"address" yaml:"address"`
@@ -63,70 +64,53 @@ func (opts *Options) ensure() error {
 	return nil
 }
 
-// Auto initialize a global tracer and auto-close it on app exit.
+// Auto initialize a global tracer on app start and auto-close it on app exit.
 func Auto() {
-	closer := MustInitGlobal()
-	app.OnClose(func() {
-		err := closer.Close()
-		if err != nil {
-			log.Get(PkgName).Warn(err)
+	app.OnInit(func() error {
+		if !config.Exist(optionKey) {
+			return errors.New("can't find option: " + optionKey)
 		}
+
+		var opts Options
+		err := config.UnmarshalOption(optionKey, &opts)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse options")
+		}
+
+		err = opts.ensure()
+		if err != nil {
+			return errors.Wrap(err, "invalid options")
+		}
+
+		//metricsFactory := metrics.NullFactory
+		tracer, closer, err := newConfig(&opts).New(opts.Name, jc.Logger(&loggerAdapter{}))
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize jaeger tracer")
+		}
+		trace.SetTracer(tracer)
+
+		app.OnClose(func() {
+			err := closer.Close()
+			if err != nil {
+				log.Get(PkgName).Warn(err)
+			}
+		})
+		return nil
 	})
 }
 
-func InitGlobal(options ...Options) (io.Closer, error) {
-	opts, err := loadOptions(options)
+func Init(opts Options) (io.Closer, error) {
+	err := opts.ensure()
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := newConfig(&opts)
-	return cfg.InitGlobalTracer(opts.Name, jc.Logger(&loggerAdapter{}))
-}
-
-func MustInitGlobal(options ...Options) io.Closer {
-	c, err := InitGlobal(options...)
+	tracer, closer, err := newConfig(&opts).New(opts.Name, jc.Logger(&loggerAdapter{}))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return c
-}
-
-func Init(options ...Options) (opentracing.Tracer, io.Closer, error) {
-	opts, err := loadOptions(options)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cfg := newConfig(&opts)
-	// Example metrics factory. Use github.com/uber/jaeger-lib/metrics respectively
-	// to bind to real logging and metrics frameworks.
-	// metricsFactory := metrics.NullFactory
-	// jc.Metrics(metricsFactory)
-	return cfg.New(opts.Name, jc.Logger(&loggerAdapter{}))
-}
-
-func MustInit(options ...Options) (opentracing.Tracer, io.Closer) {
-	t, c, err := Init(options...)
-	if err != nil {
-		panic(err)
-	}
-	return t, c
-}
-
-func loadOptions(options []Options) (opts Options, err error) {
-	if len(options) > 0 {
-		opts = options[0]
-	} else if config.Exist(optionKey) {
-		err = config.UnmarshalOption(optionKey, &opts)
-		if err != nil {
-			err = errors.Wrap(err, "failed to parse options")
-			return
-		}
-	}
-
-	err = opts.ensure()
-	return
+	trace.SetTracer(tracer)
+	return closer, nil
 }
 
 func newConfig(opts *Options) jc.Configuration {
@@ -147,8 +131,9 @@ func newConfig(opts *Options) jc.Configuration {
 	}
 	if opts.Sampler.Type != "" {
 		cfg.Sampler = &jc.SamplerConfig{
-			Type:  opts.Sampler.Type,
-			Param: opts.Sampler.Param,
+			SamplingServerURL: opts.Sampler.ServerURL,
+			Type:              opts.Sampler.Type,
+			Param:             opts.Sampler.Param,
 		}
 	}
 	return cfg

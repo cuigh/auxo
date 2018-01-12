@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cuigh/auxo/apm/trace"
 	"github.com/cuigh/auxo/apm/trace/jaeger"
-	"github.com/opentracing/opentracing-go"
+	"github.com/cuigh/auxo/test/assert"
 )
 
 func TestTrace(t *testing.T) {
@@ -13,21 +14,23 @@ func TestTrace(t *testing.T) {
 	opts.Sampler.Type = "const"
 	opts.Sampler.Param = 1
 	opts.Reporter.Address = "192.168.99.100:6831"
-	tracer, closer := jaeger.MustInit(opts)
+
+	closer, err := jaeger.Init(opts)
+	assert.NoError(t, err)
 	defer closer.Close()
 
-	parent := newSpan(tracer, nil, "parent", time.Millisecond*100)
+	parent := newSpan(nil, "parent", time.Millisecond*100)
 	defer parent.Finish()
 
-	child := newSpan(tracer, parent, "child", time.Millisecond*200)
+	child := newSpan(parent, "child", time.Millisecond*200)
 	defer child.Finish()
 }
 
-func newSpan(tracer opentracing.Tracer, parent opentracing.Span, name string, d time.Duration) (span opentracing.Span) {
+func newSpan(parent trace.Span, name string, d time.Duration) (span trace.Span) {
 	if parent == nil {
-		span = tracer.StartSpan(name)
+		span = trace.GetTracer().StartSpan(name)
 	} else {
-		span = tracer.StartSpan(name, opentracing.ChildOf(parent.Context()))
+		span = trace.GetTracer().StartChild(parent, name)
 	}
 	time.Sleep(d)
 	return
