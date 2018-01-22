@@ -82,7 +82,7 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 	)
 
 	if format == "json" {
-		parser = jsonLayout{}
+		parser = JSONLayout{}
 		write = func(fields []Field, buf *bytes.Buffer, r *Row) (err error) {
 			m := map[string]interface{}{}
 			for _, f := range fields {
@@ -91,7 +91,7 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 			return json.NewEncoder(buf).Encode(m)
 		}
 	} else {
-		parser = textLayout{}
+		parser = TextLayout{}
 		write = func(fields []Field, buf *bytes.Buffer, r *Row) (err error) {
 			for _, f := range fields {
 				if err = f.Write(buf, r); err != nil {
@@ -102,9 +102,17 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 		}
 	}
 
-	fields, err := parser.Parse(layout)
+	segments, err := parser.Parse(layout)
 	if err != nil {
 		return nil, err
+	}
+
+	fields := make([]Field, len(segments))
+	for i, seg := range segments {
+		fields[i], err = newField(&seg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Writer{

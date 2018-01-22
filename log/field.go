@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"unsafe"
 )
 
@@ -25,74 +24,24 @@ type Field interface {
 	Value(r *Row) interface{}
 }
 
-func newField(name string, option string) (Field, error) {
-	var (
-		ft string
-		fn string
-	)
-
-	pair := strings.SplitN(name, "->", 2)
-	ft = strings.TrimSpace(pair[0])
-	if len(pair) > 1 {
-		fn = strings.TrimSpace(pair[1])
-	} else {
-		fn = ft
-	}
-
-	var args []string = nil
-	if option != "" {
-		args = strings.Split(option, "|")
-	}
-
-	switch ft {
+func newField(seg *Segment) (Field, error) {
+	switch seg.Type {
 	case fieldLevel, "level":
-		return newLevelField(fn, args...), nil
+		return newLevelField(seg.Name, seg.Args...), nil
 	case fieldMessage, "msg":
-		return newMessageField(fn), nil
+		return newMessageField(seg.Name), nil
 	case fieldTime, "time":
-		return newTimeField(fn, args...), nil
+		return newTimeField(seg.Name, seg.Args...), nil
 	case fieldFile, "file":
-		return newFileField(fn, args...), nil
+		return newFileField(seg.Name, seg.Args...), nil
 	case fieldNewline, "newline":
-		return newStringField(fn, "\n"), nil
+		return newStringField(seg.Name, "\n"), nil
 	case "text":
-		return newStringField(fn, args[0]), nil
+		return newStringField(seg.Name, seg.Args[0]), nil
 	default:
-		return nil, errors.New("invalid field: " + name)
+		return nil, errors.New("invalid field: " + seg.Type)
 	}
 }
-
-// {level->lvl: a=b},{time->t:2016-01-02},{msg->msg},{file->f: s},{text->abc: test}
-//func newField1(name string, strArgs string) (Field, error) {
-//	var (
-//		alias string
-//	)
-//
-//	pair := strings.SplitN(name, "->", 2)
-//	if len(pair) > 1 {
-//		alias = strings.TrimSpace(pair[1])
-//	}
-//
-//	var args []string = nil
-//	if strArgs != "" {
-//		args = strings.Split(strArgs, "|")
-//	}
-//
-//	switch name {
-//	case fieldLevel:
-//		return newLevelField(args...), nil
-//	case fieldMessage:
-//		return newMessageField(args...), nil
-//	case fieldTime:
-//		return newTimeField(args...), nil
-//	case fieldFile:
-//		return newFileField(args...), nil
-//	case fieldNewline:
-//		return stringField("\n"), nil
-//	default:
-//		return nil, errors.New("invalid field: " + name)
-//	}
-//}
 
 /********** baseField **********/
 

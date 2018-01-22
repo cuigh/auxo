@@ -3,9 +3,8 @@ package memory
 import (
 	"context"
 	"sync"
-	"time"
-
 	"sync/atomic"
+	"time"
 
 	"github.com/cuigh/auxo/apm/limiter"
 )

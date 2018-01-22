@@ -6,14 +6,41 @@ import (
 	"strings"
 )
 
+type Segment struct {
+	Type string
+	Name string
+	Args []string
+}
+
 type Layout interface {
-	Parse(s string) ([]Field, error)
+	Parse(s string) ([]Segment, error)
 }
 
-type jsonLayout struct {
+type baseLayout struct {
 }
 
-func (jsonLayout) Parse(s string) ([]Field, error) {
+func (baseLayout) create(s string) (field Segment) {
+	array := strings.SplitN(s, ":", 2)
+	if len(array) > 1 {
+		field.Args = strings.Split(strings.TrimSpace(array[1]), "|")
+	}
+
+	pair := strings.SplitN(array[0], "->", 2)
+	field.Type = strings.TrimSpace(pair[0])
+	if len(pair) == 1 {
+		field.Name = field.Type
+	} else {
+		field.Name = strings.TrimSpace(pair[1])
+	}
+	return
+}
+
+type JSONLayout struct {
+	baseLayout
+}
+
+func (l JSONLayout) Parse(s string) ([]Segment, error) {
+	// {level->lvl: a=b},{time->t:2016-01-02},{msg->msg},{file->f: s},{text->abc: test}
 	const (
 		stateSeparator = 0 // comma
 		stateLeftFlag  = 1 // {
@@ -22,25 +49,10 @@ func (jsonLayout) Parse(s string) ([]Field, error) {
 	)
 
 	var (
-		fields []Field
+		fields []Segment
 		buf    bytes.Buffer
 		state  = stateSeparator
 	)
-
-	creator := func(s string) (Field, error) {
-		array := strings.SplitN(s, ":", 2)
-		var args string
-		if len(array) == 1 {
-			args = ""
-		} else {
-			args = strings.TrimSpace(array[1])
-		}
-		field, err := newField(strings.TrimSpace(array[0]), args)
-		if err != nil {
-			return nil, err
-		}
-		return field, nil
-	}
 
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
@@ -62,11 +74,7 @@ func (jsonLayout) Parse(s string) ([]Field, error) {
 			}
 		case ',':
 			if state == stateRightFlag {
-				field, err := creator(buf.String())
-				if err != nil {
-					return nil, err
-				}
-
+				field := l.create(buf.String())
 				fields = append(fields, field)
 				buf.Reset()
 				state = stateSeparator
@@ -90,10 +98,7 @@ func (jsonLayout) Parse(s string) ([]Field, error) {
 
 	if buf.Len() > 0 {
 		if state == stateRightFlag {
-			field, err := creator(buf.String())
-			if err != nil {
-				return nil, err
-			}
+			field := l.create(buf.String())
 			fields = append(fields, field)
 		} else {
 			return nil, fmt.Errorf("invalid layout: %s(pos: %d)", s, len(s)-1)
@@ -103,10 +108,11 @@ func (jsonLayout) Parse(s string) ([]Field, error) {
 	return fields, nil
 }
 
-type textLayout struct {
+type TextLayout struct {
+	baseLayout
 }
 
-func (textLayout) Parse(s string) ([]Field, error) {
+func (l TextLayout) Parse(s string) ([]Segment, error) {
 	const (
 		stateString    = 0 // text
 		stateLeftFlag  = 1 // {
@@ -115,25 +121,10 @@ func (textLayout) Parse(s string) ([]Field, error) {
 	)
 
 	var (
-		fields []Field
-		buf    bytes.Buffer
-		state  = stateString
+		segments []Segment
+		buf      bytes.Buffer
+		state    = stateString
 	)
-
-	creator := func(s string) (Field, error) {
-		array := strings.SplitN(s, ":", 2)
-		var args string
-		if len(array) == 1 {
-			args = ""
-		} else {
-			args = array[1]
-		}
-		field, err := newField(array[0], args)
-		if err != nil {
-			return nil, err
-		}
-		return field, nil
-	}
 
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
@@ -143,11 +134,8 @@ func (textLayout) Parse(s string) ([]Field, error) {
 			} else if state == stateString {
 				state = stateLeftFlag
 			} else if state == stateRightFlag {
-				field, err := creator(buf.String())
-				if err != nil {
-					return nil, err
-				}
-				fields = append(fields, field)
+				segment := l.create(buf.String())
+				segments = append(segments, segment)
 				buf.Reset()
 				state = stateLeftFlag
 			} else {
@@ -164,16 +152,14 @@ func (textLayout) Parse(s string) ([]Field, error) {
 		default:
 			if state == stateLeftFlag {
 				if buf.Len() > 0 {
-					fields = append(fields, newStringField("", buf.String()))
+					segment := Segment{Type: "text", Args: []string{buf.String()}}
+					segments = append(segments, segment)
 					buf.Reset()
 				}
 				state = stateField
 			} else if state == stateRightFlag {
-				field, err := creator(buf.String())
-				if err != nil {
-					return nil, err
-				}
-				fields = append(fields, field)
+				segment := l.create(buf.String())
+				segments = append(segments, segment)
 				buf.Reset()
 				state = stateString
 			}
@@ -183,17 +169,15 @@ func (textLayout) Parse(s string) ([]Field, error) {
 
 	if buf.Len() > 0 {
 		if state == stateRightFlag {
-			field, err := creator(buf.String())
-			if err != nil {
-				return nil, err
-			}
-			fields = append(fields, field)
+			segment := l.create(buf.String())
+			segments = append(segments, segment)
 		} else if state == stateString {
-			fields = append(fields, newStringField("", buf.String()))
+			segment := Segment{Type: "text", Args: []string{buf.String()}}
+			segments = append(segments, segment)
 		} else {
 			return nil, fmt.Errorf("invalid layout: %s(pos: %d)", s, len(s)-1)
 		}
 	}
 
-	return fields, nil
+	return segments, nil
 }
