@@ -24,9 +24,13 @@ func (l *Logger) Apply(next web.HandlerFunc) web.HandlerFunc {
 	l.logger = log.Get(PkgName)
 	isJSON := strings.EqualFold(l.Format, "json")
 	if l.Layout == "" {
-		l.Layout = "{time: 2006/01/02 - 15:04:05},{status},{latency},{ip},{method},{path}"
+		if isJSON {
+			l.Layout = "{time: 2006/01/02 - 15:04:05},{status},{latency},{ip},{method},{path}"
+		} else {
+			l.Layout = "{time: 2006/01/02 - 15:04:05} {status} {latency} {ip} {method} {path}"
+		}
 	}
-	l.fields = parseFields(l.Layout)
+	l.fields = createFields(l.Layout, isJSON)
 
 	return func(ctx web.Context) (err error) {
 		start := time.Now()
@@ -45,10 +49,7 @@ func (l *Logger) Apply(next web.HandlerFunc) web.HandlerFunc {
 
 func (l *Logger) text(ctx web.Context, start time.Time) {
 	b := texts.GetBuilder()
-	for i, f := range l.fields {
-		if i > 0 {
-			b.AppendByte(' ')
-		}
+	for _, f := range l.fields {
 		f.Text(ctx, b, start)
 	}
 	b.AppendByte('\n')
