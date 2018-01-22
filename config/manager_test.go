@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -10,27 +11,6 @@ import (
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/test/assert"
 )
-
-const (
-	dbAddressKey    = "db.address"
-	dbAddressEnvKey = "DB_ADDRESS"
-	dbAddress       = "127.0.0.1"
-)
-
-//func init() {
-//	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-//	fs.String("version", "1.0", "app version")
-//	config.BindFlags(fs)
-//
-//	os.Setenv(dbAddressEnvKey, dbAddress)
-//	config.SetEnvPrefix("")
-//	config.BindEnv(dbAddressKey, dbAddressEnvKey)
-//
-//	config.SetProfile("dev")
-//	config.SetName("app")
-//	config.AddFolder(".")
-//	config.SetDefaultValue("default.value", 1)
-//}
 
 func initManager() *config.Manager {
 	m := config.New("app")
@@ -100,21 +80,42 @@ func TestFlags(t *testing.T) {
 
 	fs := flag.NewFlagSet("", flag.PanicOnError)
 	fs.String("version", "1.0", "app version")
+	fs.String("a.b.c", "test", "app version")
 	m.BindFlags(fs)
 
 	version := m.Get("version")
 	assert.Equal(t, "1.0", version)
+
+	c := m.Get("a.b")
+	assert.Equal(t, "map[c:test]", fmt.Sprint(c))
 }
 
 func TestEnv(t *testing.T) {
+	const (
+		dbAddressKey    = "db.address"
+		dbAddressEnvKey = "DB_ADDRESS"
+		dbAddress       = "127.0.0.1"
+	)
+
 	os.Setenv(dbAddressEnvKey, dbAddress)
+	os.Setenv("A_B_C", "test")
 
 	m := initManager()
 	m.SetEnvPrefix("")
 	m.BindEnv(dbAddressKey, dbAddressEnvKey)
 
-	addr := m.Get(dbAddressKey)
-	assert.Equal(t, dbAddress, addr)
+	cases := []struct {
+		key   string
+		value string
+	}{
+		{dbAddressKey, dbAddress},
+		{"a.b.c", "test"},
+	}
+
+	for _, c := range cases {
+		value := m.Get(c.key)
+		assert.Equal(t, c.value, value)
+	}
 }
 
 func TestDefaultValue(t *testing.T) {

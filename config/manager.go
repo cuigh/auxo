@@ -15,7 +15,6 @@ import (
 	"github.com/cuigh/auxo/encoding/yaml"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/files"
-	"github.com/cuigh/auxo/ext/texts"
 	"github.com/cuigh/auxo/util/cast"
 )
 
@@ -201,12 +200,11 @@ func (m *Manager) load(force bool) error {
 
 	m.options = data.Map{}
 
-	if len(m.dirs) == 0 {
-		m.addDefaultFolders()
-	}
+	m.loadFlags()
+	m.loadEnvs()
 
 	// file sources
-	srcs := m.findSources()
+	srcs := m.findFileSources()
 	err := m.loadSources(srcs)
 	if err != nil {
 		return err
@@ -222,7 +220,64 @@ func (m *Manager) load(force bool) error {
 	return nil
 }
 
-func (m *Manager) findSources() (srcs []Source) {
+func (m *Manager) loadFlags() {
+	if m.flags != nil {
+		m.flags.VisitAll(func(f *flag.Flag) {
+			getter := f.Value.(flag.Getter)
+			m.set(f.Name, getter.Get())
+		})
+	}
+}
+
+func (m *Manager) loadEnvs() {
+	envs := os.Environ()
+	for _, env := range envs {
+		opt := data.ParseOption(env, "=")
+		key := opt.Name
+		if m.envPrefix != "" {
+			key = strings.TrimPrefix(key, m.envPrefix)
+		}
+		key = strings.Replace(strings.ToLower(opt.Name), "_", ".", -1)
+		m.set(key, opt.Value)
+	}
+
+	for key, envKey := range m.env {
+		opt := os.Getenv(envKey)
+		m.set(key, opt)
+	}
+}
+
+func (m *Manager) set(k string, v interface{}) {
+	opts := m.options
+	keys := strings.Split(k, ".")
+	last := len(keys) - 1
+	for i, key := range keys {
+		if opt, ok := opts[key]; ok {
+			switch t := opt.(type) {
+			case data.Map:
+				opts = t
+			case map[string]interface{}:
+				opts = t
+			default:
+				break
+			}
+		} else {
+			if i == last {
+				opts[key] = v
+			} else {
+				t := data.Map{}
+				opts[key] = t
+				opts = t
+			}
+		}
+	}
+}
+
+func (m *Manager) findFileSources() (srcs []Source) {
+	if len(m.dirs) == 0 {
+		m.addDefaultFolders()
+	}
+
 	for _, dir := range m.dirs {
 		for _, ext := range exts {
 			for _, profile := range m.profiles {
@@ -271,10 +326,10 @@ func (m *Manager) loadContent(ct string, cd []byte) (data.Map, error) {
 		if err := json.Unmarshal(cd, &opts); err != nil {
 			return nil, m.loadError(err)
 		}
-	//case "xml":
-	//	if err := xml.Unmarshal(cd, &opts); err != nil {
-	//		return nil, loadError(err)
-	//	}
+		//case "xml":
+		//	if err := xml.Unmarshal(cd, &opts); err != nil {
+		//		return nil, loadError(err)
+		//	}
 	default:
 		return nil, errors.New("unsupported config type: " + ct)
 	}
@@ -295,32 +350,6 @@ func (m *Manager) Get(key string) interface{} {
 		}
 	}
 
-	// 1. flag
-	if m.flags != nil {
-		f := m.flags.Lookup(key)
-		if f != nil {
-			if v := f.Value.String(); v != "" {
-				return v
-			}
-		}
-	}
-
-	// 2. env
-	var envKey string
-	if m.env != nil {
-		envKey = m.env[key]
-	}
-	if envKey == "" {
-		envKey = texts.Rename(strings.Replace(key, ".", "_", -1), texts.Upper)
-		if m.envPrefix != "" {
-			envKey = m.envPrefix + "_" + envKey
-		}
-	}
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-
-	// 3. config. Also check default value here.
 	opt := m.options.Find(key)
 	def := m.defaults.Get(key)
 	if def == nil {
