@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/cuigh/auxo/test/assert"
 )
 
 func TestGroup(t *testing.T) {
