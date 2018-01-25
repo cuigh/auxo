@@ -26,6 +26,10 @@ type Call struct {
 	next     *Call
 }
 
+func (c *Call) Server() string {
+	return c.n.c.opts.Name
+}
+
 func (c *Call) Request() *Request {
 	return c.req
 }

@@ -108,9 +108,9 @@ func (p *Prometheus) registerSummaryVec(name, help string, labels ...string) *pr
 
 func (p *Prometheus) registerCollector(name string, collector prometheus.Collector) {
 	if err := prometheus.Register(collector); err != nil {
-		p.logger.Errorf("prometheus > failed to register '%v': %v", name, err)
+		p.logger.Errorf("web > prometheus: failed to register collector '%v': %v", name, err)
 	} else {
-		p.logger.Infof("prometheus > '%v' registered", name)
+		p.logger.Infof("web > prometheus: collector '%v' registered", name)
 	}
 }
 
