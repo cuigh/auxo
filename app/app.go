@@ -63,13 +63,6 @@ func Run(s Server, signals ...os.Signal) {
 
 // RunFunc executes program and subscribe exit signals.
 func RunFunc(runner ServeFunc, closer CloseFunc, signals ...os.Signal) {
-	// print banner
-	if config.GetBool("banner") {
-		fmt.Print(auxo.Banner)
-		fmt.Println("\tVERSION " + auxo.Version)
-		fmt.Println()
-	}
-
 	// subscribe signals
 	stop := make(chan os.Signal, 1)
 	if len(signals) == 0 {
@@ -151,6 +144,14 @@ func Start() {
 
 	ctx := &Context{cmd: cmd}
 	handleCommonFlags(ctx)
+
+	// print banner
+	if config.GetBool("banner") {
+		fmt.Print(auxo.Banner)
+		fmt.Println("\tVERSION " + auxo.Version)
+		fmt.Println()
+	}
+
 	if cmd.Action != nil {
 		cmd.Action(ctx)
 	}
