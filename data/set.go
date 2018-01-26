@@ -41,6 +41,14 @@ func (s Set) Union(set Set) {
 	}
 }
 
+func (s Set) Intersect(set Set) {
+	for k := range set {
+		if !set.Contains(k) {
+			delete(s, k)
+		}
+	}
+}
+
 func (s Set) Len() int {
 	return len(s)
 }
@@ -53,5 +61,21 @@ func (s Set) Len() int {
 func NewSet(items ...interface{}) Set {
 	s := Set{}
 	s.Add(items...)
+	return s
+}
+
+func Union(sets ...Set) Set {
+	s := Set{}
+	for _, set := range sets {
+		s.Union(set)
+	}
+	return s
+}
+
+func Intersect(sets ...Set) Set {
+	s := Set{}
+	for _, set := range sets {
+		s.Intersect(set)
+	}
 	return s
 }
