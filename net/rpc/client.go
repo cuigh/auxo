@@ -484,7 +484,7 @@ func (c *Client) initBalancer() {
 	c.lb = b.Build(c.opts.Balancer.Options)
 }
 
-func (c *Client) initResolver() error {
+func (c *Client) initResolver() (err error) {
 	name := c.opts.Resolver.Name
 	if name == "" || name == "direct" {
 		c.resolver = resolver.Direct(c.opts.Address...)
@@ -492,12 +492,12 @@ func (c *Client) initResolver() error {
 	}
 
 	if b := resolver.Get(name); b != nil {
-		c.resolver = b.Build(resolver.Client{
+		c.resolver, err = b.Build(resolver.Client{
 			Server:  c.opts.Name,
 			Version: c.opts.Version,
 			Group:   c.opts.Group,
 		}, c.opts.Resolver.Options)
-		return nil
+		return err
 	}
 	return errors.Format("rpc: unknown resolver '%s'", name)
 }

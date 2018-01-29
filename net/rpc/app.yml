@@ -18,9 +18,10 @@ rpc:
       balancer:
         name: random
       resolver:
-        name: etcd2
+        name: etcd
         options:
           address: 127.0.0.1:2379
+          refresh: 30s
       channels: 4
       dial_timeout: 10s
       read_timeout: 10s
@@ -39,9 +40,10 @@ rpc:
       - url: unix:///var/run/test.sock
         register: false
       registry:
-        name: etcd2
+        name: etcd
         options:
           address: 127.0.0.1:2379
+          heartbeat: 30s
       heartbeat: 30s
       read_timeout: 10s
       write_timeout: 10s

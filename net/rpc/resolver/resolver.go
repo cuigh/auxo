@@ -36,7 +36,7 @@ type Builder interface {
 	// Name returns the name of Resolvers built by this builder.
 	Name() string
 	// Build creates a new Resolver with the options.
-	Build(c Client, opts data.Map) Resolver
+	Build(c Client, opts data.Map) (Resolver, error)
 }
 
 // Register registers the Resolver builder to the builder map.
@@ -59,9 +59,9 @@ func (directBuilder) Name() string {
 	return "direct"
 }
 
-func (directBuilder) Build(_ Client, opts data.Map) Resolver {
+func (directBuilder) Build(_ Client, opts data.Map) (Resolver, error) {
 	addrs := opts.Get("addresses").([]transport.Address)
-	return &directResolver{addrs: addrs}
+	return &directResolver{addrs: addrs}, nil
 }
 
 type directResolver struct {

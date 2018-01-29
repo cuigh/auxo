@@ -138,23 +138,30 @@ func (s *Server) initRegistry() {
 		return
 	}
 
-	if b := registry.Get(s.opts.Registry.Name); b != nil {
-		s.registry = b.Build(registry.Server{
-			Name:      s.opts.Name,
-			Version:   s.opts.Version,
-			Addresses: s.opts.Address,
-			Options: func() data.Map {
-				return data.Map{
-					"desc":        s.opts.Desc,
-					"max_clients": s.opts.MaxClients,
-					"clients":     s.sessions.Count(),
-				}
-			},
-		}, s.opts.Registry.Options)
-		s.registry.Register()
+	b := registry.Get(s.opts.Registry.Name)
+	if b == nil {
+		s.logger.Warnf("rpc > Unknown registry '%v'", s.opts.Registry.Name)
 		return
 	}
-	s.logger.Warnf("rpc > Unknown registry '%v'", s.opts.Registry.Name)
+
+	var err error
+	s.registry, err = b.Build(registry.Server{
+		Name:      s.opts.Name,
+		Version:   s.opts.Version,
+		Addresses: s.opts.Address,
+		Options: func() data.Map {
+			return data.Map{
+				"desc":        s.opts.Desc,
+				"max_clients": s.opts.MaxClients,
+				"clients":     s.sessions.Count(),
+			}
+		},
+	}, s.opts.Registry.Options)
+	if err == nil {
+		s.registry.Register()
+	} else {
+		s.logger.Warnf("rpc > Failed to create registry '%v': %s", s.opts.Registry.Name, err)
+	}
 }
 
 // todo

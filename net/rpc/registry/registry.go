@@ -28,6 +28,7 @@ type Server struct {
 type Registry interface {
 	// Register send all addresses to registry and keep refreshing.
 	Register()
+	//Heartbeat()
 	// Offline remove server addresses from registry and stop refreshing immediately.
 	Offline() error
 	// Online recover server registering.
@@ -42,7 +43,7 @@ type Builder interface {
 	Name() string
 	// Build creates a new Registry with the options.
 	//Build(name string, opts data.Map) Registry
-	Build(server Server, opts data.Map) Registry
+	Build(server Server, opts data.Map) (Registry, error)
 }
 
 // Register registers the registry builder to the registry map.
@@ -66,8 +67,8 @@ func (fakeRegistryBuilder) Name() string {
 	return "fake"
 }
 
-func (fakeRegistryBuilder) Build(server Server, _ data.Map) Registry {
-	return &fakeRegistry{s: server}
+func (fakeRegistryBuilder) Build(server Server, _ data.Map) (Registry, error) {
+	return &fakeRegistry{s: server}, nil
 }
 
 // fakeRegistry is a fake registry for demonstrating how to implement.
