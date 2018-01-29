@@ -8,6 +8,7 @@ import (
 	"github.com/abronan/valkeyrie"
 	"github.com/abronan/valkeyrie/store"
 	"github.com/cuigh/auxo/data"
+	"github.com/cuigh/auxo/data/set"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/rpc/registry"
@@ -179,16 +180,11 @@ func (r *Registry) online(opts data.Map) data.Map {
 		return opts
 	}
 
-	nodes := make([]string, len(r.server.Addresses))
-	for i, addr := range r.server.Addresses {
-		nodes[i] = addr.URL
-	}
-
-	offlines := v.([]string)
-	set := stringSet{m: make(map[string]struct{})}
-	set.Put(offlines...)
-	set.Delete(nodes...)
-	opts["offline_nodes"] = set.Slice()
+	ss := set.NewStringSet(v.([]string)...)
+	ss.RemoveSlice(r.server.Addresses, func(i int) string {
+		return r.server.Addresses[i].URL
+	})
+	opts["offline_nodes"] = ss.Slice()
 	return opts
 }
 
@@ -208,34 +204,8 @@ func (r *Registry) offline(opts data.Map) data.Map {
 		return opts
 	}
 
-	offlines := v.([]string)
-	set := stringSet{m: make(map[string]struct{})}
-	set.Put(offlines...)
-	set.Put(nodes...)
-	opts["offline_nodes"] = set.Slice()
+	ss := set.NewStringSet(v.([]string)...)
+	ss.Add(nodes...)
+	opts["offline_nodes"] = ss.Slice()
 	return opts
-}
-
-type stringSet struct {
-	m map[string]struct{}
-}
-
-func (s stringSet) Put(items ...string) {
-	for _, item := range items {
-		s.m[item] = struct{}{}
-	}
-}
-
-func (s stringSet) Delete(items ...string) {
-	for _, item := range items {
-		delete(s.m, item)
-	}
-}
-
-func (s stringSet) Slice() []string {
-	slice := make([]string, 0, len(s.m))
-	for k := range s.m {
-		slice = append(slice, k)
-	}
-	return slice
 }

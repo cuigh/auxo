@@ -6,6 +6,8 @@ import (
 )
 
 var (
+	// Empty is a empty struct instance.
+	Empty             = struct{}{}
 	Nil         Value = nilValue{}
 	ErrNilValue       = errors.New("nil value")
 )
