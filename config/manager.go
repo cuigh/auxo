@@ -222,9 +222,17 @@ func (m *Manager) load(force bool) error {
 
 func (m *Manager) loadFlags() {
 	if m.flags != nil {
-		m.flags.VisitAll(func(f *flag.Flag) {
+		set := make(map[string]struct{})
+		m.flags.Visit(func(f *flag.Flag) {
 			getter := f.Value.(flag.Getter)
 			m.set(f.Name, getter.Get())
+			set[f.Name] = struct{}{}
+		})
+		m.flags.VisitAll(func(f *flag.Flag) {
+			if _, ok := set[f.Name]; !ok && f.DefValue != "" {
+				getter := f.Value.(flag.Getter)
+				m.set(f.Name, getter.Get())
+			}
 		})
 	}
 }
@@ -242,8 +250,9 @@ func (m *Manager) loadEnvs() {
 	}
 
 	for key, envKey := range m.env {
-		opt := os.Getenv(envKey)
-		m.set(key, opt)
+		if opt := os.Getenv(envKey); opt != "" {
+			m.set(key, opt)
+		}
 	}
 }
 
