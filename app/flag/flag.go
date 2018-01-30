@@ -4,7 +4,9 @@ package flag
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
+	"text/tabwriter"
 	"time"
 )
 
@@ -37,6 +39,16 @@ const (
 	// Manual: up-down style
 	Manual
 )
+
+func (s UsageStyle) Print(w io.Writer, title, desc string) {
+	fmt.Fprint(w, "  "+title)
+	switch s {
+	case Compact:
+		fmt.Fprintln(w, "\t"+desc)
+	default:
+		fmt.Fprintln(w, "\n      "+desc)
+	}
+}
 
 var Default = Wrap(flag.CommandLine, "")
 
@@ -122,6 +134,21 @@ type Flag struct {
 	ShortName string
 	Default   interface{}
 	Usage     string
+}
+
+func (f *Flag) usageTitle() string {
+	var name string
+	if f.FullName != "" && f.ShortName != "" {
+		name = fmt.Sprintf("-%s, -%s", f.ShortName, f.FullName)
+	} else if f.FullName != "" {
+		name = fmt.Sprintf("-%s", f.FullName)
+	} else {
+		name = fmt.Sprintf("-%s", f.ShortName)
+	}
+	if v := fmt.Sprint(f.Default); v != "" {
+		name = name + fmt.Sprintf("[=%v]", v)
+	}
+	return name
 }
 
 type Set struct {
@@ -327,31 +354,19 @@ func (s *Set) Inner() *flag.FlagSet {
 
 func (s *Set) Usage() {
 	if s.Desc != "" {
-		fmt.Println(s.Desc)
-		fmt.Println()
+		fmt.Print(s.Desc + "\n\n")
 	}
 
-	fmt.Println("Options:")
-	fmt.Println()
-
-	for i, f := range s.flags {
-		if f.FullName != "" && f.ShortName != "" {
-			fmt.Printf("  -%s, -%s", f.ShortName, f.FullName)
-		} else if f.FullName != "" {
-			fmt.Printf("  -%s", f.FullName)
-		} else {
-			fmt.Printf("  -%s", f.ShortName)
+	fmt.Print("Options:\n\n")
+	if s.style == Compact {
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+		for _, f := range s.flags {
+			s.style.Print(w, f.usageTitle(), f.Usage)
 		}
-
-		if v := fmt.Sprint(f.Default); v != "" {
-			fmt.Printf("[=%v]", v)
-		}
-
-		if s.style == Compact {
-			fmt.Println("\r\t\t\t\t" + f.Usage)
-		} else if s.style == Manual {
-			fmt.Println()
-			fmt.Println("     ", f.Usage)
+		w.Flush()
+	} else {
+		for i, f := range s.flags {
+			s.style.Print(os.Stdout, f.usageTitle(), f.Usage)
 			if i != len(s.flags)-1 {
 				fmt.Println()
 			}

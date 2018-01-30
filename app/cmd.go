@@ -2,7 +2,9 @@ package app
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/cuigh/auxo/app/flag"
 	"github.com/cuigh/auxo/util/cast"
@@ -65,9 +67,11 @@ func (c *Context) Usage() {
 	c.cmd.Flags.Usage()
 	if len(c.cmd.children) > 0 {
 		fmt.Print("\nCommands:\n\n")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		for name, child := range c.cmd.children {
-			fmt.Println("  " + name + "\r\t\t" + child.Desc)
+			fmt.Fprintln(w, "  "+name+"\t"+child.Desc)
 		}
+		w.Flush()
 	}
 }
 
