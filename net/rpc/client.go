@@ -614,3 +614,26 @@ func (m *clientManager) create(name string) (c *Client, err error) {
 	opts.Name = name
 	return NewClient(opts)
 }
+
+type LazyClient struct {
+	Name string
+	c    *Client
+}
+
+func (l *LazyClient) Try() (c *Client, err error) {
+	if l.c == nil {
+		// we don't use locker here, because method AutoClient is already safe
+		l.c, err = AutoClient(l.Name)
+	}
+	return l.c, err
+}
+
+func (l *LazyClient) Get() (c *Client) {
+	if l.c == nil {
+		var err error
+		if l.c, err = l.Try(); err != nil {
+			panic(err)
+		}
+	}
+	return l.c
+}

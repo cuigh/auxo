@@ -12,7 +12,9 @@ import (
 )
 
 func TestServer_Match(t *testing.T) {
-	s := rpc.Listen(transport.Address{URL: ":9000"})
+	s, err := rpc.Listen(transport.Address{URL: ":9000"})
+	assert.NoError(t, err)
+
 	s.Match(rpc.Any, "json")
 	//s.Use(filter.Test())
 	hs := HelloService{
@@ -22,7 +24,8 @@ func TestServer_Match(t *testing.T) {
 	}
 	s.RegisterService("Test", hs)
 	s.RegisterFunc("Test", "Echo", func(ctx context.Context, s string) string { return s })
-	err := s.Serve()
+
+	err = s.Serve()
 	assert.NoError(t, err)
 }
 

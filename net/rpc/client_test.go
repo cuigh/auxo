@@ -19,9 +19,7 @@ import (
 
 func TestClient_Call(t *testing.T) {
 	c, err := rpc.Dial("json", transport.Address{URL: "127.0.0.1:9000"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Error(t, err)
 
 	var s string
 	err = c.Call(context.Background(), "Test", "Hello", []interface{}{"auxo"}, &s)
@@ -35,9 +33,7 @@ func TestClient_Call(t *testing.T) {
 
 func BenchmarkClient_Call(b *testing.B) {
 	c, err := rpc.Dial("json", transport.Address{URL: "127.0.0.1:9000"})
-	if err != nil {
-		b.Fatal(err)
-	}
+	assert.Error(b, err)
 
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
