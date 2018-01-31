@@ -56,7 +56,8 @@ func (b *Builder) Build(server registry.Server, opts data.Map) (registry.Registr
 		server:   server,
 		store:    kv,
 		key:      prefix + "/" + server.Name,
-		interval: interval + 5*time.Second,
+		interval: interval,
+		ttl:      interval + 5*time.Second,
 		logger:   log.Get(PkgName),
 	}, nil
 }
@@ -68,6 +69,7 @@ type Registry struct {
 	store    store.Store
 	key      string
 	interval time.Duration
+	ttl      time.Duration
 	logger   *log.Logger
 	stopper  chan struct{}
 }
@@ -111,7 +113,7 @@ func (r *Registry) register() {
 			continue
 		}
 
-		err = r.store.Put(key, b, &store.WriteOptions{TTL: r.interval})
+		err = r.store.Put(key, b, &store.WriteOptions{TTL: r.ttl})
 		if err != nil {
 			r.logger.Errorf("valkeyrie > Failed to register address '%s': %v", addr.URL, err)
 		} else {

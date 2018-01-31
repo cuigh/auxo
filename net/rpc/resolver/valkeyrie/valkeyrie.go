@@ -34,7 +34,7 @@ func (b *Builder) Build(client resolver.Client, opts data.Map) (resolver.Resolve
 	password := cast.ToString(opts.Get("password"))
 	interval := cast.ToDuration(opts.Get("refresh"))
 	if interval <= 0 {
-		interval = 15 * time.Second
+		interval = 30 * time.Second
 	}
 	prefix := cast.ToString(opts.Get("prefix"))
 	if prefix == "" {
