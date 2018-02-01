@@ -566,6 +566,10 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 }
 
 type clientManager struct {
+	// todo: expose Option & Decorator to support customizing AutoClient
+	Option    func() ClientOptions // default options
+	Decorator func(*Client)        // client decorator
+
 	sync.RWMutex
 	clients map[string]*Client
 }
@@ -600,19 +604,25 @@ func (m *clientManager) Get(name string) (c *Client, err error) {
 }
 
 func (m *clientManager) create(name string) (c *Client, err error) {
-	// todo: create from registry
 	key := "rpc.client." + name
-	if !config.Exist(key) {
+	if !config.Exist(key) && m.Option == nil {
 		return nil, errors.Format("rpc: can't find config for client '%s'", name)
 	}
 
-	opts := ClientOptions{}
+	var opts ClientOptions
+	if m.Option != nil {
+		opts = m.Option()
+	}
 	err = config.UnmarshalOption(key, &opts)
 	if err != nil {
 		return nil, err
 	}
 	opts.Name = name
-	return NewClient(opts)
+	c, err = NewClient(opts)
+	if err == nil && m.Decorator != nil {
+		m.Decorator(c)
+	}
+	return
 }
 
 type LazyClient struct {
