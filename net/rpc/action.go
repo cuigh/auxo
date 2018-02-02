@@ -74,18 +74,29 @@ func (s *actionSet) RegisterService(name string, svc interface{}, filter ...SFil
 		name = reflect.TypeOf(svc).Name()
 	}
 	logger := log.Get(PkgName)
-	sv := reflects.StructOf(reflect.ValueOf(svc))
-	sv.VisitMethods(func(mv reflect.Value, mi *reflect.Method) (err error) {
-		// Method must be exported.
-		if mi.PkgPath == "" {
-			if out := mi.Type.NumOut(); out > 2 {
-				logger.Debugf("method %s.%s has wrong number of outs: %", name, mi.Name, out)
-				return
-			}
-			s.registerAction(name, mi.Name, mv, filter...)
+
+	v := reflect.ValueOf(svc)
+	t := v.Type()
+	for i, num := 0, t.NumMethod(); i < num; i++ {
+		mi := t.Method(i)
+		if mi.PkgPath != "" { // Method must be exported.
+			continue
 		}
-		return
-	})
+
+		if out := mi.Type.NumOut(); out < 2 {
+			s.registerAction(name, mi.Name, v.Method(i), filter...)
+		} else if out == 2 {
+			if mi.Type.Out(1) == reflects.TypeError {
+				s.registerAction(name, mi.Name, v.Method(i), filter...)
+			} else {
+				logger.Debugf("skip method %s.%s: the second out arg must be error", name, mi.Name)
+			}
+		} else {
+			logger.Debugf("skip method %s.%s: too much out args", name, mi.Name)
+		}
+	}
+
+	sv := reflects.StructOf(reflect.ValueOf(svc))
 	sv.VisitFields(func(fv reflect.Value, fi *reflect.StructField) error {
 		if fv.Kind() == reflect.Func && fi.PkgPath == "" && !fv.IsNil() {
 			s.registerAction(name, fi.Name, fv, filter...)
@@ -238,14 +249,16 @@ func (a *action) do(c Context) (r interface{}, err error) {
 	out := a.v.Call(in)
 	switch len(out) {
 	case 1:
-		if a.err {
-			err = out[0].Interface().(error)
-		} else {
+		if !a.err {
 			r = out[0].Interface()
+		} else if !out[0].IsNil() {
+			err = out[0].Interface().(error)
 		}
 	case 2:
 		r = out[0].Interface()
-		err = out[1].Interface().(error)
+		if !out[1].IsNil() {
+			err = out[1].Interface().(error)
+		}
 	}
 	return
 }

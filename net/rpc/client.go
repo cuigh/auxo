@@ -3,7 +3,6 @@ package rpc
 import (
 	ct "context"
 	"encoding/binary"
-	"io"
 	"sort"
 	"strings"
 	"sync"
@@ -209,15 +208,10 @@ func (n *Node) handle() {
 	for n.state == stateReady {
 		err := n.codec.DecodeHead(&resp.Head)
 		if err != nil {
-			if err == io.EOF {
-				if n.state == stateShutdown {
-					break
-				} else {
-					err = io.ErrUnexpectedEOF
-				}
+			if n.state != stateShutdown {
+				n.logger.Error("client > failed to decode head: ", err)
+				n.Close()
 			}
-			n.logger.Error("client > failed to decode head: ", err)
-			n.Close()
 			break
 		}
 
