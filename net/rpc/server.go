@@ -15,6 +15,7 @@ import (
 	"github.com/cuigh/auxo/net/rpc/registry"
 	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/util/debug"
+	"github.com/cuigh/auxo/util/run"
 )
 
 var (
@@ -44,6 +45,7 @@ type ServerOptions struct {
 	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 	Heartbeat    time.Duration `json:"heartbeat" yaml:"heartbeat"`
+	MaxPoolSize  int32         `json:"max_pool_size" yaml:"max_pool_size"`
 	MaxClients   int32         `json:"max_clients" yaml:"max_clients"`
 	Concurrency  int32
 	MaxRequests  int32
@@ -65,6 +67,9 @@ func (opts *ServerOptions) ensure() error {
 	if opts.WriteTimeout <= 0 {
 		opts.WriteTimeout = 10 * time.Second
 	}
+	if opts.MaxPoolSize <= 0 {
+		opts.MaxPoolSize = 1024
+	}
 	return nil
 }
 
@@ -85,8 +90,8 @@ type Server struct {
 	listeners []net.Listener
 	sessions  *sessionMap
 	actions   *actionSet
-	jobs      sync.WaitGroup // for graceful closing
-	hb        *times.Wheel   // for heartbeat
+	pool      *run.Pool
+	hb        *times.Wheel // for heartbeat
 	listening int32
 }
 
@@ -101,6 +106,7 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		opts:     opts,
 		sessions: newSessionMap(),
 		actions:  newActionSet(),
+		pool:     &run.Pool{Max: opts.MaxPoolSize},
 	}
 	s.ctxPool = newContextPool(s)
 	return s, nil
@@ -178,6 +184,7 @@ func (s *Server) Serve() error {
 		return err
 	}
 
+	s.pool.Start()
 	if s.opts.Heartbeat > 0 {
 		s.hb = times.NewWheel(time.Second, int(s.opts.Heartbeat.Seconds()))
 	}
@@ -236,17 +243,17 @@ func (s *Server) Close(timeout time.Duration) {
 	}
 
 	if timeout > 0 {
-		s.logger.Info("start to close server: ", time.Now())
-		select {
-		case <-time.After(timeout):
-			s.logger.Warn("rpc > Server closed due to timeout")
-		case <-s.wait():
+		s.logger.Info("rpc > Try to close server...")
+		if err := s.pool.Wait(timeout); err == nil {
 			s.logger.Info("rpc > Server closed gracefully")
+		} else {
+			s.logger.Warn("rpc > Server closed with error: ", err.Error())
 		}
 	} else {
 		s.logger.Info("rpc > Server closed")
 	}
 	s.sessions.Close()
+	s.pool.Stop()
 }
 
 func (s *Server) Match(m Matcher, codec string, opts ...data.Map) {
@@ -340,7 +347,7 @@ func (s *Server) handleSession(ch *Channel, sc ServerCodec) {
 
 		err = s.decodeArgs(sc, ctx)
 		if err == nil {
-			go s.handleRequest(ctx, sc)
+			s.handleRequest(ctx, sc)
 		} else {
 			s.encode(ctx, nil, err)
 		}
@@ -374,21 +381,24 @@ func (s *Server) heartbeat(sn *session) bool {
 }
 
 func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
-	s.jobs.Add(1)
-	defer func() {
-		s.jobs.Done()
-		if e := recover(); e != nil {
-			s.logger.Error("server > failed to handle request: ", e)
+	s.pool.Put(func() {
+		//s.jobs.Add(1)
+		defer func() {
+			//s.jobs.Done()
+			if e := recover(); e != nil {
+				s.logger.Error("server > failed to handle request: ", e)
+			}
+		}()
+
+		// todo: move to initialization stage
+		h := ctx.action.Handler()
+		for i := len(s.filters) - 1; i >= 0; i-- {
+			h = s.filters[i](h)
 		}
-	}()
 
-	h := ctx.action.Handler()
-	for i := len(s.filters) - 1; i >= 0; i-- {
-		h = s.filters[i](h)
-	}
-
-	r, err := h(ctx)
-	s.encode(ctx, r, err)
+		r, err := h(ctx)
+		s.encode(ctx, r, err)
+	})
 }
 
 func (s *Server) decodeArgs(sc ServerCodec, ctx *context) (err error) {
@@ -427,17 +437,6 @@ func (s *Server) findCodec(ch *Channel) ServerCodec {
 		}
 	}
 	return nil
-}
-
-// wait all jobs finished
-func (s *Server) wait() data.ReadChan {
-	notify := make(data.Chan, 1)
-	go func() {
-		s.jobs.Wait()
-		notify.Send()
-		close(notify)
-	}()
-	return notify.ReadOnly()
 }
 
 func (s *Server) wrapError(err error) *errors.CodedError {

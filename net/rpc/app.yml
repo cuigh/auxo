@@ -44,6 +44,7 @@ rpc:
         options:
           address: 127.0.0.1:2379
           heartbeat: 30s
+      max_pool_size: 1024
       heartbeat: 30s
       read_timeout: 10s
       write_timeout: 10s
