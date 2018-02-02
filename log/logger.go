@@ -12,16 +12,6 @@ import (
 	"github.com/cuigh/auxo/data"
 )
 
-const defaultLayout = "[{L}]{T}: {M}{N}"
-
-var (
-	once            sync.Once
-	root            *Logger
-	loggers         []*Logger
-	levelShortNames = [7]string{"D", "I", "W", "E", "P", "F", "O"}
-	levelLongNames  = [7]string{"DEBUG", "INFO", "WARN", "ERROR", "PANIC", "FATAL", "OFF"}
-)
-
 const (
 	LevelDebug = Level(0)
 	LevelInfo  = Level(1)
@@ -30,6 +20,19 @@ const (
 	LevelPanic = Level(4)
 	LevelFatal = Level(5)
 	LevelOff   = Level(6)
+)
+
+var (
+	defaultLevel  = LevelDebug
+	defaultLayout = "[{L}]{T}: {M}{N}"
+)
+
+var (
+	once            sync.Once
+	root            *Logger
+	loggers         []*Logger
+	levelShortNames = [7]string{"D", "I", "W", "E", "P", "F", "O"}
+	levelLongNames  = [7]string{"DEBUG", "INFO", "WARN", "ERROR", "PANIC", "FATAL", "OFF"}
 )
 
 type Level int8
@@ -54,6 +57,10 @@ func parseLevel(l string) (lvl Level, err error) {
 		err = errors.New("invalid level: " + l)
 	}
 	return
+}
+
+func SetDefaultLevel(lvl Level) {
+	defaultLevel = lvl
 }
 
 type Row struct {
@@ -232,7 +239,7 @@ func createDefaultLogger() *Logger {
 		panic(err)
 	}
 	return &Logger{
-		lvl:     LevelDebug,
+		lvl:     defaultLevel,
 		writers: []*Writer{w},
 	}
 }
