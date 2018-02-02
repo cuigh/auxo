@@ -45,21 +45,14 @@ type ServerOptions struct {
 	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 	Heartbeat    time.Duration `json:"heartbeat" yaml:"heartbeat"`
-	MaxPoolSize  int32         `json:"max_pool_size" yaml:"max_pool_size"`
 	MaxClients   int32         `json:"max_clients" yaml:"max_clients"`
-	Concurrency  int32
-	MaxRequests  int32
+	MaxPoolSize  int32         `json:"max_pool_size" yaml:"max_pool_size"`
+	Backlog      int32         `json:"backlog" yaml:"backlog"`
 }
 
 func (opts *ServerOptions) ensure() error {
 	if len(opts.Address) == 0 {
 		return errors.New("rpc: address must be set for server")
-	}
-	if opts.MaxClients <= 0 {
-		opts.MaxClients = 1000
-	}
-	if opts.MaxRequests <= 0 {
-		opts.MaxRequests = 10000
 	}
 	if opts.ReadTimeout <= 0 {
 		opts.ReadTimeout = 10 * time.Second
@@ -69,6 +62,15 @@ func (opts *ServerOptions) ensure() error {
 	}
 	if opts.MaxPoolSize <= 0 {
 		opts.MaxPoolSize = 1024
+	}
+	if opts.MaxClients <= 0 {
+		opts.MaxClients = 10000
+	}
+	if opts.MaxPoolSize <= 0 {
+		opts.MaxPoolSize = 1024
+	}
+	if opts.Backlog <= 0 {
+		opts.Backlog = 10000
 	}
 	return nil
 }
@@ -106,7 +108,7 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		opts:     opts,
 		sessions: newSessionMap(),
 		actions:  newActionSet(),
-		pool:     &run.Pool{Max: opts.MaxPoolSize},
+		pool:     &run.Pool{Max: opts.MaxPoolSize, Backlog: int(opts.Backlog)},
 	}
 	s.ctxPool = newContextPool(s)
 	return s, nil
@@ -290,7 +292,12 @@ func (s *Server) serve(l net.Listener) (err error) {
 			break
 		}
 
-		// todo: close connection when reach max clients
+		// close connection when max clients was reached.
+		if s.sessions.Count() >= int(s.opts.MaxClients) {
+			s.logger.Warnf("server > reach max clients, close connection: %v", conn.RemoteAddr())
+			conn.Close()
+			continue
+		}
 
 		ch := newChannel(conn)
 		c := s.findCodec(ch)
@@ -382,9 +389,7 @@ func (s *Server) heartbeat(sn *session) bool {
 
 func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
 	err := s.pool.Put(func() {
-		//s.jobs.Add(1)
 		defer func() {
-			//s.jobs.Done()
 			if e := recover(); e != nil {
 				s.logger.Error("server > failed to handle request: ", e)
 			}

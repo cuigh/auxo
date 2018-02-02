@@ -1,10 +1,8 @@
 package registry
 
 import (
-	"strings"
-
 	"fmt"
-
+	"strings"
 	"time"
 
 	"github.com/cuigh/auxo/data"
