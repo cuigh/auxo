@@ -2,12 +2,12 @@ package http
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,7 +52,7 @@ func (c *ClientCodec) Encode(req *rpc.Request) (err error) {
 	c.req.URL.Path = texts.Concat(c.path, req.Head.Service, ".", req.Head.Method)
 	c.req.Body = ioutil.NopCloser(c.enc)
 	c.req.ContentLength = int64(c.enc.Len())
-	c.req.Header.Set(headerID, hex.EncodeToString(req.Head.ID))
+	c.req.Header.Set(headerID, strconv.FormatUint(req.Head.ID, 10))
 	err = c.req.Write(c)
 	if err == nil {
 		err = c.Flush()
@@ -66,7 +66,7 @@ func (c *ClientCodec) DecodeHead(head *rpc.ResponseHead) (err error) {
 		return
 	}
 
-	head.ID, err = hex.DecodeString(c.resp.Header.Get(headerID))
+	head.ID, err = strconv.ParseUint(c.resp.Header.Get(headerID), 10, 64)
 	return
 }
 
@@ -113,7 +113,7 @@ func (c *ServerCodec) Encode(resp *rpc.Response) (err error) {
 
 	c.resp.Body = ioutil.NopCloser(c.enc)
 	c.resp.ContentLength = int64(c.enc.Len())
-	c.resp.Header.Set(headerID, hex.EncodeToString(resp.Head.ID))
+	c.resp.Header.Set(headerID, strconv.FormatUint(resp.Head.ID, 10))
 	err = c.resp.Write(c)
 	if err == nil {
 		err = c.Flush()
@@ -127,7 +127,7 @@ func (c *ServerCodec) DecodeHead(head *rpc.RequestHead) (err error) {
 		return
 	}
 
-	head.ID, err = hex.DecodeString(c.req.Header.Get(headerID))
+	head.ID, err = strconv.ParseUint(c.req.Header.Get(headerID), 10, 64)
 	if err != nil {
 		return
 	}

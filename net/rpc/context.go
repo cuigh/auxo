@@ -105,7 +105,7 @@ func (c *context) Reset(ch *Channel, sc ServerCodec) {
 	c.codec = sc
 	c.action = nil
 	c.ctx = ct.Background()
-	c.req.Head.ID = nil
+	c.req.Head.ID = 0
 	c.req.Head.Service = ""
 	c.req.Head.Method = ""
 	if c.req.Head.Labels != nil {

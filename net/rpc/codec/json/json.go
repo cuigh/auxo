@@ -15,7 +15,7 @@ type request struct {
 }
 
 func (r *request) reset() {
-	r.Head.ID = nil
+	r.Head.ID = 0
 	r.Head.Service = ""
 	r.Head.Method = ""
 	if r.Head.Labels != nil {
@@ -35,7 +35,7 @@ type response struct {
 }
 
 func (r *response) reset() {
-	r.Head.ID = nil
+	r.Head.ID = 0
 	r.Result.Value = nil
 	r.Result.Error = nil
 }

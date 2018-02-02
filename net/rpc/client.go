@@ -2,7 +2,6 @@ package rpc
 
 import (
 	ct "context"
-	"encoding/binary"
 	"sort"
 	"strings"
 	"sync"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/data"
-	"github.com/cuigh/auxo/data/guid"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/rpc/resolver"
@@ -81,25 +79,6 @@ var (
 //type DialFilter func(DialHandler) DialHandler
 
 //type DialHandler func(n *Node) error
-
-type Identifier func() []byte
-
-// Uint64 is an Identifier which generate an uint64 id.
-func Uint64() Identifier {
-	var n uint64
-	return func() []byte {
-		id := atomic.AddUint64(&n, 1)
-		buf := make([]byte, 8)
-		buf = buf[:binary.PutUvarint(buf, id)]
-		return buf
-		//return cast.StringToBytes(strconv.FormatUint(id, 10))
-	}
-}
-
-// GUID is an Identifier using `guid.New`.
-func GUID() []byte {
-	return guid.New().Slice()
-}
 
 type NodeOptions struct {
 	Codec struct {
@@ -182,7 +161,7 @@ func (n *Node) initialize(ctx ct.Context) error {
 //}
 
 func (n *Node) Call(ctx ct.Context, service, method string, args []interface{}, reply interface{}) (err error) {
-	c := n.calls.Acquire(n.c.id())
+	c := n.calls.Acquire(n.c.nextID())
 	c.reset(ctx, service, method, args, reply)
 	defer n.calls.Release(c)
 	err = n.handler(c)
@@ -215,7 +194,7 @@ func (n *Node) handle() {
 			break
 		}
 
-		if len(resp.Head.ID) == 0 {
+		if resp.Head.ID == 0 {
 			n.heartbeat()
 			continue
 		}
@@ -321,7 +300,7 @@ func (opts *ClientOptions) ensure() error {
 type Client struct {
 	opts    ClientOptions
 	logger  *log.Logger
-	id      Identifier
+	id      uint64
 	filters []CFilter
 
 	lock     sync.Mutex
@@ -341,7 +320,6 @@ func NewClient(opts ClientOptions) (*Client, error) {
 	return &Client{
 		logger: log.Get(PkgName),
 		opts:   opts,
-		id:     Uint64(),
 	}, nil
 }
 
@@ -557,6 +535,10 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 	for _, n := range invalid {
 		n.Close()
 	}
+}
+
+func (c *Client) nextID() uint64 {
+	return atomic.AddUint64(&c.id, 1)
 }
 
 type clientManager struct {

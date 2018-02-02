@@ -333,7 +333,7 @@ func (s *Server) handleSession(ch *Channel, sc ServerCodec) {
 		}
 
 		// heartbeat response
-		if len(ctx.req.Head.ID) == 0 {
+		if ctx.req.Head.ID == 0 {
 			sc.DiscardArgs()
 			sn.heartbeat = time.Now()
 			continue
@@ -381,7 +381,7 @@ func (s *Server) heartbeat(sn *session) bool {
 }
 
 func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
-	s.pool.Put(func() {
+	err := s.pool.Put(func() {
 		//s.jobs.Add(1)
 		defer func() {
 			//s.jobs.Done()
@@ -399,6 +399,9 @@ func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
 		r, err := h(ctx)
 		s.encode(ctx, r, err)
 	})
+	if err != nil {
+		s.encode(ctx, nil, err)
+	}
 }
 
 func (s *Server) decodeArgs(sc ServerCodec, ctx *context) (err error) {

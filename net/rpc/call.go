@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/cuigh/auxo/data"
-	"github.com/cuigh/auxo/util/cast"
 )
 
 // CFilter is client interceptor.
@@ -95,7 +94,7 @@ type callPool struct {
 
 	sync.RWMutex
 	free    *Call
-	pending map[string]*Call
+	pending map[uint64]*Call
 }
 
 func newCallPool(n *Node) *callPool {
@@ -107,13 +106,13 @@ func newCallPool(n *Node) *callPool {
 				},
 			}}
 		},
-		pending: make(map[string]*Call),
+		pending: make(map[uint64]*Call),
 	}
 	return cp
 }
 
 // acquire a *Call from pool and add it to pending.
-func (cp *callPool) Acquire(id []byte) *Call {
+func (cp *callPool) Acquire(id uint64) *Call {
 	cp.Lock()
 	c := cp.free
 	if c == nil {
@@ -122,7 +121,7 @@ func (cp *callPool) Acquire(id []byte) *Call {
 		cp.free = c.next
 	}
 	c.req.Head.ID = id
-	cp.pending[cast.BytesToString(c.req.Head.ID)] = c
+	cp.pending[id] = c
 	cp.Unlock()
 	return c
 }
@@ -133,15 +132,15 @@ func (cp *callPool) Release(c *Call) {
 		cp.Lock()
 		c.next = cp.free
 		cp.free = c
-		delete(cp.pending, cast.BytesToString(c.req.Head.ID))
+		delete(cp.pending, c.req.Head.ID)
 		cp.Unlock()
 	}
 }
 
 // find pending *Call by id.
-func (cp *callPool) Find(id []byte) (c *Call) {
+func (cp *callPool) Find(id uint64) (c *Call) {
 	cp.RLock()
-	c = cp.pending[cast.BytesToString(id)]
+	c = cp.pending[id]
 	cp.RUnlock()
 	return
 }
