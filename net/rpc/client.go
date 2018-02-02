@@ -65,7 +65,7 @@ const (
 )
 
 var (
-	manager = newClientManager()
+	ClientPool = clientManager{clients: make(map[string]*Client)}
 
 	// ErrNodeUnavailable indicates no node is available for call.
 	ErrNodeUnavailable = NewError(StatusNodeUnavailable, "rpc: no node is available")
@@ -357,7 +357,7 @@ func Dial(codec string, addrs ...transport.Address) (*Client, error) {
 // AutoClient loads options from config file and create a Client. The created client is cached,
 // so next call AutoClient with the same name will return the same Client instance.
 func AutoClient(name string) (*Client, error) {
-	return manager.Get(name)
+	return ClientPool.Get(name)
 }
 
 func (c *Client) Use(filter ...CFilter) {
@@ -560,30 +560,23 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 }
 
 type clientManager struct {
-	// todo: expose Option & Decorator to support customizing AutoClient
-	Option    func() ClientOptions // default options
-	Decorator func(*Client)        // client decorator
+	Option    func(name string) ClientOptions   // default options
+	Decorator func(name string, client *Client) // client decorator
 
-	sync.RWMutex
+	lock    sync.RWMutex
 	clients map[string]*Client
 }
 
-func newClientManager() *clientManager {
-	return &clientManager{
-		clients: make(map[string]*Client),
-	}
-}
-
 func (m *clientManager) Get(name string) (c *Client, err error) {
-	m.RLock()
+	m.lock.RLock()
 	c = m.clients[name]
-	m.RUnlock()
+	m.lock.RUnlock()
 	if c != nil {
 		return
 	}
 
-	m.Lock()
-	defer m.Unlock()
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
 	c = m.clients[name]
 	if c != nil {
@@ -605,7 +598,7 @@ func (m *clientManager) create(name string) (c *Client, err error) {
 
 	var opts ClientOptions
 	if m.Option != nil {
-		opts = m.Option()
+		opts = m.Option(name)
 	}
 	err = config.UnmarshalOption(key, &opts)
 	if err != nil {
@@ -614,7 +607,7 @@ func (m *clientManager) create(name string) (c *Client, err error) {
 	opts.Name = name
 	c, err = NewClient(opts)
 	if err == nil && m.Decorator != nil {
-		m.Decorator(c)
+		m.Decorator(name, c)
 	}
 	return
 }
