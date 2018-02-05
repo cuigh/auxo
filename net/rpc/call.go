@@ -4,7 +4,6 @@ import (
 	ct "context"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/cuigh/auxo/data"
 )
@@ -51,8 +50,12 @@ func (c *Call) Err() error {
 
 // Wait implements interface of AsyncError.
 func (c *Call) Wait() (err error) {
-	ctx, cancel := ct.WithTimeout(c.ctx, time.Second*10)
-	defer cancel()
+	ctx := c.ctx
+	if timeout := c.n.c.opts.CallTimeout; timeout > 0 {
+		var cancel ct.CancelFunc
+		ctx, cancel = ct.WithTimeout(c.ctx, timeout)
+		defer cancel()
+	}
 
 	select {
 	case err = <-c.err:

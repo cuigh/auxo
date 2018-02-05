@@ -247,28 +247,29 @@ func (n *Node) Close() {
 }
 
 type ClientOptions struct {
-	Name    string
-	Desc    string
-	Version string
-	Group   string
-	Fail    FailMode
-	Address []transport.Address
+	Name    string              `json:"name" yaml:"name"`
+	Desc    string              `json:"desc" yaml:"desc"`
+	Version string              `json:"version" yaml:"version"`
+	Group   string              `json:"group" yaml:"group"`
+	Fail    FailMode            `json:"fail" yaml:"fail"`
+	Address []transport.Address `json:"address" yaml:"address"`
 	Codec   struct {
-		Name    string
-		Options data.Map
-	}
+		Name    string   `json:"name" yaml:"name"`
+		Options data.Map `json:"options" yaml:"options"`
+	} `json:"codec" yaml:"codec"`
 	Balancer struct {
-		Name    string
-		Options data.Map
-	}
+		Name    string   `json:"name" yaml:"name"`
+		Options data.Map `json:"options" yaml:"options"`
+	} `json:"balancer" yaml:"balancer"`
 	Resolver struct {
-		Name    string
-		Options data.Map
-	}
-	Channels     int
-	DialTimeout  time.Duration
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+		Name    string   `json:"name" yaml:"name"`
+		Options data.Map `json:"options" yaml:"options"`
+	} `json:"resolver" yaml:"resolver"`
+	Channels     int           `json:"channels" yaml:"channels"`
+	CallTimeout  time.Duration `json:"call_timeout" yaml:"call_timeout"`
+	DialTimeout  time.Duration `json:"dial_timeout" yaml:"dial_timeout"`
+	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
+	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
 }
 
 func (opts *ClientOptions) AddAddress(uri string, options data.Map) {
@@ -285,6 +286,9 @@ func (opts *ClientOptions) ensure() error {
 	if opts.Channels <= 0 {
 		opts.Channels = 1
 	}
+	//if opts.CallTimeout <= 0 {
+	//	opts.CallTimeout = 15 * time.Second
+	//}
 	if opts.DialTimeout <= 0 {
 		opts.DialTimeout = 10 * time.Second
 	}
