@@ -5,7 +5,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/cuigh/auxo/log"
+	"github.com/cuigh/auxo/util/debug"
 )
+
+const PkgPath = "auxo.util.run"
 
 var (
 	ErrTimeout      = errors.New("timeout")
@@ -15,11 +20,23 @@ var (
 
 type Recovery func(e interface{})
 
+type Canceler interface {
+	Cancel()
+}
+
+func handlePanic(r Recovery, e interface{}) {
+	if r == nil {
+		log.Get(PkgPath).Errorf("run > PANIC: %v, stack: %s", e, debug.StackSkip(1))
+	} else {
+		r(e)
+	}
+}
+
 // Safe call fn with recover.
 func Safe(fn func(), r Recovery) {
 	defer func() {
 		if e := recover(); e != nil {
-			r(e)
+			handlePanic(r, e)
 		}
 	}()
 	fn()
@@ -31,10 +48,36 @@ func Count(g *sync.WaitGroup, fn func(), r Recovery) {
 	defer func() {
 		g.Done()
 		if e := recover(); e != nil {
-			r(e)
+			handlePanic(r, e)
 		}
 	}()
 	fn()
+}
+
+// Schedule call fn with recover continuously. It returns a Canceler that can
+// be used to cancel the call using its Cancel method.
+func Schedule(d time.Duration, fn func(), r Recovery) Canceler {
+	s := &scheduler{state: 1}
+	s.schedule(d, fn, r)
+	return s
+}
+
+type scheduler struct {
+	timer *time.Timer
+	state int32
+}
+
+func (s *scheduler) schedule(d time.Duration, fn func(), r Recovery) {
+	if s.state == 1 {
+		Safe(fn, r)
+		s.timer = time.AfterFunc(d, fn)
+	}
+}
+
+func (s *scheduler) Cancel() {
+	if atomic.CompareAndSwapInt32(&s.state, 1, 0) && s.timer != nil {
+		s.timer.Stop()
+	}
 }
 
 // Pool is a simple goroutine pool.
