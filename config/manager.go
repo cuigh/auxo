@@ -182,7 +182,7 @@ func (m *Manager) SetDefaultValue(name string, value interface{}) {
 	if m.defaults == nil {
 		m.defaults = data.Map{}
 	}
-	m.defaults.Set(name, value)
+	m.set(m.defaults, name, value)
 }
 
 // Load reads options from all sources.
@@ -200,7 +200,7 @@ func (m *Manager) load(force bool) error {
 
 	m.options = data.Map{}
 
-	m.loadFlags()
+	m.loadFlags(false)
 	m.loadEnvs()
 
 	// file sources
@@ -216,22 +216,30 @@ func (m *Manager) load(force bool) error {
 		return err
 	}
 
+	m.loadFlags(true)
 	m.loaded = true
 	return nil
 }
 
-func (m *Manager) loadFlags() {
-	if m.flags != nil {
-		set := make(map[string]struct{})
-		m.flags.Visit(func(f *flag.Flag) {
-			getter := f.Value.(flag.Getter)
-			m.set(f.Name, getter.Get())
+func (m *Manager) loadFlags(defaults bool) {
+	if m.flags == nil {
+		return
+	}
+
+	set := make(map[string]struct{})
+	m.flags.Visit(func(f *flag.Flag) {
+		if defaults {
 			set[f.Name] = struct{}{}
-		})
+		} else {
+			getter := f.Value.(flag.Getter)
+			m.set(m.options, f.Name, getter.Get())
+		}
+	})
+	if defaults {
 		m.flags.VisitAll(func(f *flag.Flag) {
-			if _, ok := set[f.Name]; !ok && f.DefValue != "" {
+			if _, ok := set[f.Name]; !ok {
 				getter := f.Value.(flag.Getter)
-				m.set(f.Name, getter.Get())
+				m.SetDefaultValue(f.Name, getter.Get())
 			}
 		})
 	}
@@ -246,18 +254,17 @@ func (m *Manager) loadEnvs() {
 			key = strings.TrimPrefix(key, m.envPrefix)
 		}
 		key = strings.Replace(strings.ToLower(opt.Name), "_", ".", -1)
-		m.set(key, opt.Value)
+		m.set(m.options, key, opt.Value)
 	}
 
 	for key, envKey := range m.env {
 		if opt := os.Getenv(envKey); opt != "" {
-			m.set(key, opt)
+			m.set(m.options, key, opt)
 		}
 	}
 }
 
-func (m *Manager) set(k string, v interface{}) {
-	opts := m.options
+func (m *Manager) set(opts data.Map, k string, v interface{}) {
 	keys := strings.Split(k, ".")
 	last := len(keys) - 1
 	for i, key := range keys {
@@ -360,7 +367,7 @@ func (m *Manager) Get(key string) interface{} {
 	}
 
 	opt := m.options.Find(key)
-	def := m.defaults.Get(key)
+	def := m.defaults.Find(key)
 	if def == nil {
 		return opt
 	} else if opt == nil {
