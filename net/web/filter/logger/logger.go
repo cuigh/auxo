@@ -11,26 +11,58 @@ import (
 	"github.com/cuigh/auxo/net/web"
 )
 
-const PkgName = "auxo.net.web.filter.logger"
+const (
+	PkgName           = "auxo.net.web.filter.logger"
+	defaultJSONLayout = "{time: 2006/01/02 - 15:04:05},{status},{latency},{ip},{method},{path}"
+	defaultTextLayout = "{time: 2006/01/02 - 15:04:05} {status} {latency} {ip} {method} {path}"
+)
+
+type Option func(*Logger)
 
 type Logger struct {
-	Layout string
-	Format string
+	layout string
+	format string
 	logger *log.Logger
 	fields []field
 }
 
-func (l *Logger) Apply(next web.HandlerFunc) web.HandlerFunc {
-	l.logger = log.Get(PkgName)
-	isJSON := strings.EqualFold(l.Format, "json")
-	if l.Layout == "" {
-		if isJSON {
-			l.Layout = "{time: 2006/01/02 - 15:04:05},{status},{latency},{ip},{method},{path}"
-		} else {
-			l.Layout = "{time: 2006/01/02 - 15:04:05} {status} {latency} {ip} {method} {path}"
+func Layout(layout string) Option {
+	return func(l *Logger) {
+		if layout != "" {
+			l.layout = layout
 		}
 	}
-	l.fields = createFields(l.Layout, isJSON)
+}
+
+func Format(format string) Option {
+	return func(l *Logger) {
+		if format != "" {
+			l.format = strings.ToLower(format)
+		}
+	}
+}
+
+func New(opts ...Option) *Logger {
+	l := &Logger{
+		format: "text",
+	}
+	for _, opt := range opts {
+		opt(l)
+	}
+	if l.layout == "" {
+		if l.format == "json" {
+			l.layout = defaultJSONLayout
+		} else {
+			l.layout = defaultTextLayout
+		}
+	}
+	return l
+}
+
+func (l *Logger) Apply(next web.HandlerFunc) web.HandlerFunc {
+	isJSON := strings.EqualFold(l.format, "json")
+	l.fields = createFields(l.layout, isJSON)
+	l.logger = log.Get(PkgName)
 
 	return func(ctx web.Context) (err error) {
 		start := time.Now()

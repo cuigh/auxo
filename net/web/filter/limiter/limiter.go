@@ -29,17 +29,18 @@ func IP(ctx web.Context) string {
 	return ctx.RealIP()
 }
 
-type Options struct {
-	Key Keyer
+type Option func(*Options)
+
+func Key(k Keyer) Option {
+	return func(opts *Options) {
+		if k != nil {
+			opts.key = k
+		}
+	}
 }
 
-func (o *Options) ensure(opts ...Options) {
-	if len(opts) > 0 {
-		*o = opts[0]
-	}
-	if o.Key == nil {
-		o.Key = IP
-	}
+type Options struct {
+	key Keyer
 }
 
 type SimpleLimiter struct {
@@ -47,17 +48,20 @@ type SimpleLimiter struct {
 	opts    Options
 }
 
-func NewSimple(store limiter.Store, period time.Duration, count int64, opts ...Options) *SimpleLimiter {
+func NewSimple(store limiter.Store, period time.Duration, count int64, opts ...Option) *SimpleLimiter {
 	sl := &SimpleLimiter{
 		limiter: limiter.New(store, &limiter.Rate{Period: period, Count: count}),
+		opts:    Options{key: IP},
 	}
-	sl.opts.ensure(opts...)
+	for _, opt := range opts {
+		opt(&sl.opts)
+	}
 	return sl
 }
 
 func (sl *SimpleLimiter) Apply(next web.HandlerFunc) web.HandlerFunc {
 	return func(ctx web.Context) error {
-		res, err := sl.limiter.Get(ctx.Request().Context(), sl.opts.Key(ctx))
+		res, err := sl.limiter.Get(ctx.Request().Context(), sl.opts.key(ctx))
 		if err != nil {
 			return err
 		}
@@ -81,7 +85,7 @@ type AutoLimiter struct {
 	limiters map[string]*limiter.Limiter
 }
 
-func NewAuto(store limiter.Store, opts ...Options) *AutoLimiter {
+func NewAuto(store limiter.Store, opts ...Option) *AutoLimiter {
 	if store == nil {
 		panic(errors.New("limiter: store must be set"))
 	}
@@ -89,8 +93,11 @@ func NewAuto(store limiter.Store, opts ...Options) *AutoLimiter {
 	l := &AutoLimiter{
 		store:    store,
 		limiters: make(map[string]*limiter.Limiter),
+		opts:     Options{key: IP},
 	}
-	l.opts.ensure(opts...)
+	for _, opt := range opts {
+		opt(&l.opts)
+	}
 	return l
 }
 
@@ -106,7 +113,7 @@ func (al *AutoLimiter) Apply(next web.HandlerFunc) web.HandlerFunc {
 			return err
 		}
 
-		res, err := rl.Get(ctx.Request().Context(), al.opts.Key(ctx))
+		res, err := rl.Get(ctx.Request().Context(), al.opts.key(ctx))
 		if err != nil {
 			return err
 		}
