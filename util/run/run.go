@@ -26,7 +26,7 @@ type Canceler interface {
 
 func handlePanic(r Recovery, e interface{}) {
 	if r == nil {
-		log.Get(PkgPath).Errorf("run > PANIC: %v, stack: %s", e, debug.StackSkip(1))
+		log.Get(PkgPath).Errorf("PANIC: %v, stack: %s", e, debug.StackSkip(1))
 	} else {
 		r(e)
 	}

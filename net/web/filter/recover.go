@@ -13,10 +13,6 @@ type Recover struct {
 	// Optional. Default value 4KB.
 	StackSize int `json:"stack_size"`
 
-	// StackAll enables logging stack traces of all other goroutines.
-	// Optional. Default value false.
-	StackAll bool `json:"stack_all"`
-
 	// StackEnabled enables logging stack trace.
 	// Optional. Default value is true.
 	StackEnabled bool `json:"stack_enabled"`
@@ -47,8 +43,8 @@ func (r *Recover) Apply(next web.HandlerFunc) web.HandlerFunc {
 				err := errors.Convert(e)
 				if r.StackEnabled {
 					stack := pool.Get().([]byte)
-					length := runtime.Stack(stack, r.StackAll)
-					ctx.Logger().Errorf("[%s] %s %s", "PANIC", err, stack[:length])
+					length := runtime.Stack(stack, false)
+					ctx.Logger().Errorf("PANIC: %s, stack: %s", err, stack[:length])
 					pool.Put(stack)
 				}
 				ctx.Error(err)
