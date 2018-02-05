@@ -1,0 +1,28 @@
+syntax = "proto2";
+
+package proto;
+
+message Request {
+    optional uint64 ID = 1;
+    optional string Service = 2;
+    optional string Method = 3;
+    repeated Label Labels = 4;
+    repeated bytes Args = 5;
+}
+
+message Response {
+    optional uint64 ID = 1;
+    optional bytes Result = 2;
+    optional Error Error = 3;
+}
+
+message Label {
+    required string Name = 1;
+    required string Value = 2;
+}
+
+message Error {
+    optional int32 Code = 1;
+    optional string Message = 2;
+    optional string Detail = 3;
+}
