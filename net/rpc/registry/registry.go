@@ -7,6 +7,7 @@ import (
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/net/transport"
+	"github.com/cuigh/auxo/util/run"
 )
 
 var (
@@ -71,25 +72,14 @@ func (fakeRegistryBuilder) Build(server Server, _ data.Map) (Registry, error) {
 
 // fakeRegistry is a fake registry for demonstrating how to implement.
 type fakeRegistry struct {
-	closer data.Chan
-	s      Server
+	s        Server
+	canceler run.Canceler
 }
 
 func (r *fakeRegistry) Register() {
-	r.register()
-	r.closer = make(data.Chan)
-	go func() {
-		t := time.NewTicker(5 * time.Second)
-		defer t.Stop()
-		for {
-			select {
-			case <-t.C:
-				r.register()
-			case <-r.closer:
-				return
-			}
-		}
-	}()
+	if r.canceler == nil {
+		r.canceler = run.Schedule(15*time.Second, r.register, nil)
+	}
 }
 
 func (r *fakeRegistry) register() {
@@ -102,7 +92,7 @@ func (r *fakeRegistry) register() {
 
 func (r *fakeRegistry) Offline() error {
 	fmt.Println("registry > offline: " + r.s.Name)
-	close(r.closer)
+	r.Close()
 	return nil
 }
 
@@ -113,8 +103,11 @@ func (r *fakeRegistry) Online() error {
 }
 
 func (r *fakeRegistry) Close() {
-	fmt.Println("registry > close: " + r.s.Name)
-	close(r.closer)
+	if r.canceler != nil {
+		r.canceler.Cancel()
+		r.canceler = nil
+		fmt.Println("registry > close: " + r.s.Name)
+	}
 }
 
 func init() {

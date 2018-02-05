@@ -21,7 +21,7 @@ rpc:
         name: etcd
         options:
           address: 127.0.0.1:2379
-          refresh: 30s
+          refresh_interval: 30s
       channels: 4
       dial_timeout: 10s
       read_timeout: 10s
@@ -43,8 +43,8 @@ rpc:
         name: etcd
         options:
           address: 127.0.0.1:2379
-          heartbeat: 30s
-      heartbeat: 30s
+          heartbeat_interval: 30s
+      heartbeat_interval: 30s
       max_clients: 1000
       max_pool_size: 1024
       backlog: 10000

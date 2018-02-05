@@ -42,12 +42,12 @@ type ServerOptions struct {
 		Name    string   `json:"name" yaml:"name"`
 		Options data.Map `json:"options" yaml:"options"`
 	} `json:"registry" yaml:"registry"`
-	ReadTimeout  time.Duration `json:"read_timeout" yaml:"read_timeout"`
-	WriteTimeout time.Duration `json:"write_timeout" yaml:"write_timeout"`
-	Heartbeat    time.Duration `json:"heartbeat" yaml:"heartbeat"`
-	MaxClients   int32         `json:"max_clients" yaml:"max_clients"`
-	MaxPoolSize  int32         `json:"max_pool_size" yaml:"max_pool_size"`
-	Backlog      int32         `json:"backlog" yaml:"backlog"`
+	ReadTimeout       time.Duration `json:"read_timeout" yaml:"read_timeout"`
+	WriteTimeout      time.Duration `json:"write_timeout" yaml:"write_timeout"`
+	HeartbeatInterval time.Duration `json:"heartbeat_interval" yaml:"heartbeat"`
+	MaxClients        int32         `json:"max_clients" yaml:"max_clients"`
+	MaxPoolSize       int32         `json:"max_pool_size" yaml:"max_pool_size"`
+	Backlog           int32         `json:"backlog" yaml:"backlog"`
 }
 
 func (opts *ServerOptions) ensure() error {
@@ -187,8 +187,8 @@ func (s *Server) Serve() error {
 	}
 
 	s.pool.Start()
-	if s.opts.Heartbeat > 0 {
-		s.hb = times.NewWheel(time.Second, int(s.opts.Heartbeat.Seconds()))
+	if s.opts.HeartbeatInterval > 0 {
+		s.hb = times.NewWheel(time.Second, int(s.opts.HeartbeatInterval.Seconds()))
 	}
 
 	// todo: use errgroup.Group
@@ -364,7 +364,7 @@ func (s *Server) handleSession(ch *Channel, sc ServerCodec) {
 func (s *Server) addSession(ch *Channel, sc ServerCodec) *session {
 	sn := newSession(ch, sc)
 	s.sessions.Add(sn)
-	if s.opts.Heartbeat > 0 {
+	if s.opts.HeartbeatInterval > 0 {
 		s.hb.Add(func() bool { return s.heartbeat(sn) })
 	}
 	return sn
@@ -372,7 +372,7 @@ func (s *Server) addSession(ch *Channel, sc ServerCodec) *session {
 
 func (s *Server) heartbeat(sn *session) bool {
 	if s.sessions.Get(sn.id) != nil {
-		if sn.heartbeat.Add(s.opts.Heartbeat).Add(time.Second).Before(time.Now()) {
+		if sn.heartbeat.Add(s.opts.HeartbeatInterval).Add(time.Second).Before(time.Now()) {
 			s.logger.Info("server > close session [%v] for heartbeat timeout", sn.id)
 			sn.Close()
 			return false

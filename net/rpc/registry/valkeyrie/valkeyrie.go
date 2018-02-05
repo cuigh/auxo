@@ -15,6 +15,7 @@ import (
 	"github.com/cuigh/auxo/net/rpc/resolver"
 	"github.com/cuigh/auxo/util/cast"
 	"github.com/cuigh/auxo/util/retry"
+	"github.com/cuigh/auxo/util/run"
 )
 
 const PkgName = "auxo.net.rpc.registry.valkeyrie"
@@ -33,7 +34,7 @@ func (b *Builder) Build(server registry.Server, opts data.Map) (registry.Registr
 	timeout := cast.ToDuration(opts.Get("dial_timeout"), 10*time.Second)
 	username := cast.ToString(opts.Get("username"))
 	password := cast.ToString(opts.Get("password"))
-	interval := cast.ToDuration(opts.Get("heartbeat"))
+	interval := cast.ToDuration(opts.Get("heartbeat_interval"))
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
@@ -71,32 +72,13 @@ type Registry struct {
 	interval time.Duration
 	ttl      time.Duration
 	logger   *log.Logger
-	stopper  chan struct{}
+	canceler run.Canceler
 }
 
 func (r *Registry) Register() {
-	if r.stopper != nil { // already registered
-		return
+	if r.canceler == nil {
+		r.canceler = run.Schedule(r.interval, r.register, nil)
 	}
-
-	r.register()
-
-	// todo: safe run
-	go func() {
-		r.stopper = make(chan struct{})
-		t := time.NewTicker(r.interval)
-		defer t.Stop()
-
-		for {
-			select {
-			case <-t.C:
-				r.register()
-			case <-r.stopper:
-				r.logger.Debug("valkeyrie > Registry stopped")
-				return
-			}
-		}
-	}()
 }
 
 func (r *Registry) register() {
@@ -147,7 +129,10 @@ func (r *Registry) Online() error {
 }
 
 func (r *Registry) Close() {
-	close(r.stopper)
+	if r.canceler != nil {
+		r.canceler.Cancel()
+		r.logger.Debug("valkeyrie > Registry stopped")
+	}
 	r.store.Close()
 }
 

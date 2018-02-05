@@ -19,7 +19,7 @@ import (
 
 func TestClient_Call(t *testing.T) {
 	c, err := rpc.Dial("json", transport.Address{URL: "127.0.0.1:9000"})
-	assert.Error(t, err)
+	assert.NoError(t, err)
 
 	var s string
 	err = c.Call(context.Background(), "Test", "Hello", []interface{}{"auxo"}, &s)

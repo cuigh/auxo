@@ -13,6 +13,7 @@ import (
 	"github.com/cuigh/auxo/net/rpc/resolver"
 	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/util/cast"
+	"github.com/cuigh/auxo/util/run"
 	"github.com/cuigh/auxo/util/semver"
 )
 
@@ -32,7 +33,7 @@ func (b *Builder) Build(client resolver.Client, opts data.Map) (resolver.Resolve
 	timeout := cast.ToDuration(opts.Get("dial_timeout"), 10*time.Second)
 	username := cast.ToString(opts.Get("username"))
 	password := cast.ToString(opts.Get("password"))
-	interval := cast.ToDuration(opts.Get("refresh"))
+	interval := cast.ToDuration(opts.Get("refresh_interval"))
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
@@ -75,7 +76,7 @@ type Resolver struct {
 	interval   time.Duration
 	logger     *log.Logger
 	constraint *semver.Constraints
-	stopper    chan struct{}
+	canceler   run.Canceler
 }
 
 func (r *Resolver) Resolve() ([]transport.Address, error) {
@@ -83,37 +84,23 @@ func (r *Resolver) Resolve() ([]transport.Address, error) {
 }
 
 func (r *Resolver) Watch(notify func([]transport.Address)) {
-	if r.stopper != nil { // already watched
-		return
-	}
-
-	// TODO: safe run
-	go r.watch(notify)
-}
-
-func (r *Resolver) watch(notify func([]transport.Address)) {
-	r.stopper = make(chan struct{})
-	t := time.NewTicker(r.interval)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-t.C:
+	if r.canceler == nil {
+		r.canceler = run.Schedule(r.interval, func() {
 			addrs, err := r.getAddrs()
 			if err != nil {
 				r.logger.Error("valkeyrie > Failed to refresh addresses: ", err)
 			} else {
 				notify(addrs)
 			}
-		case <-r.stopper:
-			r.logger.Debug("valkeyrie > Resolver stopped")
-			return
-		}
+		}, nil)
 	}
 }
 
 func (r *Resolver) Close() {
-	close(r.stopper)
+	if r.canceler != nil {
+		r.canceler.Cancel()
+		r.logger.Debug("valkeyrie > Resolver stopped")
+	}
 	r.store.Close()
 }
 
