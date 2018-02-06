@@ -1,11 +1,13 @@
 package run
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/util/debug"
 )
@@ -57,20 +59,28 @@ func Count(g *sync.WaitGroup, fn func(), r Recovery) {
 // Schedule call fn with recover continuously. It returns a Canceler that can
 // be used to cancel the call using its Cancel method.
 func Schedule(d time.Duration, fn func(), r Recovery) Canceler {
-	s := &scheduler{state: 1}
-	s.schedule(d, fn, r)
+	s := &scheduler{
+		d:     d,
+		fn:    fn,
+		r:     r,
+		state: 1,
+	}
+	s.timer = time.AfterFunc(d, s.schedule)
 	return s
 }
 
 type scheduler struct {
+	d     time.Duration
+	fn    func()
+	r     Recovery
 	timer *time.Timer
 	state int32
 }
 
-func (s *scheduler) schedule(d time.Duration, fn func(), r Recovery) {
+func (s *scheduler) schedule() {
 	if s.state == 1 {
-		Safe(fn, r)
-		s.timer = time.AfterFunc(d, fn)
+		Safe(s.fn, s.r)
+		s.timer = time.AfterFunc(s.d, s.schedule)
 	}
 }
 
@@ -86,11 +96,13 @@ type Pool struct {
 	Backlog  int
 	Idle     time.Duration
 
-	state   int32
-	current int32 // running goroutines
-	jobs    chan func()
-	stopper chan struct{}
-	wg      sync.WaitGroup
+	state    int32
+	current  int32 // running goroutines
+	busy     int32 // busy goroutines
+	jobs     chan func()
+	stopper  data.Chan // stop all goroutine
+	closer   data.Chan // close idle goroutine
+	canceler Canceler  // control canceler
 }
 
 // Start start the pool
@@ -108,13 +120,15 @@ func (p *Pool) Start() {
 			p.Backlog = 10000
 		}
 		if p.Idle <= 0 {
-			p.Idle = 3 * time.Minute
+			p.Idle = time.Minute
 		}
 		p.jobs = make(chan func(), p.Backlog)
-		p.stopper = make(chan struct{})
+		p.stopper = make(data.Chan)
+		p.closer = make(data.Chan)
 		for i := int32(0); i < p.Min; i++ {
 			go p.long()
 		}
+		p.control()
 	}
 }
 
@@ -122,22 +136,35 @@ func (p *Pool) Start() {
 func (p *Pool) Stop() {
 	if atomic.CompareAndSwapInt32(&p.state, 1, 0) {
 		close(p.stopper)
+		if p.canceler != nil {
+			p.canceler.Cancel()
+		}
 	}
 }
 
 // Wait waits the running jobs to finish.
 func (p *Pool) Wait(timeout time.Duration) error {
-	ch := make(chan struct{})
-	go func() {
-		p.wg.Wait()
-		ch <- struct{}{}
-	}()
+	const waitPollInterval = 500 * time.Millisecond
 
-	select {
-	case <-time.After(timeout):
-		return ErrTimeout
-	case <-ch:
-		return nil
+	ctx := context.Background()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+	}
+
+	ticker := time.NewTicker(waitPollInterval)
+	defer ticker.Stop()
+
+	for {
+		if p.busy == 0 {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
 	}
 }
 
@@ -149,7 +176,7 @@ func (p *Pool) Put(job func()) error {
 
 	select {
 	case p.jobs <- job:
-		if len(p.jobs) > 1 && p.current < p.Max {
+		if p.busy >= p.current && p.current < p.Max {
 			go p.short()
 		}
 		return nil
@@ -186,15 +213,28 @@ func (p *Pool) short() {
 			t.Reset(p.Idle)
 		case <-p.stopper:
 			return
+		case <-p.closer:
+			//log.Get(PkgPath).Debugf("run > Pool: Close goroutine by scheduler[%d/%d]", p.busy, p.current)
+			return
 		case <-t.C:
+			//log.Get(PkgPath).Debugf("run > Pool: Close goroutine for idle timeout[%d/%d]", p.busy, p.current)
 			return
 		}
 	}
 }
 
+// Adjust the number of goroutines to conserve resources.
+func (p *Pool) control() {
+	p.canceler = Schedule(5*time.Second, func() {
+		if p.busy < p.current/2 && p.current > p.Min {
+			p.closer.TrySend()
+		}
+	}, nil)
+}
+
 func (p *Pool) call(fn func()) {
-	p.wg.Add(1)
-	defer p.wg.Done()
+	atomic.AddInt32(&p.busy, 1)
+	defer atomic.AddInt32(&p.busy, -1)
 
 	fn()
 }
