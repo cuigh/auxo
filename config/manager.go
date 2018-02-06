@@ -2,24 +2,20 @@
 package config
 
 import (
-	"encoding/json"
 	"flag"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/cuigh/auxo/data"
-	"github.com/cuigh/auxo/encoding/yaml"
-	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/files"
 	"github.com/cuigh/auxo/util/cast"
 )
 
 var (
-	exts            = []string{".yml", ".yaml", ".toml", ".json"}
+	exts            = []string{".yml", ".yaml", ".json"}
 	unmarshalerType = reflect.TypeOf((*Unmarshaler)(nil)).Elem()
 )
 
@@ -37,8 +33,7 @@ type Manager struct {
 	flags *flag.FlagSet
 
 	// env
-	envPrefix string
-	env       map[string]string
+	env envSource
 
 	// options(local/source)
 	options  data.Map
@@ -46,7 +41,6 @@ type Manager struct {
 	dirs     []string
 	name     string
 	srcs     []Source
-	//mgrs     []SourceManager
 
 	// defaults
 	defaults data.Map
@@ -59,6 +53,8 @@ func New(name ...string) *Manager {
 	} else {
 		m.SetName("app")
 	}
+	m.SetDefaultValue("banner", true)
+	m.SetEnvPrefix("AUXO")
 	return m
 }
 
@@ -119,15 +115,12 @@ func (m *Manager) BindFlags(set *flag.FlagSet) {
 
 // SetEnvPrefix sets the prefix of environment variables. Default prefix is "AUXO".
 func (m *Manager) SetEnvPrefix(prefix string) {
-	m.envPrefix = prefix
+	m.env.SetPrefix(prefix)
 }
 
 // BindEnv binds a option to an environment variable.
 func (m *Manager) BindEnv(key string, envKey string) {
-	if m.env == nil {
-		m.env = make(map[string]string)
-	}
-	m.env[key] = envKey
+	m.env.SetAlias(key, envKey)
 }
 
 // SetProfiles sets active profiles. Profiles are only valid to local file sources.
@@ -182,7 +175,7 @@ func (m *Manager) SetDefaultValue(name string, value interface{}) {
 	if m.defaults == nil {
 		m.defaults = data.Map{}
 	}
-	m.set(m.defaults, name, value)
+	setOption(m.defaults, name, value)
 }
 
 // Load reads options from all sources.
@@ -201,17 +194,17 @@ func (m *Manager) load(force bool) error {
 	m.options = data.Map{}
 
 	m.loadFlags(false)
-	m.loadEnvs()
+	m.loadSource(&m.env)
 
 	// file sources
 	srcs := m.findFileSources()
-	err := m.loadSources(srcs)
+	err := m.loadSource(srcs...)
 	if err != nil {
 		return err
 	}
 
 	// custom source
-	err = m.loadSources(m.srcs)
+	err = m.loadSource(m.srcs...)
 	if err != nil {
 		return err
 	}
@@ -226,66 +219,20 @@ func (m *Manager) loadFlags(defaults bool) {
 		return
 	}
 
-	set := make(map[string]struct{})
-	m.flags.Visit(func(f *flag.Flag) {
-		if defaults {
-			set[f.Name] = struct{}{}
-		} else {
-			getter := f.Value.(flag.Getter)
-			m.set(m.options, f.Name, getter.Get())
-		}
-	})
 	if defaults {
+		set := make(map[string]struct{})
+		m.flags.Visit(func(f *flag.Flag) { set[f.Name] = struct{}{} })
 		m.flags.VisitAll(func(f *flag.Flag) {
 			if _, ok := set[f.Name]; !ok {
 				getter := f.Value.(flag.Getter)
 				m.SetDefaultValue(f.Name, getter.Get())
 			}
 		})
-	}
-}
-
-func (m *Manager) loadEnvs() {
-	envs := os.Environ()
-	for _, env := range envs {
-		opt := data.ParseOption(env, "=")
-		key := opt.Name
-		if m.envPrefix != "" {
-			key = strings.TrimPrefix(key, m.envPrefix)
-		}
-		key = strings.Replace(strings.ToLower(opt.Name), "_", ".", -1)
-		m.set(m.options, key, opt.Value)
-	}
-
-	for key, envKey := range m.env {
-		if opt := os.Getenv(envKey); opt != "" {
-			m.set(m.options, key, opt)
-		}
-	}
-}
-
-func (m *Manager) set(opts data.Map, k string, v interface{}) {
-	keys := strings.Split(k, ".")
-	last := len(keys) - 1
-	for i, key := range keys {
-		if opt, ok := opts[key]; ok {
-			switch t := opt.(type) {
-			case data.Map:
-				opts = t
-			case map[string]interface{}:
-				opts = t
-			default:
-				break
-			}
-		} else {
-			if i == last {
-				opts[key] = v
-			} else {
-				t := data.Map{}
-				opts[key] = t
-				opts = t
-			}
-		}
+	} else {
+		m.flags.Visit(func(f *flag.Flag) {
+			getter := f.Value.(flag.Getter)
+			setOption(m.options, f.Name, getter.Get())
+		})
 	}
 }
 
@@ -315,45 +262,15 @@ func (m *Manager) findFileSources() (srcs []Source) {
 	return
 }
 
-func (m *Manager) loadSources(srcs []Source) error {
+func (m *Manager) loadSource(srcs ...Source) error {
 	for _, src := range srcs {
-		d, err := src.LoadData()
-		if err != nil {
-			return err
-		}
-
-		opts, err := m.loadContent(src.GetType(), d)
+		opts, err := src.Load()
 		if err != nil {
 			return err
 		}
 		m.options.Merge(opts)
 	}
 	return nil
-}
-
-func (m *Manager) loadContent(ct string, cd []byte) (data.Map, error) {
-	opts := data.Map{}
-	switch strings.ToLower(ct) {
-	case "yaml", "yml":
-		if err := yaml.Unmarshal(cd, &opts); err != nil {
-			return nil, m.loadError(err)
-		}
-	case "json":
-		if err := json.Unmarshal(cd, &opts); err != nil {
-			return nil, m.loadError(err)
-		}
-		//case "xml":
-		//	if err := xml.Unmarshal(cd, &opts); err != nil {
-		//		return nil, loadError(err)
-		//	}
-	default:
-		return nil, errors.New("unsupported config type: " + ct)
-	}
-	return opts, nil
-}
-
-func (m *Manager) loadError(err error) error {
-	return errors.Wrap(err, "loading config failed")
 }
 
 // Get searches option from flag/env/config/remote/default. It returns nil if option is not found.

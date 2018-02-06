@@ -4,19 +4,11 @@ package config
 import (
 	"flag"
 	"time"
-
-	"github.com/cuigh/auxo/data"
 )
 
 var (
 	// default manager
-	m = &Manager{
-		envPrefix: "AUXO",
-		name:      "app",
-		defaults: data.Map{
-			"banner": true,
-		},
-	}
+	m = New("app")
 )
 
 // FindFile searches all config directories and return the first found file.
