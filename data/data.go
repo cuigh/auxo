@@ -120,6 +120,15 @@ func ParseOption(s, sep string) Option {
 
 type Options []Option
 
+func ParseOptions(s, sep1, sep2 string) Options {
+	parts := strings.Split(s, sep1)
+	opts := make(Options, len(parts))
+	for i, part := range parts {
+		opts[i] = ParseOption(part, sep2)
+	}
+	return opts
+}
+
 func (opts Options) Get(name string) string {
 	for _, opt := range opts {
 		if opt.Name == name {

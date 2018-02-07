@@ -67,12 +67,12 @@ func (s *envSource) Load() (opts data.Map, err error) {
 			key = strings.TrimPrefix(key, s.prefix)
 		}
 		key = strings.Replace(strings.ToLower(opt.Name), "_", ".", -1)
-		setOption(opts, key, opt.Value)
+		mergeOption(opts, key, opt.Value)
 	}
 
 	for alias, key := range s.aliases {
 		if opt := os.Getenv(key); opt != "" {
-			setOption(opts, alias, opt)
+			mergeOption(opts, alias, opt)
 		}
 	}
 	return
@@ -131,7 +131,7 @@ func loadSource(t string, d []byte) (opts data.Map, err error) {
 	return opts, nil
 }
 
-func setOption(opts data.Map, k string, v interface{}) {
+func mergeOption(opts data.Map, k string, v interface{}) {
 	keys := strings.Split(k, ".")
 	last := len(keys) - 1
 	for i, key := range keys {
@@ -142,16 +142,41 @@ func setOption(opts data.Map, k string, v interface{}) {
 			case map[string]interface{}:
 				opts = t
 			default:
-				break
+				return
 			}
 		} else {
 			if i == last {
 				opts[key] = v
 			} else {
-				t := data.Map{}
-				opts[key] = t
-				opts = t
+				m := data.Map{}
+				opts[key] = m
+				opts = m
 			}
+		}
+	}
+}
+
+func coverOption(opts data.Map, k string, v interface{}) {
+	keys := strings.Split(k, ".")
+	last := len(keys) - 1
+	for i, key := range keys {
+		if opt, ok := opts[key]; ok {
+			switch t := opt.(type) {
+			case data.Map:
+				opts = t
+				continue
+			case map[string]interface{}:
+				opts = t
+				continue
+			}
+		}
+
+		if i == last {
+			opts[key] = v
+		} else {
+			m := data.Map{}
+			opts[key] = m
+			opts = m
 		}
 	}
 }

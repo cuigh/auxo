@@ -47,7 +47,9 @@ type Manager struct {
 }
 
 func New(name ...string) *Manager {
-	m := &Manager{}
+	m := &Manager{
+		defaults: make(data.Map),
+	}
 	if len(name) > 0 {
 		m.SetName(name[0])
 	} else {
@@ -172,10 +174,7 @@ func (m *Manager) addDefaultFolders() {
 
 // SetDefaultValue sets a default option.
 func (m *Manager) SetDefaultValue(name string, value interface{}) {
-	if m.defaults == nil {
-		m.defaults = data.Map{}
-	}
-	setOption(m.defaults, name, value)
+	coverOption(m.defaults, name, value)
 }
 
 // Load reads options from all sources.
@@ -225,13 +224,13 @@ func (m *Manager) loadFlags(defaults bool) {
 		m.flags.VisitAll(func(f *flag.Flag) {
 			if _, ok := set[f.Name]; !ok {
 				getter := f.Value.(flag.Getter)
-				m.SetDefaultValue(f.Name, getter.Get())
+				mergeOption(m.defaults, f.Name, getter.Get())
 			}
 		})
 	} else {
 		m.flags.Visit(func(f *flag.Flag) {
 			getter := f.Value.(flag.Getter)
-			setOption(m.options, f.Name, getter.Get())
+			mergeOption(m.options, f.Name, getter.Get())
 		})
 	}
 }
