@@ -64,11 +64,6 @@ const (
 
 var (
 	ClientPool = clientManager{clients: make(map[string]*Client)}
-
-	// ErrNodeUnavailable indicates no node is available for call.
-	ErrNodeUnavailable = NewError(StatusNodeUnavailable, "rpc: no node is available")
-	// ErrNodeShutdown indicates Node is shut down.
-	ErrNodeShutdown = NewError(StatusNodeShutdown, "rpc: node is shut down")
 )
 
 //type ClientFilters struct {

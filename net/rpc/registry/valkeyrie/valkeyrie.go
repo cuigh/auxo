@@ -86,7 +86,7 @@ func (r *Registry) register() {
 		key := r.key + "/nodes/" + addr.URL
 		m := data.Map{"version": r.server.Version}
 		if r.server.Options != nil {
-			m.Merge(r.server.Options())
+			m.Merge(r.server.Options)
 		}
 		m.Merge(addr.Options)
 		b, err := json.Marshal(m)

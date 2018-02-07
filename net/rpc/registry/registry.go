@@ -19,8 +19,8 @@ type Server struct {
 	Name      string
 	Version   string
 	Addresses []transport.Address
-	// Options returns additional options need send to registry with all addresses.
-	Options func() data.Map
+	// Options is additional options need send to registry with all addresses.
+	Options data.Map
 }
 
 // Registry defines interfaces for register server.
@@ -86,7 +86,7 @@ func (r *fakeRegistry) register() {
 	opts := data.Map{
 		"version": r.s.Version,
 	}
-	opts.Merge(r.s.Options())
+	opts.Merge(r.s.Options)
 	fmt.Println("registry > register: "+r.s.Name, "|", opts)
 }
 

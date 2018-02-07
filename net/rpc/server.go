@@ -18,10 +18,6 @@ import (
 	"github.com/cuigh/auxo/util/run"
 )
 
-var (
-	ErrServerClosed = NewError(StatusServerClosed, "rpc: server closed")
-)
-
 type matchInfo struct {
 	matcher Matcher
 	cb      CodecBuilder
@@ -157,12 +153,9 @@ func (s *Server) initRegistry() {
 		Name:      s.opts.Name,
 		Version:   s.opts.Version,
 		Addresses: s.opts.Address,
-		Options: func() data.Map {
-			return data.Map{
-				"desc":        s.opts.Desc,
-				"max_clients": s.opts.MaxClients,
-				"clients":     s.sessions.Count(),
-			}
+		Options: data.Map{
+			"desc":        s.opts.Desc,
+			"max_clients": s.opts.MaxClients,
 		},
 	}, s.opts.Registry.Options)
 	if err == nil {

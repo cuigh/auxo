@@ -58,6 +58,20 @@ const (
 
 	// StatusLoginFailed indicates client's login is failed.
 	StatusLoginFailed StatusCode = 11
+
+	// StatusNilResult indicates return value is nil.
+	StatusNilResult StatusCode = 12
+)
+
+var (
+	// ErrNodeUnavailable indicates no node is available for call.
+	ErrNodeUnavailable = NewError(StatusNodeUnavailable, "rpc: no node is available")
+	// ErrNodeShutdown indicates Node is shut down.
+	ErrNodeShutdown = NewError(StatusNodeShutdown, "rpc: node is shut down")
+	// ErrNilResult indicates the return value is nil.
+	ErrNilResult = NewError(StatusNilResult, "rpc: result is nil")
+	// ErrServerClosed indicates Server is closed.
+	ErrServerClosed = NewError(StatusServerClosed, "rpc: server closed")
 )
 
 func NewError(code StatusCode, format string, args ...interface{}) *errors.CodedError {
