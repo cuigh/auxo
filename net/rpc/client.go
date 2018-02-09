@@ -467,6 +467,7 @@ func (c *Client) initResolver() (err error) {
 			Server:  c.opts.Name,
 			Version: c.opts.Version,
 			Group:   c.opts.Group,
+			Codec:   c.opts.Codec.Name,
 		}, c.opts.Resolver.Options)
 		return err
 	}

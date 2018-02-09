@@ -8,6 +8,7 @@ import (
 	"github.com/abronan/valkeyrie"
 	"github.com/abronan/valkeyrie/store"
 	"github.com/cuigh/auxo/data"
+	"github.com/cuigh/auxo/data/set"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/rpc/resolver"
@@ -156,6 +157,15 @@ func (r *Resolver) filter(addr *transport.Address, opts *appOptions) bool {
 	if opts.offline(addr.URL) {
 		r.logger.Debugf("valkeyrie > Drop offline node '%s'", addr.URL)
 		return true
+	}
+
+	if r.client.Codec != "" {
+		v := cast.ToString(addr.Options.Get("codec"))
+		if v != "" {
+			if s := set.NewStringSet(strings.Split(v, ",")...); !s.Contains(r.client.Codec) {
+				return true
+			}
+		}
 	}
 
 	if r.constraint != nil {

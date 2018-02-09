@@ -19,6 +19,7 @@ type Client struct {
 	Server  string
 	Version string
 	Group   string
+	Codec   string
 }
 
 // Resolver defines interfaces for nodes discovery.

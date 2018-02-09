@@ -3,6 +3,7 @@ package rpc
 import (
 	"io"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +21,7 @@ import (
 
 type matchInfo struct {
 	matcher Matcher
-	cb      CodecBuilder
+	codec   string
 	opts    data.Map
 }
 
@@ -148,6 +149,11 @@ func (s *Server) initRegistry() {
 		return
 	}
 
+	codecs := make([]string, len(s.matchers))
+	for i, m := range s.matchers {
+		codecs[i] = m.codec
+	}
+
 	var err error
 	s.registry, err = b.Build(registry.Server{
 		Name:      s.opts.Name,
@@ -156,6 +162,7 @@ func (s *Server) initRegistry() {
 		Options: data.Map{
 			"desc":        s.opts.Desc,
 			"max_clients": s.opts.MaxClients,
+			"codec":       strings.Join(codecs, ","),
 		},
 	}, s.opts.Registry.Options)
 	if err == nil {
@@ -252,8 +259,7 @@ func (s *Server) Close(timeout time.Duration) {
 }
 
 func (s *Server) Match(m Matcher, codec string, opts ...data.Map) {
-	cb := codecs[codec]
-	mi := matchInfo{matcher: m, cb: cb}
+	mi := matchInfo{matcher: m, codec: codec}
 	if len(opts) > 0 {
 		mi.opts = opts[0]
 	}
@@ -432,8 +438,8 @@ func (s *Server) encode(ctx *context, r interface{}, err error) {
 func (s *Server) findCodec(ch *Channel) ServerCodec {
 	for _, m := range s.matchers {
 		if m.matcher == nil || m.matcher(ch) {
-			if m.cb != nil {
-				return m.cb.NewServer(ch, m.opts)
+			if cb := codecs[m.codec]; cb != nil {
+				return cb.NewServer(ch, m.opts)
 			}
 		}
 	}
