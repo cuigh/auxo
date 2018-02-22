@@ -150,26 +150,26 @@ type Executor interface {
 	QueryRows(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 }
 
-type Interceptor func(Executor) Executor
+type Filter func(Executor) Executor
 
-type Interceptors []Interceptor
+type Filters []Filter
 
-func (is Interceptors) Apply(e Executor) Executor {
-	for i := len(is) - 1; i >= 0; i-- {
-		e = is[i](e)
+func (fs Filters) Apply(e Executor) Executor {
+	for i := len(fs) - 1; i >= 0; i-- {
+		e = fs[i](e)
 	}
 	return e
 }
 
-var interceptors = make(map[string]Interceptors)
+var filters = make(map[string]Filters)
 
-func Use(filters ...Interceptor) {
-	UseDB("", filters...)
+func Use(fs ...Filter) {
+	UseDB("", fs...)
 }
 
-func UseDB(db string, filters ...Interceptor) {
-	v := interceptors[db]
-	interceptors[db] = append(v, filters...)
+func UseDB(db string, fs ...Filter) {
+	v := filters[db]
+	filters[db] = append(v, fs...)
 }
 
 type Factory struct {
@@ -213,11 +213,11 @@ func New(opts *Options) (DB, error) {
 		db:     db,
 		stmts:  newStmtMap(db),
 	}
-	d.Interceptors = interceptors[""]
+	d.Filters = filters[""]
 	if d.opts.Name != "" {
-		d.Interceptors = append(d.Interceptors, interceptors[d.opts.Name]...)
+		d.Filters = append(d.Filters, filters[d.opts.Name]...)
 	}
-	d.e = d.Interceptors.Apply(d)
+	d.e = d.Filters.Apply(d)
 	return d, nil
 }
 

@@ -7,7 +7,7 @@ import (
 
 type DeleteInfo struct {
 	Table string
-	Where Filters
+	Where CriteriaSet
 }
 
 type deleteContext struct {
@@ -28,7 +28,7 @@ func (c *deleteContext) Delete(table string) DeleteClause {
 	return c
 }
 
-func (c *deleteContext) Where(w Filters) ResultClause {
+func (c *deleteContext) Where(w CriteriaSet) ResultClause {
 	c.info.Where = w
 	return c
 }
@@ -45,7 +45,7 @@ func (c *deleteContext) Remove(i interface{}) (r Result, err error) {
 	m := GetMeta(t)
 	c.info.Table = m.Table
 
-	where := NewFilters()
+	where := &SimpleCriteriaSet{}
 	values := m.PrimaryKeyValues(i)
 	for i, key := range m.PrimaryKeys {
 		where.Equal(key, values[i])

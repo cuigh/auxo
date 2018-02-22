@@ -83,10 +83,10 @@ func (p *Provider) BuildDelete(b *gsd.Builder, info *gsd.DeleteInfo) (err error)
 	b.WriteString("DELETE FROM ")
 	p.Quote(b, info.Table)
 	if info.Where == nil || info.Where.Empty() {
-		return errors.New("delete action must have filters")
+		return errors.New("delete action must have where clause")
 	}
 	b.WriteString(" WHERE ")
-	p.buildFilters(b, info.Where)
+	p.buildCriteriaSet(b, info.Where)
 	return
 }
 
@@ -118,7 +118,7 @@ func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error)
 	}
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildFilters(b, info.Where)
+		p.buildCriteriaSet(b, info.Where)
 	}
 	return
 }
@@ -162,7 +162,7 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildFilters(b, info.Where)
+		p.buildCriteriaSet(b, info.Where)
 	}
 
 	// GROUP BY
@@ -215,7 +215,7 @@ func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildFilters(b, info.Where)
+		p.buildCriteriaSet(b, info.Where)
 	}
 
 	// GROUP BY
@@ -230,7 +230,7 @@ func (p *Provider) buildJoin(b *gsd.Builder, info *gsd.SelectInfo) {
 			b.WriteString(" AS ", join.Table.Alias())
 		}
 		b.WriteString(" ON ")
-		p.buildFilters(b, join.On)
+		p.buildCriteriaSet(b, join.On)
 	}
 }
 
@@ -245,7 +245,7 @@ func (p *Provider) buildGroupBy(b *gsd.Builder, info *gsd.SelectInfo) {
 		}
 		if info.Having != nil {
 			b.WriteString(" HAVING ")
-			p.buildFilters(b, info.Having)
+			p.buildCriteriaSet(b, info.Having)
 		}
 	}
 }
@@ -260,95 +260,95 @@ func (p *Provider) buildColumn(b *gsd.Builder, col gsd.Column) {
 	}
 }
 
-func (p *Provider) buildFilters(b *gsd.Builder, filters gsd.Filters) {
-	switch fs := filters.(type) {
-	case *gsd.SimpleFilters:
-		for i, filter := range *fs {
+func (p *Provider) buildCriteriaSet(b *gsd.Builder, cs gsd.CriteriaSet) {
+	switch fs := cs.(type) {
+	case *gsd.SimpleCriteriaSet:
+		for i, c := range fs.Items {
 			if i > 0 {
 				b.WriteString(" AND ")
 			}
-			switch f := filter.(type) {
-			case *gsd.OneColumnFilter:
-				p.buildOneColumnFilter(b, f)
-			case *gsd.TwoColumnFilter:
-				p.buildTwoColumnFilter(b, f)
-			case gsd.ExprFilter:
+			switch f := c.(type) {
+			case *gsd.OneColumnCriteria:
+				p.buildOneColumnCriteria(b, f)
+			case *gsd.TwoColumnCriteria:
+				p.buildTwoColumnCriteria(b, f)
+			case gsd.ExprCriteria:
 				b.WriteString(string(f))
 			}
 		}
-	case *gsd.NotFilters:
+	case *gsd.NotCriteriaSet:
 		b.WriteString("NOT(")
-		p.buildFilters(b, fs.Inner)
+		p.buildCriteriaSet(b, fs.Inner)
 		b.WriteByte(')')
-	case gsd.JoinFilters:
+	case gsd.JoinCriteriaSet:
 		if fs.Left().Empty() {
-			p.buildFilters(b, fs.Right())
+			p.buildCriteriaSet(b, fs.Right())
 		} else if fs.Right().Empty() {
-			p.buildFilters(b, fs.Left())
+			p.buildCriteriaSet(b, fs.Left())
 		} else {
 			b.WriteByte('(')
-			p.buildFilters(b, fs.Left())
+			p.buildCriteriaSet(b, fs.Left())
 			b.WriteString(") ", fs.Joiner(), " (")
-			p.buildFilters(b, fs.Right())
+			p.buildCriteriaSet(b, fs.Right())
 			b.WriteByte(')')
 		}
 	}
 }
 
-func (p *Provider) buildOneColumnFilter(b *gsd.Builder, f *gsd.OneColumnFilter) (err error) {
-	if f.Table() != nil {
-		p.Quote(b, f.Table().Prefix())
+func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriteria) (err error) {
+	if c.Table() != nil {
+		p.Quote(b, c.Table().Prefix())
 		b.WriteByte(Dot)
 	}
 
-	switch f.Type {
+	switch c.Type {
 	case gsd.NE:
-		if f.Value == nil {
-			p.Quote(b, f.Name())
+		if c.Value == nil {
+			p.Quote(b, c.Name())
 			b.WriteString(" IS NOT NULL")
 			return
 		} else {
-			p.Quote(b, f.Name())
+			p.Quote(b, c.Name())
 			b.WriteString("<>?")
 		}
 	case gsd.LT:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString("<?")
 	case gsd.LTE:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString("<=?")
 	case gsd.GT:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString(">?")
 	case gsd.GTE:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString(">=?")
 	case gsd.IN:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString(" IN(")
-		p.buildInValues(b, f.Value)
+		p.buildInValues(b, c.Value)
 		b.WriteByte(')')
 		return
 	case gsd.NIN:
-		p.Quote(b, f.Name())
+		p.Quote(b, c.Name())
 		b.WriteString(" NOT IN(")
-		p.buildInValues(b, f.Value)
+		p.buildInValues(b, c.Value)
 		b.WriteByte(')')
 		return
 	case gsd.LK:
-		p.Quote(b, f.Name())
-		b.WriteString(" LIKE '", f.Value.(string), "'")
+		p.Quote(b, c.Name())
+		b.WriteString(" LIKE '", c.Value.(string), "'")
 	default:
-		if f.Value == nil {
-			p.Quote(b, f.Name())
+		if c.Value == nil {
+			p.Quote(b, c.Name())
 			b.WriteString(" IS NULL")
 			return
 		} else {
-			p.Quote(b, f.Name())
+			p.Quote(b, c.Name())
 			b.WriteString("=?")
 		}
 	}
-	b.Args = append(b.Args, f.Value)
+	b.Args = append(b.Args, c.Value)
 	return
 }
 
@@ -375,14 +375,14 @@ func (p *Provider) buildInValues(b *gsd.Builder, i interface{}) (err error) {
 	return
 }
 
-func (p *Provider) buildTwoColumnFilter(b *gsd.Builder, f *gsd.TwoColumnFilter) (err error) {
-	if f.Left.Table() != nil {
-		p.Quote(b, f.Left.Table().Prefix())
+func (p *Provider) buildTwoColumnCriteria(b *gsd.Builder, c *gsd.TwoColumnCriteria) (err error) {
+	if c.Left.Table() != nil {
+		p.Quote(b, c.Left.Table().Prefix())
 		b.WriteByte(Dot)
 	}
-	p.Quote(b, f.Left.Name())
+	p.Quote(b, c.Left.Name())
 
-	switch f.Type {
+	switch c.Type {
 	case gsd.EQ:
 		b.WriteByte('=')
 	case gsd.NE:
@@ -396,13 +396,13 @@ func (p *Provider) buildTwoColumnFilter(b *gsd.Builder, f *gsd.TwoColumnFilter) 
 	case gsd.GTE:
 		b.Write([]byte{'>', '='})
 	default:
-		return errors.Format("not supported filter type: %v", f.Type)
+		return errors.Format("not supported criteria type: %v", c.Type)
 	}
 
-	if f.Right.Table() != nil {
-		p.Quote(b, f.Right.Table().Prefix())
+	if c.Right.Table() != nil {
+		p.Quote(b, c.Right.Table().Prefix())
 		b.WriteByte(Dot)
 	}
-	p.Quote(b, f.Right.Name())
+	p.Quote(b, c.Right.Name())
 	return
 }

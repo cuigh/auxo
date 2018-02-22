@@ -145,12 +145,12 @@ func buildFindProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 			}
 
 			m := gsd.GetMeta(rt)
-			f := gsd.NewFilters()
+			w := &gsd.SimpleCriteriaSet{}
 			for i, key := range m.PrimaryKeys {
-				f.Equal(key, ins[i].Interface())
+				w.Equal(key, ins[i].Interface())
 			}
 			r := reflect.New(ret)
-			err = db.Select(m.Selects...).From(m.Table).Where(f).Fill(r.Interface())
+			err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(r.Interface())
 			if err != nil {
 				outs[0] = zr
 				outs[1] = reflects.Error(err)
@@ -195,11 +195,11 @@ func buildFindProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 
 			db, err := lazy.Try()
 			if err == nil {
-				f := gsd.NewFilters()
+				w := &gsd.SimpleCriteriaSet{}
 				for i, key := range m.PrimaryKeys {
-					f.Equal(key, args[i])
+					w.Equal(key, args[i])
 				}
-				err = db.Select(m.Selects...).From(m.Table).Where(f).Fill(i)
+				err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(i)
 			}
 			if err != nil {
 				outs[0], outs[1] = zr, reflects.Error(err)
@@ -277,25 +277,6 @@ func buildRemoveProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 	})
 }
 
-//func buildDeleteProxy(lazy *gsd.LazyDB, table string, ft reflect.Type, _ data.Options) (v reflect.Value) {
-//	// todo: validate func
-//	return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
-//		outs = make([]reflect.Value, 1)
-//
-//		db, err := lazy.Try()
-//		if err == nil {
-//			m := GetMeta(rt)
-//			f := NewFilters()
-//			for i, key := range m.Keys {
-//				f.Equal(key, ins[i].Interface())
-//			}
-//			err = db.Delete(table).Where(Equal()).Submit()
-//		}
-//		outs[0] = reflects.Error(err)
-//		return
-//	})
-//}
-
 func buildModifyProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v reflect.Value) {
 	// todo: validate func
 	return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
@@ -339,8 +320,8 @@ func buildSearchProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (
 				)
 				fm := gsd.GetMeta(ins[0].Type())
 				rm := gsd.GetMeta(outs[0].Elem().Type())
-				f := fm.FilterValues(i)
-				err = db.Select(rm.Selects...).From(rm.Table).Where(f).Page(1, 1).List(nil, &count)
+				w := fm.WhereValues(i)
+				err = db.Select(rm.Selects...).From(rm.Table).Where(w).Page(1, 1).List(nil, &count)
 			}
 			// todo:
 			outs[2] = reflects.Error(err)

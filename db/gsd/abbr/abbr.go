@@ -48,26 +48,26 @@ func Include(cols ...string) gsd.ColumnFilter {
 	return gsd.Include(cols...)
 }
 
-func F() *gsd.SimpleFilters {
-	return gsd.NewFilters()
+func W() *gsd.SimpleCriteriaSet {
+	return &gsd.SimpleCriteriaSet{}
 }
 
-func Not(inner gsd.Filters) gsd.Filters {
+func Not(inner gsd.CriteriaSet) gsd.CriteriaSet {
 	return gsd.Not(inner)
 }
 
-func And(left, right gsd.Filters) gsd.Filters {
+func And(left, right gsd.CriteriaSet) gsd.CriteriaSet {
 	return gsd.And(left, right)
 }
 
-func Or(left, right gsd.Filters) gsd.Filters {
+func Or(left, right gsd.CriteriaSet) gsd.CriteriaSet {
 	return gsd.Or(left, right)
 }
 
-func Equal(col, val interface{}) *gsd.SimpleFilters {
+func Equal(col, val interface{}) *gsd.SimpleCriteriaSet {
 	return gsd.Equal(col, val)
 }
 
-func On(left, right interface{}) *gsd.SimpleFilters {
-	return gsd.NewFilters().Equal2(left, right)
+func On(left, right interface{}) *gsd.SimpleCriteriaSet {
+	return W().Equal2(left, right)
 }

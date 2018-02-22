@@ -31,14 +31,14 @@ type SelectInfo struct {
 	Table
 	Distinct bool
 	Columns
-	Where Filters
+	Where CriteriaSet
 	Joins []struct {
 		Type string
 		Table
-		On Filters
+		On CriteriaSet
 	}
 	Groups Columns
-	Having Filters
+	Having CriteriaSet
 	Orders []*Order
 	Skip   int
 	Take   int
@@ -85,32 +85,32 @@ func (c *selectContext) From(table interface{}) FromClause {
 	return c
 }
 
-func (c *selectContext) Where(w Filters) WhereClause {
+func (c *selectContext) Where(w CriteriaSet) WhereClause {
 	c.info.Where = w
 	return c
 }
 
-func (c *selectContext) Join(t interface{}, on Filters) JoinClause {
+func (c *selectContext) Join(t interface{}, on CriteriaSet) JoinClause {
 	return c.join(t, on, "JOIN")
 }
 
-func (c *selectContext) LeftJoin(t interface{}, on Filters) JoinClause {
+func (c *selectContext) LeftJoin(t interface{}, on CriteriaSet) JoinClause {
 	return c.join(t, on, "LEFT JOIN")
 }
 
-func (c *selectContext) RightJoin(t interface{}, on Filters) JoinClause {
+func (c *selectContext) RightJoin(t interface{}, on CriteriaSet) JoinClause {
 	return c.join(t, on, "RIGHT JOIN")
 }
 
-func (c *selectContext) FullJoin(t interface{}, on Filters) JoinClause {
+func (c *selectContext) FullJoin(t interface{}, on CriteriaSet) JoinClause {
 	return c.join(t, on, "FULL JOIN")
 }
 
-func (c *selectContext) join(t interface{}, on Filters, jt string) JoinClause {
+func (c *selectContext) join(t interface{}, on CriteriaSet, jt string) JoinClause {
 	c.info.Joins = append(c.info.Joins, struct {
 		Type string
 		Table
-		On Filters
+		On CriteriaSet
 	}{Type: jt, Table: toTable(t), On: on})
 	return c
 }
@@ -120,7 +120,7 @@ func (c *selectContext) GroupBy(cols *Columns) GroupByClause {
 	return c
 }
 
-func (c *selectContext) Having(f Filters) HavingClause {
+func (c *selectContext) Having(f CriteriaSet) HavingClause {
 	c.info.Having = f
 	return c
 }
@@ -241,7 +241,7 @@ func (c *selectContext) Load(i interface{}) error {
 	// Where
 	keys := m.PrimaryKeys
 	values := m.PrimaryKeyValues(i)
-	where := NewFilters()
+	where := &SimpleCriteriaSet{}
 	for i, v := range values {
 		where.Equal(keys[i], v)
 	}
@@ -282,27 +282,27 @@ func (c *countContext) Count(table interface{}) CountClause {
 	return c
 }
 
-func (c *countContext) Join(t interface{}, on Filters) CountClause {
+func (c *countContext) Join(t interface{}, on CriteriaSet) CountClause {
 	(*selectContext)(c).Join(t, on)
 	return c
 }
 
-func (c *countContext) LeftJoin(t interface{}, on Filters) CountClause {
+func (c *countContext) LeftJoin(t interface{}, on CriteriaSet) CountClause {
 	(*selectContext)(c).LeftJoin(t, on)
 	return c
 }
 
-func (c *countContext) RightJoin(t interface{}, on Filters) CountClause {
+func (c *countContext) RightJoin(t interface{}, on CriteriaSet) CountClause {
 	(*selectContext)(c).RightJoin(t, on)
 	return c
 }
 
-func (c *countContext) FullJoin(t interface{}, on Filters) CountClause {
+func (c *countContext) FullJoin(t interface{}, on CriteriaSet) CountClause {
 	(*selectContext)(c).FullJoin(t, on)
 	return c
 }
 
-func (c *countContext) Where(f Filters) CountWhereClause {
+func (c *countContext) Where(f CriteriaSet) CountWhereClause {
 	(*selectContext)(c).Where(f)
 	return c
 }
@@ -311,7 +311,7 @@ func (c *countContext) GroupBy(cols *Columns) CountGroupByClause {
 	(*selectContext)(c).GroupBy(cols)
 	return c
 }
-func (c *countContext) Having(f Filters) CountResultClause {
+func (c *countContext) Having(f CriteriaSet) CountResultClause {
 	(*selectContext)(c).Having(f)
 	return c
 }

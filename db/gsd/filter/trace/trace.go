@@ -11,7 +11,7 @@ import (
 
 const component = "gsd"
 
-func Trace() gsd.Interceptor {
+func Trace() gsd.Filter {
 	return func(e gsd.Executor) gsd.Executor {
 		return &executor{
 			Executor: e,

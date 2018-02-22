@@ -16,7 +16,7 @@ type UpdateInfo struct {
 	Table   string
 	Columns []string
 	Values  []interface{}
-	Where   Filters
+	Where   CriteriaSet
 	Filter  ColumnFilter
 }
 
@@ -65,7 +65,7 @@ func (c *updateContext) Expr(col string, val string) SetClause {
 	return c
 }
 
-func (c *updateContext) Where(w Filters) ResultClause {
+func (c *updateContext) Where(w CriteriaSet) ResultClause {
 	c.info.Where = w
 	return c
 }
@@ -96,7 +96,7 @@ func (c *updateContext) Modify(i interface{}, filter ...ColumnFilter) (r Result,
 	}
 
 	// filters
-	where := NewFilters()
+	where := &SimpleCriteriaSet{}
 	values := m.PrimaryKeyValues(i)
 	for i, key := range m.PrimaryKeys {
 		where.Equal(key, values[i])

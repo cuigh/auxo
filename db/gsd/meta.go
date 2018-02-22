@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"strings"
 	"sync"
-
 	"sync/atomic"
 
 	"github.com/cuigh/auxo/errors"
@@ -54,7 +53,7 @@ type ColumnOptions struct {
 	Insert        bool   `json:"insert"`
 	Update        bool   `json:"update"`
 	Select        bool   `json:"select"`
-	Filter        *struct {
+	Where         *struct {
 		Column string
 		Type   int
 		Index  int
@@ -112,7 +111,7 @@ type Meta struct {
 	Inserts []string // insert columns
 	Selects []string // select columns
 	Columns []string // all columns, columns = keys + updates = autos + inserts
-	Filters []*struct {
+	Wheres  []*struct {
 		Column string
 		Type   int
 		Index  int
@@ -176,9 +175,9 @@ func newMeta(t reflect.Type, options *TableOptions) *Meta {
 			m.Selects = append(m.Selects, options.Name)
 			m.selectIndexes = append(m.selectIndexes, len(m.fields)-1)
 		}
-		if options.Filter != nil {
-			options.Filter.Index = len(m.fields) - 1
-			m.Filters = append(m.Filters, options.Filter)
+		if options.Where != nil {
+			options.Where.Index = len(m.fields) - 1
+			m.Wheres = append(m.Wheres, options.Where)
 		}
 	}
 	return m
@@ -238,12 +237,12 @@ func (m *Meta) parseOptions(sf *reflect.StructField, ns texts.NameStyle) (option
 	if v, ok := d["select"]; ok {
 		options.Select = v == "" || v == "true"
 	}
-	if v, ok := d["filter"]; ok {
-		options.Filter = &struct {
+	if v, ok := d["where"]; ok {
+		options.Where = &struct {
 			Column string
 			Type   int
 			Index  int
-		}{Column: options.Name, Type: parseFilterType(v)}
+		}{Column: options.Name, Type: parseCriteriaType(v)}
 	}
 	return
 }
@@ -372,12 +371,12 @@ func (m *Meta) CopyPrimaryKeyValues(i interface{}, values []interface{}) {
 	}
 }
 
-// FilterValues return search filters
-func (m *Meta) FilterValues(i interface{}) Filters {
+// WhereValues return values of searching criteria set.
+func (m *Meta) WhereValues(i interface{}) CriteriaSet {
 	ptr := reflects.Ptr(i)
-	f := NewFilters()
-	for _, item := range m.Filters {
-		f.add(item.Column, item.Type, m.fields[item.Index].Get(ptr))
+	cs := &SimpleCriteriaSet{}
+	for _, item := range m.Wheres {
+		cs.add(item.Column, item.Type, m.fields[item.Index].Get(ptr))
 	}
-	return f
+	return cs
 }

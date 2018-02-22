@@ -65,7 +65,7 @@ type database struct {
 	p      Provider
 	stmts  *stmtMap
 	e      Executor
-	Interceptors
+	Filters
 }
 
 func (d *database) Database() string {
@@ -220,7 +220,7 @@ func (d *database) TransactContext(ctx context.Context, fn func(tx TX) error, op
 	}
 
 	tx := &transaction{db: d, tx: trans}
-	tx.e = d.Interceptors.Apply(tx)
+	tx.e = d.Filters.Apply(tx)
 	defer func() {
 		if e := recover(); e != nil {
 			err = errors.Convert(e)

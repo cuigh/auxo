@@ -15,11 +15,11 @@ type SelectClause interface {
 type FromClause interface {
 	LimitClause
 	SelectResultClause
-	Join(table interface{}, on Filters) JoinClause
-	LeftJoin(t interface{}, on Filters) JoinClause
-	RightJoin(t interface{}, on Filters) JoinClause
-	FullJoin(t interface{}, on Filters) JoinClause
-	Where(f Filters) WhereClause
+	Join(table interface{}, on CriteriaSet) JoinClause
+	LeftJoin(t interface{}, on CriteriaSet) JoinClause
+	RightJoin(t interface{}, on CriteriaSet) JoinClause
+	FullJoin(t interface{}, on CriteriaSet) JoinClause
+	Where(f CriteriaSet) WhereClause
 }
 
 type JoinClause interface {
@@ -37,7 +37,7 @@ type WhereClause interface {
 type GroupByClause interface {
 	LimitClause
 	OrderBy(orders ...*Order) OrderByClause
-	Having(f Filters) HavingClause
+	Having(f CriteriaSet) HavingClause
 	SelectResultClause
 }
 
@@ -73,11 +73,11 @@ type SelectResultClause interface {
 /********** Count Clauses **********/
 
 type CountClause interface {
-	Join(table interface{}, on Filters) CountClause
-	LeftJoin(t interface{}, on Filters) CountClause
-	RightJoin(t interface{}, on Filters) CountClause
-	FullJoin(t interface{}, on Filters) CountClause
-	Where(f Filters) CountWhereClause
+	Join(table interface{}, on CriteriaSet) CountClause
+	LeftJoin(t interface{}, on CriteriaSet) CountClause
+	RightJoin(t interface{}, on CriteriaSet) CountClause
+	FullJoin(t interface{}, on CriteriaSet) CountClause
+	Where(f CriteriaSet) CountWhereClause
 	CountResultClause
 }
 
@@ -87,7 +87,7 @@ type CountWhereClause interface {
 }
 
 type CountGroupByClause interface {
-	Having(f Filters) CountResultClause
+	Having(f CriteriaSet) CountResultClause
 	CountResultClause
 }
 
@@ -108,13 +108,13 @@ type UpdateClause interface {
 type SetClause interface {
 	UpdateClause
 	ResultClause
-	Where(f Filters) ResultClause
+	Where(f CriteriaSet) ResultClause
 }
 
 /********** Delete Clauses **********/
 
 type DeleteClause interface {
-	Where(f Filters) ResultClause
+	Where(f CriteriaSet) ResultClause
 }
 
 /********** Insert Clauses **********/
