@@ -1,10 +1,9 @@
 package gsd
 
 import (
+	"context"
 	"database/sql"
 	"sync"
-
-	"context"
 
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/data"
@@ -140,7 +139,7 @@ type Builder struct {
 func (b *Builder) Reset() {
 	b.Builder.Reset()
 	if b.Args != nil {
-		b.Args = b.Args[:0] //nil
+		b.Args = b.Args[:0]
 	}
 }
 

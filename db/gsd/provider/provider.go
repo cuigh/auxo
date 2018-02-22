@@ -49,30 +49,30 @@ func (p *Provider) BuildCall(b *gsd.Builder, info *gsd.CallInfo) (err error) {
 
 func (p *Provider) BuildInsert(b *gsd.Builder, info *gsd.InsertInfo) (err error) {
 	cols := len(info.Columns)
-	b.Append("INSERT INTO ")
+	b.WriteString("INSERT INTO ")
 	p.Quote(b, info.Table)
-	b.AppendByte('(')
+	b.WriteByte('(')
 	p.Quote(b, info.Columns[0])
 	for i := 1; i < cols; i++ {
-		b.AppendByte(Comma)
+		b.WriteByte(Comma)
 		p.Quote(b, info.Columns[i])
 	}
-	b.Append(") VALUES ")
+	b.WriteString(") VALUES ")
 
 	rows := len(info.Values) / cols
 	for i := 0; i < rows; i++ {
 		if i > 0 {
-			b.AppendByte(Comma)
+			b.WriteByte(Comma)
 		}
 		if cols > 20 {
 			// todo: optimize
-			b.AppendBytes('(', '?')
+			b.Write([]byte{'(', '?'})
 			for j := 1; j < cols; j++ {
-				b.AppendBytes(',', '?')
+				b.Write([]byte{',', '?'})
 			}
-			b.AppendByte(')')
+			b.WriteByte(')')
 		} else {
-			b.Append(insertValueClauses[cols-1])
+			b.WriteString(insertValueClauses[cols-1])
 		}
 	}
 	b.Args = info.Values
@@ -80,44 +80,44 @@ func (p *Provider) BuildInsert(b *gsd.Builder, info *gsd.InsertInfo) (err error)
 }
 
 func (p *Provider) BuildDelete(b *gsd.Builder, info *gsd.DeleteInfo) (err error) {
-	b.Append("DELETE FROM ")
+	b.WriteString("DELETE FROM ")
 	p.Quote(b, info.Table)
 	if info.Where == nil || info.Where.Empty() {
 		return errors.New("delete action must have filters")
 	}
-	b.Append(" WHERE ")
+	b.WriteString(" WHERE ")
 	p.buildFilters(b, info.Where)
 	return
 }
 
 func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error) {
-	b.Append("UPDATE ")
+	b.WriteString("UPDATE ")
 	p.Quote(b, info.Table)
-	b.Append(" SET ")
+	b.WriteString(" SET ")
 	for i, col := range info.Columns {
 		if i > 0 {
-			b.AppendByte(Comma)
+			b.WriteByte(Comma)
 		}
 		p.Quote(b, col)
-		b.AppendByte('=')
+		b.WriteByte('=')
 		switch v := info.Values[i].(type) {
 		case gsd.IncValue:
 			p.Quote(b, col)
-			b.AppendBytes('+', '?')
+			b.Write([]byte{'+', '?'})
 			b.Args = append(b.Args, v.Value)
 		case gsd.DecValue:
 			p.Quote(b, col)
-			b.AppendBytes('-', '?')
+			b.Write([]byte{'-', '?'})
 			b.Args = append(b.Args, v.Value)
 		case gsd.ExprValue:
-			b.Append(string(v))
+			b.WriteString(string(v))
 		default:
-			b.AppendByte('?')
+			b.WriteByte('?')
 			b.Args = append(b.Args, v)
 		}
 	}
 	if info.Where != nil && !info.Where.Empty() {
-		b.Append(" WHERE ")
+		b.WriteString(" WHERE ")
 		p.buildFilters(b, info.Where)
 	}
 	return
@@ -125,35 +125,35 @@ func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error)
 
 func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error) {
 	// SELECT
-	b.Append("SELECT ")
+	b.WriteString("SELECT ")
 	if info.Distinct {
-		b.Append("DISTINCT ")
+		b.WriteString("DISTINCT ")
 	}
 	for i, col := range info.Columns {
 		if i > 0 {
-			b.AppendByte(',')
+			b.WriteByte(',')
 		}
 		if col.Table() == nil {
 			if _, ok := col.(*gsd.ExprColumn); ok {
-				b.Append(col.Name())
+				b.WriteString(col.Name())
 			} else {
 				p.Quote(b, col.Name())
 			}
 		} else {
 			p.Quote(b, col.Table().Prefix())
-			b.AppendByte(Dot)
+			b.WriteByte(Dot)
 			p.Quote(b, col.Name())
 		}
 		if col.Alias() != "" {
-			b.Append(" AS ", col.Alias())
+			b.WriteString(" AS ", col.Alias())
 		}
 	}
 
 	// FROM
-	b.Append(" FROM ")
+	b.WriteString(" FROM ")
 	p.Quote(b, info.Table.Name())
 	if info.Table.Alias() != "" {
-		b.Append(" AS ", info.Table.Alias())
+		b.WriteString(" AS ", info.Table.Alias())
 	}
 
 	// JOIN
@@ -161,7 +161,7 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
-		b.Append(" WHERE ")
+		b.WriteString(" WHERE ")
 		p.buildFilters(b, info.Where)
 	}
 
@@ -170,19 +170,19 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 
 	// ORDER BY
 	if len(info.Orders) > 0 {
-		b.Append(" ORDER BY ")
+		b.WriteString(" ORDER BY ")
 		for i, order := range info.Orders {
 			if i > 0 {
-				b.AppendByte(Comma)
+				b.WriteByte(Comma)
 			}
 			for j, col := range order.Columns {
 				if j > 0 {
-					b.AppendByte(Comma)
+					b.WriteByte(Comma)
 				}
 				p.buildColumn(b, col)
 			}
 			if order.Type == gsd.DESC {
-				b.Append(" DESC")
+				b.WriteString(" DESC")
 			}
 		}
 	}
@@ -203,10 +203,10 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 
 func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
 	// SELECT FROM
-	b.Append(";SELECT COUNT(0) FROM ")
+	b.WriteString(";SELECT COUNT(0) FROM ")
 	p.Quote(b, info.Table.Name())
 	if info.Table.Alias() != "" {
-		b.Append(" AS ", info.Table.Alias())
+		b.WriteString(" AS ", info.Table.Alias())
 	}
 
 	// JOIN
@@ -214,7 +214,7 @@ func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
 
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
-		b.Append(" WHERE ")
+		b.WriteString(" WHERE ")
 		p.buildFilters(b, info.Where)
 	}
 
@@ -224,27 +224,27 @@ func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
 
 func (p *Provider) buildJoin(b *gsd.Builder, info *gsd.SelectInfo) {
 	for _, join := range info.Joins {
-		b.Append(" ", join.Type, " ")
+		b.WriteString(" ", join.Type, " ")
 		p.Quote(b, join.Table.Name())
 		if join.Table.Alias() != "" {
-			b.Append(" AS ", join.Table.Alias())
+			b.WriteString(" AS ", join.Table.Alias())
 		}
-		b.Append(" ON ")
+		b.WriteString(" ON ")
 		p.buildFilters(b, join.On)
 	}
 }
 
 func (p *Provider) buildGroupBy(b *gsd.Builder, info *gsd.SelectInfo) {
 	if len(info.Groups) > 0 {
-		b.Append(" GROUP BY ")
+		b.WriteString(" GROUP BY ")
 		for i, col := range info.Groups {
 			if i > 0 {
-				b.AppendByte(',')
+				b.WriteByte(',')
 			}
 			p.buildColumn(b, col)
 		}
 		if info.Having != nil {
-			b.Append(" HAVING ")
+			b.WriteString(" HAVING ")
 			p.buildFilters(b, info.Having)
 		}
 	}
@@ -255,7 +255,7 @@ func (p *Provider) buildColumn(b *gsd.Builder, col gsd.Column) {
 		p.Quote(b, col.Name())
 	} else {
 		p.Quote(b, col.Table().Prefix())
-		b.AppendByte(Dot)
+		b.WriteByte(Dot)
 		p.Quote(b, col.Name())
 	}
 }
@@ -265,7 +265,7 @@ func (p *Provider) buildFilters(b *gsd.Builder, filters gsd.Filters) {
 	case *gsd.SimpleFilters:
 		for i, filter := range *fs {
 			if i > 0 {
-				b.Append(" AND ")
+				b.WriteString(" AND ")
 			}
 			switch f := filter.(type) {
 			case *gsd.OneColumnFilter:
@@ -273,24 +273,24 @@ func (p *Provider) buildFilters(b *gsd.Builder, filters gsd.Filters) {
 			case *gsd.TwoColumnFilter:
 				p.buildTwoColumnFilter(b, f)
 			case gsd.ExprFilter:
-				b.Append(string(f))
+				b.WriteString(string(f))
 			}
 		}
 	case *gsd.NotFilters:
-		b.Append("NOT(")
+		b.WriteString("NOT(")
 		p.buildFilters(b, fs.Inner)
-		b.AppendByte(')')
+		b.WriteByte(')')
 	case gsd.JoinFilters:
 		if fs.Left().Empty() {
 			p.buildFilters(b, fs.Right())
 		} else if fs.Right().Empty() {
 			p.buildFilters(b, fs.Left())
 		} else {
-			b.AppendByte('(')
+			b.WriteByte('(')
 			p.buildFilters(b, fs.Left())
-			b.Append(") ", fs.Joiner(), " (")
+			b.WriteString(") ", fs.Joiner(), " (")
 			p.buildFilters(b, fs.Right())
-			b.AppendByte(')')
+			b.WriteByte(')')
 		}
 	}
 }
@@ -298,54 +298,54 @@ func (p *Provider) buildFilters(b *gsd.Builder, filters gsd.Filters) {
 func (p *Provider) buildOneColumnFilter(b *gsd.Builder, f *gsd.OneColumnFilter) (err error) {
 	if f.Table() != nil {
 		p.Quote(b, f.Table().Prefix())
-		b.AppendByte(Dot)
+		b.WriteByte(Dot)
 	}
 
 	switch f.Type {
 	case gsd.NE:
 		if f.Value == nil {
 			p.Quote(b, f.Name())
-			b.Append(" IS NOT NULL")
+			b.WriteString(" IS NOT NULL")
 			return
 		} else {
 			p.Quote(b, f.Name())
-			b.Append("<>?")
+			b.WriteString("<>?")
 		}
 	case gsd.LT:
 		p.Quote(b, f.Name())
-		b.Append("<?")
+		b.WriteString("<?")
 	case gsd.LTE:
 		p.Quote(b, f.Name())
-		b.Append("<=?")
+		b.WriteString("<=?")
 	case gsd.GT:
 		p.Quote(b, f.Name())
-		b.Append(">?")
+		b.WriteString(">?")
 	case gsd.GTE:
 		p.Quote(b, f.Name())
-		b.Append(">=?")
+		b.WriteString(">=?")
 	case gsd.IN:
 		p.Quote(b, f.Name())
-		b.Append(" IN(")
+		b.WriteString(" IN(")
 		p.buildInValues(b, f.Value)
-		b.AppendByte(')')
+		b.WriteByte(')')
 		return
 	case gsd.NIN:
 		p.Quote(b, f.Name())
-		b.Append(" NOT IN(")
+		b.WriteString(" NOT IN(")
 		p.buildInValues(b, f.Value)
-		b.AppendByte(')')
+		b.WriteByte(')')
 		return
 	case gsd.LK:
 		p.Quote(b, f.Name())
-		b.Append(" LIKE '", f.Value.(string), "'")
+		b.WriteString(" LIKE '", f.Value.(string), "'")
 	default:
 		if f.Value == nil {
 			p.Quote(b, f.Name())
-			b.Append(" IS NULL")
+			b.WriteString(" IS NULL")
 			return
 		} else {
 			p.Quote(b, f.Name())
-			b.Append("=?")
+			b.WriteString("=?")
 		}
 	}
 	b.Args = append(b.Args, f.Value)
@@ -359,15 +359,15 @@ func (p *Provider) buildInValues(b *gsd.Builder, i interface{}) (err error) {
 	length := reflects.SliceLen(i)
 	for i := 0; i < length; i++ {
 		if i > 0 {
-			b.AppendByte(',')
+			b.WriteByte(',')
 		}
 		switch t.Kind() {
 		case reflect.String:
-			b.Append("'", si.GetString(ptr, i), "'")
+			b.WriteString("'", si.GetString(ptr, i), "'")
 		case reflect.Int:
-			b.Append("'", strconv.Itoa(si.GetInt(ptr, i)), "'")
+			b.WriteString("'", strconv.Itoa(si.GetInt(ptr, i)), "'")
 		case reflect.Int32:
-			b.Append("'", strconv.Itoa(int(si.GetInt32(ptr, i))), "'")
+			b.WriteString("'", strconv.Itoa(int(si.GetInt32(ptr, i))), "'")
 		default:
 			return errors.Format("not supported type: %v", t)
 		}
@@ -378,30 +378,30 @@ func (p *Provider) buildInValues(b *gsd.Builder, i interface{}) (err error) {
 func (p *Provider) buildTwoColumnFilter(b *gsd.Builder, f *gsd.TwoColumnFilter) (err error) {
 	if f.Left.Table() != nil {
 		p.Quote(b, f.Left.Table().Prefix())
-		b.AppendByte(Dot)
+		b.WriteByte(Dot)
 	}
 	p.Quote(b, f.Left.Name())
 
 	switch f.Type {
 	case gsd.EQ:
-		b.AppendByte('=')
+		b.WriteByte('=')
 	case gsd.NE:
-		b.AppendBytes('<', '>')
+		b.Write([]byte{'<', '>'})
 	case gsd.LT:
-		b.AppendByte('<')
+		b.WriteByte('<')
 	case gsd.LTE:
-		b.AppendBytes('<', '=')
+		b.Write([]byte{'<', '='})
 	case gsd.GT:
-		b.AppendByte('>')
+		b.WriteByte('>')
 	case gsd.GTE:
-		b.AppendBytes('>', '=')
+		b.Write([]byte{'>', '='})
 	default:
 		return errors.Format("not supported filter type: %v", f.Type)
 	}
 
 	if f.Right.Table() != nil {
 		p.Quote(b, f.Right.Table().Prefix())
-		b.AppendByte(Dot)
+		b.WriteByte(Dot)
 	}
 	p.Quote(b, f.Right.Name())
 	return

@@ -84,7 +84,7 @@ func (l *Logger) text(ctx web.Context, start time.Time) {
 	for _, f := range l.fields {
 		f.Text(ctx, b, start)
 	}
-	b.AppendByte('\n')
+	b.WriteByte('\n')
 	l.logger.Write(b.Bytes())
 	texts.PutBuilder(b)
 }

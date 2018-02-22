@@ -9,25 +9,23 @@ import (
 )
 
 func quote(b *gsd.Builder, s string) {
-	b.AppendByte('`')
-	b.Append(s)
-	b.AppendByte('`')
+	b.WriteByte('`').WriteString(s).WriteByte('`')
 }
 
 func limit(b *gsd.Builder, skip, take int) {
-	b.Append(" LIMIT ", strconv.Itoa(skip), ",", strconv.Itoa(take))
+	b.WriteString(" LIMIT ", strconv.Itoa(skip), ",", strconv.Itoa(take))
 }
 
 func call(b *gsd.Builder, sp string, args ...interface{}) (err error) {
 	//CALL SP(?,?,?)
-	b.Append("CALL ", sp, "(")
+	b.WriteString("CALL ", sp, "(")
 	for i := range args {
 		if i > 0 {
-			b.AppendByte(',')
+			b.WriteByte(',')
 		}
-		b.AppendByte('?')
+		b.WriteByte('?')
 	}
-	b.AppendByte(')')
+	b.WriteByte(')')
 	b.Args = args
 	return
 }

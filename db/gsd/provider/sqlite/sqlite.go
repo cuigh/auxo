@@ -10,13 +10,11 @@ import (
 )
 
 func quote(b *gsd.Builder, s string) {
-	b.AppendByte('[')
-	b.Append(s)
-	b.AppendByte(']')
+	b.WriteByte('[').WriteString(s).WriteByte(']')
 }
 
 func limit(b *gsd.Builder, skip, take int) {
-	b.Append(" LIMIT ", strconv.Itoa(take), " OFFSET ", strconv.Itoa(skip))
+	b.WriteString(" LIMIT ", strconv.Itoa(take), " OFFSET ", strconv.Itoa(skip))
 }
 
 func call(b *gsd.Builder, sp string, args ...interface{}) error {

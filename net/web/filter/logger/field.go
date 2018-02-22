@@ -22,7 +22,7 @@ type textField struct {
 }
 
 func (f *textField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(f.text)
+	b.WriteString(f.text)
 }
 
 func (f *textField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -34,7 +34,7 @@ type timeField struct {
 }
 
 func (f *timeField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(start.Format(f.layout))
+	b.WriteString(start.Format(f.layout))
 }
 
 func (f *timeField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -44,7 +44,7 @@ func (f *timeField) JSON(c web.Context, m data.Map, start time.Time) {
 type statusField struct{}
 
 func (statusField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(strconv.Itoa(c.Response().Status()))
+	b.WriteString(strconv.Itoa(c.Response().Status()))
 }
 
 func (statusField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -57,7 +57,7 @@ type latencyField struct {
 
 func (latencyField) Text(c web.Context, b *texts.Builder, start time.Time) {
 	latency := time.Since(start)
-	b.Append(latency.String())
+	b.WriteString(latency.String())
 }
 
 func (latencyField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -67,7 +67,7 @@ func (latencyField) JSON(c web.Context, m data.Map, start time.Time) {
 type ipField struct{}
 
 func (ipField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.RealIP())
+	b.WriteString(c.RealIP())
 }
 
 func (ipField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -77,7 +77,7 @@ func (ipField) JSON(c web.Context, m data.Map, start time.Time) {
 type methodField struct{}
 
 func (methodField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Request().Method)
+	b.WriteString(c.Request().Method)
 }
 
 func (methodField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -87,7 +87,7 @@ func (methodField) JSON(c web.Context, m data.Map, start time.Time) {
 type hostField struct{}
 
 func (hostField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Request().Host)
+	b.WriteString(c.Request().Host)
 }
 
 func (hostField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -97,7 +97,7 @@ func (hostField) JSON(c web.Context, m data.Map, start time.Time) {
 type pathField struct{}
 
 func (pathField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Request().RequestURI)
+	b.WriteString(c.Request().RequestURI)
 }
 
 func (pathField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -107,7 +107,7 @@ func (pathField) JSON(c web.Context, m data.Map, start time.Time) {
 type refererField struct{}
 
 func (refererField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Request().Referer())
+	b.WriteString(c.Request().Referer())
 }
 
 func (refererField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -117,7 +117,7 @@ func (refererField) JSON(c web.Context, m data.Map, start time.Time) {
 type userAgentField struct{}
 
 func (userAgentField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Request().UserAgent())
+	b.WriteString(c.Request().UserAgent())
 }
 
 func (userAgentField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -129,7 +129,7 @@ type headerField struct {
 }
 
 func (f *headerField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Header(f.name))
+	b.WriteString(c.Header(f.name))
 }
 
 func (f *headerField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -141,7 +141,7 @@ type queryField struct {
 }
 
 func (f *queryField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Query(f.name))
+	b.WriteString(c.Query(f.name))
 }
 
 func (f *queryField) JSON(c web.Context, m data.Map, start time.Time) {
@@ -153,7 +153,7 @@ type formField struct {
 }
 
 func (f *formField) Text(c web.Context, b *texts.Builder, start time.Time) {
-	b.Append(c.Form(f.name))
+	b.WriteString(c.Form(f.name))
 }
 
 func (f *formField) JSON(c web.Context, m data.Map, start time.Time) {

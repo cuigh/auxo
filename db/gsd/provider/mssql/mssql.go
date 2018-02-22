@@ -9,25 +9,23 @@ import (
 )
 
 func quote(b *gsd.Builder, s string) {
-	b.AppendByte('[')
-	b.Append(s)
-	b.AppendByte(']')
+	b.WriteByte('[').WriteString(s).WriteByte(']')
 }
 
 func limit(b *gsd.Builder, skip, take int) {
-	b.Append(" OFFSET ", strconv.Itoa(skip), " ROWS FETCH NEXT ", strconv.Itoa(take), " ROWS ONLY")
+	b.WriteString(" OFFSET ", strconv.Itoa(skip), " ROWS FETCH NEXT ", strconv.Itoa(take), " ROWS ONLY")
 }
 
 func call(b *gsd.Builder, sp string, args ...interface{}) (err error) {
 	//SET NOCOUNT ON; EXEC [SP] ?; SET NOCOUNT OFF
-	b.Append("SET NOCOUNT ON; EXEC [", sp, "]")
+	b.WriteString("SET NOCOUNT ON; EXEC [", sp, "]")
 	for i := range args {
 		if i > 0 {
-			b.AppendByte(',')
+			b.WriteByte(',')
 		}
-		b.AppendByte('?')
+		b.WriteByte('?')
 	}
-	b.Append("SET NOCOUNT OFF")
+	b.WriteString("SET NOCOUNT OFF")
 	b.Args = args
 	return
 }
