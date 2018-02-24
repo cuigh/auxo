@@ -19,7 +19,7 @@ type SimpleBreaker struct {
 	Fallback web.HandlerFunc
 }
 
-func (sb *SimpleBreaker) Try(handler web.HandlerFunc, ctx web.Context, logger *log.Logger) error {
+func (sb *SimpleBreaker) Try(handler web.HandlerFunc, ctx web.Context, logger log.Logger) error {
 	if sb.Fallback == nil {
 		return sb.Breaker.Try(func() error {
 			return handler(ctx)

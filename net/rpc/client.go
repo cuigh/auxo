@@ -90,7 +90,7 @@ type Node struct {
 	//opts    NodeOptions
 	addr    transport.Address
 	state   nodeState
-	logger  *log.Logger
+	logger  log.Logger
 	handler CHandler
 	calls   *callPool
 
@@ -298,7 +298,7 @@ func (opts *ClientOptions) ensure() error {
 
 type Client struct {
 	opts    ClientOptions
-	logger  *log.Logger
+	logger  log.Logger
 	id      uint64
 	filters []CFilter
 

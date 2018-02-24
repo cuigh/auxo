@@ -43,7 +43,7 @@ type Breaker struct {
 	name   string
 	cond   Condition
 	opts   Options
-	logger *log.Logger
+	logger log.Logger
 
 	state  int32
 	expiry time.Time

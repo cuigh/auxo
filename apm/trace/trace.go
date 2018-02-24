@@ -2,7 +2,6 @@ package trace
 
 import (
 	"context"
-
 	"io"
 
 	"github.com/cuigh/auxo/log"
@@ -126,7 +125,7 @@ func StartServer(operation string, format, carrier interface{}) opentracing.Span
 type Tracer struct {
 	opentracing.Tracer
 	closer io.Closer
-	logger *log.Logger
+	logger log.Logger
 }
 
 func NewTracer(tracer opentracing.Tracer) *Tracer {

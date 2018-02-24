@@ -1,176 +1,188 @@
 package log
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/cuigh/auxo/config"
-	"github.com/cuigh/auxo/data"
 )
 
-const (
-	LevelDebug = Level(0)
-	LevelInfo  = Level(1)
-	LevelWarn  = Level(2)
-	LevelError = Level(3)
-	LevelPanic = Level(4)
-	LevelFatal = Level(5)
-	LevelOff   = Level(6)
-)
-
-var (
-	defaultLevel  = LevelDebug
-	defaultLayout = "[{L}]{T}: {M}{N}"
-)
-
-var (
-	once            sync.Once
-	root            *Logger
-	loggers         []*Logger
-	levelShortNames = [7]string{"D", "I", "W", "E", "P", "F", "O"}
-	levelLongNames  = [7]string{"DEBUG", "INFO", "WARN", "ERROR", "PANIC", "FATAL", "OFF"}
-)
-
-type Level int8
-
-func parseLevel(l string) (lvl Level, err error) {
-	switch strings.ToLower(l) {
-	case "debug":
-		lvl = LevelDebug
-	case "info":
-		lvl = LevelInfo
-	case "warn":
-		lvl = LevelWarn
-	case "error":
-		lvl = LevelError
-	case "panic":
-		lvl = LevelPanic
-	case "fatal":
-		lvl = LevelFatal
-	case "off":
-		lvl = LevelOff
-	default:
-		err = errors.New("invalid level: " + l)
-	}
-	return
+type Entry interface {
+	WithField(key string, value interface{}) Entry
+	WithFields(fields map[string]interface{}) Entry
+	Debug(args ...interface{})
+	Debugf(format string, args ...interface{})
+	Info(args ...interface{})
+	Infof(format string, args ...interface{})
+	Warn(args ...interface{})
+	Warnf(format string, args ...interface{})
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Panic(args ...interface{})
+	Panicf(format string, args ...interface{})
+	Fatal(args ...interface{})
+	Fatalf(format string, args ...interface{})
 }
 
-func SetDefaultLevel(lvl Level) {
-	defaultLevel = lvl
+type Logger interface {
+	io.Writer
+	Name() string
+	Level() Level
+	SetLevel(lvl Level)
+	IsEnabled(lvl Level) bool
+	WithField(key string, value interface{}) Entry
+	WithFields(fields map[string]interface{}) Entry
+	Debug(args ...interface{})
+	Debugf(format string, args ...interface{})
+	Info(args ...interface{})
+	Infof(format string, args ...interface{})
+	Warn(args ...interface{})
+	Warnf(format string, args ...interface{})
+	Error(args ...interface{})
+	Errorf(format string, args ...interface{})
+	Panic(args ...interface{})
+	Panicf(format string, args ...interface{})
+	Fatal(args ...interface{})
+	Fatalf(format string, args ...interface{})
 }
 
-type Row struct {
-	lvl    Level
-	time   time.Time
-	msg    string
-	fields map[string]interface{}
-}
-
-type Logger struct {
+type logger struct {
 	locker sync.Mutex
 	name   string
 	lvl    Level
 	//prefix  string
 	writers []*Writer
-	row     Row
+	entries sync.Pool
 }
 
-func (l *Logger) Name() string {
+func (l *logger) Name() string {
 	return l.name
 }
 
-func (l *Logger) SetName(name string) {
-	l.name = name
-}
-
-func (l *Logger) Level() Level {
+func (l *logger) Level() Level {
 	return l.lvl
 }
 
-func (l *Logger) SetLevel(lvl Level) {
+func (l *logger) SetLevel(lvl Level) {
 	l.lvl = lvl
 }
 
-//func (l *Logger) Prefix() string {
+//func (l *logger) Prefix() string {
 //	return l.prefix
 //}
 //
-//func (l *Logger) SetPrefix(prefix string) {
+//func (l *logger) SetPrefix(prefix string) {
 //	l.prefix = prefix
 //}
 
-func (l *Logger) IsDebugEnabled() bool {
-	return l.lvl <= LevelDebug
+func (l *logger) IsEnabled(lvl Level) bool {
+	return l.lvl <= lvl
 }
 
-func (l *Logger) IsInfoEnabled() bool {
-	return l.lvl <= LevelInfo
+func (l *logger) WithField(key string, value interface{}) Entry {
+	e := &entry{logger: l}
+	return e.WithField(key, value)
 }
 
-func (l *Logger) IsWarnEnabled() bool {
-	return l.lvl <= LevelWarn
+func (l *logger) WithFields(fields map[string]interface{}) Entry {
+	e := &entry{logger: l}
+	return e.WithFields(fields)
 }
 
-func (l *Logger) Debug(args ...interface{}) {
-	l.write(LevelDebug, fmt.Sprint(args...))
+func (l *logger) Debug(args ...interface{}) {
+	if l.lvl <= LevelDebug {
+		e := l.getEntry()
+		e.Debug(args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.write(LevelDebug, fmt.Sprintf(format, args...))
+func (l *logger) Debugf(format string, args ...interface{}) {
+	if l.lvl <= LevelDebug {
+		e := l.getEntry()
+		e.Debugf(format, args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Info(args ...interface{}) {
-	l.write(LevelInfo, fmt.Sprint(args...))
+func (l *logger) Info(args ...interface{}) {
+	if l.lvl <= LevelInfo {
+		e := l.getEntry()
+		e.Info(args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Infof(format string, args ...interface{}) {
-	l.write(LevelInfo, fmt.Sprintf(format, args...))
+func (l *logger) Infof(format string, args ...interface{}) {
+	if l.lvl <= LevelInfo {
+		e := l.getEntry()
+		e.Infof(format, args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Warn(args ...interface{}) {
-	l.write(LevelWarn, fmt.Sprint(args...))
+func (l *logger) Warn(args ...interface{}) {
+	if l.lvl <= LevelWarn {
+		e := l.getEntry()
+		e.Warn(args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.write(LevelWarn, fmt.Sprintf(format, args...))
+func (l *logger) Warnf(format string, args ...interface{}) {
+	if l.lvl <= LevelWarn {
+		e := l.getEntry()
+		e.Warnf(format, args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Error(args ...interface{}) {
-	l.write(LevelError, fmt.Sprint(args...))
+func (l *logger) Error(args ...interface{}) {
+	if l.lvl <= LevelError {
+		e := l.getEntry()
+		e.Error(args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.write(LevelError, fmt.Sprintf(format, args...))
+func (l *logger) Errorf(format string, args ...interface{}) {
+	if l.lvl <= LevelError {
+		e := l.getEntry()
+		e.Errorf(format, args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Panic(args ...interface{}) {
-	s := fmt.Sprint(args...)
-	l.write(LevelPanic, s)
-	panic(s)
+func (l *logger) Panic(args ...interface{}) {
+	if l.lvl <= LevelPanic {
+		e := l.getEntry()
+		e.Panic(args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Panicf(format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
-	l.write(LevelPanic, s)
-	panic(s)
+func (l *logger) Panicf(format string, args ...interface{}) {
+	if l.lvl <= LevelPanic {
+		e := l.getEntry()
+		e.Panicf(format, args...)
+		l.putEntry(e)
+	}
 }
 
-func (l *Logger) Fatal(args ...interface{}) {
-	l.write(LevelFatal, fmt.Sprint(args...))
-	os.Exit(1)
+func (l *logger) Fatal(args ...interface{}) {
+	e := l.getEntry()
+	e.Fatal(args...)
 }
 
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.write(LevelFatal, fmt.Sprintf(format, args...))
-	os.Exit(1)
+func (l *logger) Fatalf(format string, args ...interface{}) {
+	e := l.getEntry()
+	e.Fatalf(format, args...)
 }
 
 // Write implement io.Writer interface
-func (l *Logger) Write(p []byte) (n int, err error) {
+func (l *logger) Write(p []byte) (n int, err error) {
 	l.locker.Lock()
 	for _, w := range l.writers {
 		n, err = w.Output().Write(p)
@@ -182,64 +194,133 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 	return
 }
 
-func (l *Logger) write(lvl Level, msg string) {
-	if l.lvl > lvl {
-		return
+func (l *logger) getEntry() *entry {
+	if e := l.entries.Get(); e != nil {
+		return e.(*entry)
 	}
-
-	l.locker.Lock()
-	l.row.lvl = lvl
-	l.row.time = time.Now()
-	l.row.msg = msg
-	for _, w := range l.writers {
-		w.Write(&l.row)
-	}
-	l.locker.Unlock()
+	return &entry{logger: l, buf: &bytes.Buffer{}}
 }
 
-func Get(name string) (l *Logger) {
-	l = Find(name)
-	if l == nil {
-		l = root
-	}
-	return
+func (l *logger) putEntry(e *entry) {
+	l.entries.Put(e)
 }
 
-func Find(name string) *Logger {
-	once.Do(initialize)
+type entry struct {
+	*logger
+	locker sync.Mutex
+	buf    *bytes.Buffer
+	lvl    Level
+	time   time.Time
+	msg    string
+	fields map[string]interface{}
+}
 
-	for _, l := range loggers {
-		if strings.HasPrefix(name, l.name) {
-			return l
+func (e *entry) WithField(key string, value interface{}) Entry {
+	if e.fields == nil {
+		e.fields = map[string]interface{}{key: value}
+	} else {
+		e.fields[key] = value
+	}
+	return e
+}
+
+func (e *entry) WithFields(fields map[string]interface{}) Entry {
+	if e.fields == nil {
+		// todo: copy data?
+		e.fields = fields
+	} else {
+		for k, v := range fields {
+			e.fields[k] = v
 		}
 	}
-	return nil
+	return e
 }
 
-func initialize() {
-	if loggers == nil && config.Exist("log") {
-		opts := &Config{}
-		err := config.UnmarshalOption("log", opts)
-		if err == nil {
-			err = Configure(opts)
-		}
-		if err != nil {
-			fmt.Println("log > Auto configure failed:", err)
-		}
-	}
-
-	if root == nil {
-		root = createDefaultLogger()
+func (e *entry) Debug(args ...interface{}) {
+	if e.logger.lvl <= LevelDebug {
+		e.write(LevelDebug, fmt.Sprint(args...))
 	}
 }
 
-func createDefaultLogger() *Logger {
-	w, err := newWriter("console", "console", "text", defaultLayout, data.Map{})
-	if err != nil {
-		panic(err)
+func (e *entry) Debugf(format string, args ...interface{}) {
+	if e.logger.lvl <= LevelDebug {
+		e.write(LevelDebug, fmt.Sprintf(format, args...))
 	}
-	return &Logger{
-		lvl:     defaultLevel,
-		writers: []*Writer{w},
+}
+
+func (e *entry) Info(args ...interface{}) {
+	if e.logger.lvl <= LevelInfo {
+		e.write(LevelInfo, fmt.Sprint(args...))
 	}
+}
+
+func (e *entry) Infof(format string, args ...interface{}) {
+	if e.logger.lvl <= LevelInfo {
+		e.write(LevelInfo, fmt.Sprintf(format, args...))
+	}
+}
+
+func (e *entry) Warn(args ...interface{}) {
+	if e.logger.lvl <= LevelWarn {
+		e.write(LevelWarn, fmt.Sprint(args...))
+	}
+}
+
+func (e *entry) Warnf(format string, args ...interface{}) {
+	if e.logger.lvl <= LevelWarn {
+		e.write(LevelWarn, fmt.Sprintf(format, args...))
+	}
+}
+
+func (e *entry) Error(args ...interface{}) {
+	if e.logger.lvl <= LevelError {
+		e.write(LevelError, fmt.Sprint(args...))
+	}
+}
+
+func (e *entry) Errorf(format string, args ...interface{}) {
+	if e.logger.lvl <= LevelError {
+		e.write(LevelError, fmt.Sprintf(format, args...))
+	}
+}
+
+func (e *entry) Panic(args ...interface{}) {
+	s := fmt.Sprint(args...)
+	if e.logger.lvl <= LevelPanic {
+		e.write(LevelPanic, s)
+	}
+	panic(s)
+}
+
+func (e *entry) Panicf(format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	if e.logger.lvl <= LevelPanic {
+		e.write(LevelPanic, s)
+	}
+	panic(s)
+}
+
+func (e *entry) Fatal(args ...interface{}) {
+	if e.logger.lvl <= LevelFatal {
+		e.write(LevelPanic, fmt.Sprint(args...))
+	}
+	os.Exit(1)
+}
+
+func (e *entry) Fatalf(format string, args ...interface{}) {
+	if e.logger.lvl <= LevelFatal {
+		e.write(LevelFatal, fmt.Sprintf(format, args...))
+	}
+	os.Exit(1)
+}
+
+func (e *entry) write(lvl Level, msg string) {
+	e.locker.Lock()
+	e.lvl = lvl
+	e.time = time.Now()
+	e.msg = msg
+	for _, w := range e.writers {
+		w.Write(e)
+	}
+	e.locker.Unlock()
 }

@@ -31,7 +31,7 @@ type Server struct {
 	Binder       Binder
 	Validator    Validator
 	Renderer     Renderer
-	Logger       *log.Logger
+	Logger       log.Logger
 	stdLogger    *slog.Logger
 	cfg          *Options
 	filters      []Filter

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"sync"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/log/console"
@@ -38,18 +37,17 @@ func (bs WriterBuilders) Build(name string, options data.Map) (io.Writer, error)
 	return b(options)
 }
 
+func RegisterWriter(name string, b WriterBuilder) {
+	writerBuilders[name] = b
+}
+
 type Writer struct {
 	name    string
 	format  string
 	out     io.Writer
-	fields  []Field
+	fields  []field
 	options data.Map
-	bufs    sync.Pool
-	write   func(fields []Field, buf *bytes.Buffer, r *Row) error
-}
-
-func RegisterWriter(name string, b WriterBuilder) {
-	writerBuilders[name] = b
+	write   func(fields []field, buf *bytes.Buffer, e *entry) error
 }
 
 func (w *Writer) Name() string {
@@ -60,13 +58,11 @@ func (w *Writer) Output() io.Writer {
 	return w.out
 }
 
-func (w *Writer) Write(r *Row) (err error) {
-	buf := w.bufs.Get().(*bytes.Buffer)
-	buf.Reset()
-	if err = w.write(w.fields, buf, r); err == nil {
-		_, err = w.out.Write(buf.Bytes())
+func (w *Writer) Write(e *entry) (err error) {
+	e.buf.Reset()
+	if err = w.write(w.fields, e.buf, e); err == nil {
+		_, err = w.out.Write(e.buf.Bytes())
 	}
-	w.bufs.Put(buf)
 	return
 }
 
@@ -78,23 +74,23 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 
 	var (
 		parser Layout
-		write  func(fields []Field, buf *bytes.Buffer, r *Row) error
+		write  func(fields []field, buf *bytes.Buffer, e *entry) error
 	)
 
 	if format == "json" {
 		parser = JSONLayout{}
-		write = func(fields []Field, buf *bytes.Buffer, r *Row) (err error) {
+		write = func(fields []field, buf *bytes.Buffer, e *entry) (err error) {
 			m := map[string]interface{}{}
 			for _, f := range fields {
-				m[f.Name()] = f.Value(r)
+				m[f.Name()] = f.Value(e)
 			}
 			return json.NewEncoder(buf).Encode(m)
 		}
 	} else {
 		parser = TextLayout{}
-		write = func(fields []Field, buf *bytes.Buffer, r *Row) (err error) {
+		write = func(fields []field, buf *bytes.Buffer, e *entry) (err error) {
 			for _, f := range fields {
-				if err = f.Write(buf, r); err != nil {
+				if err = f.Write(buf, e); err != nil {
 					return
 				}
 			}
@@ -107,7 +103,7 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 		return nil, err
 	}
 
-	fields := make([]Field, len(segments))
+	fields := make([]field, len(segments))
 	for i, seg := range segments {
 		fields[i], err = newField(&seg)
 		if err != nil {
@@ -122,10 +118,5 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 		fields:  fields,
 		options: options,
 		write:   write,
-		bufs: sync.Pool{
-			New: func() interface{} {
-				return &bytes.Buffer{}
-			},
-		},
 	}, nil
 }

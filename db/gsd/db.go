@@ -60,7 +60,7 @@ type DB interface {
 
 type database struct {
 	opts   *Options
-	logger *log.Logger
+	logger log.Logger
 	db     *sql.DB
 	p      Provider
 	stmts  *stmtMap

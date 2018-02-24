@@ -81,7 +81,7 @@ func (opts *ServerOptions) AddAddress(uri string, options data.Map) {
 
 type Server struct {
 	opts      ServerOptions
-	logger    *log.Logger
+	logger    log.Logger
 	matchers  []matchInfo
 	registry  registry.Registry
 	ctxPool   *contextPool

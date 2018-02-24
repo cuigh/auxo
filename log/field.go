@@ -18,13 +18,13 @@ const (
 	//fieldContext = "C" // 上下文 ID
 )
 
-type Field interface {
+type field interface {
 	Name() string
-	Write(w io.Writer, r *Row) error
-	Value(r *Row) interface{}
+	Write(w io.Writer, e *entry) error
+	Value(e *entry) interface{}
 }
 
-func newField(seg *Segment) (Field, error) {
+func newField(seg *Segment) (field, error) {
 	switch seg.Type {
 	case fieldLevel, "level":
 		return newLevelField(seg.Name, seg.Args...), nil
@@ -74,11 +74,11 @@ func newStringField(name string, s string) *stringField {
 	return f
 }
 
-func (f stringField) Value(r *Row) interface{} {
+func (f stringField) Value(e *entry) interface{} {
 	return f.s
 }
 
-func (f stringField) Write(w io.Writer, r *Row) (err error) {
+func (f stringField) Write(w io.Writer, e *entry) (err error) {
 	return f.writeString(w, f.s)
 }
 
@@ -101,12 +101,12 @@ func newLevelField(name string, args ...string) *levelField {
 	return f
 }
 
-func (f levelField) Value(r *Row) interface{} {
-	return f.texts[r.lvl]
+func (f levelField) Value(e *entry) interface{} {
+	return f.texts[e.lvl]
 }
 
-func (f levelField) Write(w io.Writer, r *Row) (err error) {
-	s := f.texts[r.lvl]
+func (f levelField) Write(w io.Writer, e *entry) (err error) {
+	s := f.texts[e.lvl]
 	return f.writeString(w, s)
 }
 
@@ -129,12 +129,12 @@ func newTimeField(name string, args ...string) *timeField {
 	return f
 }
 
-func (f timeField) Value(r *Row) interface{} {
-	return r.time.Format(f.layout)
+func (f timeField) Value(e *entry) interface{} {
+	return e.time.Format(f.layout)
 }
 
-func (f timeField) Write(w io.Writer, r *Row) (err error) {
-	s := r.time.Format(f.layout)
+func (f timeField) Write(w io.Writer, e *entry) (err error) {
+	s := e.time.Format(f.layout)
 	return f.writeString(w, s)
 }
 
@@ -157,11 +157,11 @@ func newFileField(name string, args ...string) *fileField {
 	return f
 }
 
-func (f fileField) Value(r *Row) interface{} {
+func (f fileField) Value(e *entry) interface{} {
 	return f.file()
 }
 
-func (f fileField) Write(w io.Writer, r *Row) (err error) {
+func (f fileField) Write(w io.Writer, e *entry) (err error) {
 	return f.writeString(w, f.file())
 }
 
@@ -183,16 +183,16 @@ type messageField struct {
 	baseField
 }
 
-func newMessageField(name string) Field {
+func newMessageField(name string) field {
 	return &messageField{
 		baseField: baseField(name),
 	}
 }
 
-func (f messageField) Value(r *Row) interface{} {
-	return r.msg
+func (f messageField) Value(e *entry) interface{} {
+	return e.msg
 }
 
-func (f messageField) Write(w io.Writer, r *Row) (err error) {
-	return f.writeString(w, r.msg)
+func (f messageField) Write(w io.Writer, e *entry) (err error) {
+	return f.writeString(w, e.msg)
 }

@@ -162,7 +162,7 @@ type Context interface {
 	Server() *Server
 
 	// Logger returns the `Logger` instance.
-	Logger() *log.Logger
+	Logger() log.Logger
 
 	// User returns info of current visitor.
 	User() User
@@ -587,7 +587,7 @@ func (c *context) Handler() HandlerInfo {
 	return c.handler
 }
 
-func (c *context) Logger() *log.Logger {
+func (c *context) Logger() log.Logger {
 	return c.server.Logger
 }
 

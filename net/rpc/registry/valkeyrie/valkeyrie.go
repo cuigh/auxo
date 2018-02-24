@@ -71,7 +71,7 @@ type Registry struct {
 	key      string
 	interval time.Duration
 	ttl      time.Duration
-	logger   *log.Logger
+	logger   log.Logger
 	canceler run.Canceler
 }
 

@@ -75,7 +75,7 @@ type Resolver struct {
 	store      store.Store
 	key        string
 	interval   time.Duration
-	logger     *log.Logger
+	logger     log.Logger
 	constraint *semver.Constraints
 	canceler   run.Canceler
 }

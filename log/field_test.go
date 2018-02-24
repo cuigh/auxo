@@ -38,10 +38,10 @@ func TestLevelField(t *testing.T) {
 	// short name
 	f := newLevelField("level")
 	for i, c := range cases {
-		r := &Row{
+		e := &entry{
 			lvl: c.Level,
 		}
-		err := f.Write(buf, r)
+		err := f.Write(buf, e)
 		assert.NoError(t, err)
 		assert.Equal(t, levelShortNames[i], buf.String())
 		buf.Reset()
@@ -50,10 +50,10 @@ func TestLevelField(t *testing.T) {
 	// long name
 	f = newLevelField("level", "L")
 	for i, c := range cases {
-		r := &Row{
+		e := &entry{
 			lvl: c.Level,
 		}
-		err := f.Write(buf, r)
+		err := f.Write(buf, e)
 		assert.NoError(t, err)
 		assert.Equal(t, levelLongNames[i], buf.String())
 		buf.Reset()
@@ -63,23 +63,23 @@ func TestLevelField(t *testing.T) {
 func TestTimeField(t *testing.T) {
 	const layout = "2006-01-02 15:04:05.000"
 	buf := new(bytes.Buffer)
-	r := &Row{
+	e := &entry{
 		time: time.Now(),
 	}
 	f := newTimeField("time", layout)
-	err := f.Write(buf, r)
+	err := f.Write(buf, e)
 	assert.NoError(t, err)
-	assert.Equal(t, r.time.Format(layout), buf.String())
+	assert.Equal(t, e.time.Format(layout), buf.String())
 }
 
 func TestMessageField(t *testing.T) {
 	var value = "test"
 	buf := new(bytes.Buffer)
-	r := &Row{
+	e := &entry{
 		msg: value,
 	}
 	f := newMessageField("msg")
-	err := f.Write(buf, r)
+	err := f.Write(buf, e)
 	assert.NoError(t, err)
 	assert.Equal(t, value, buf.String())
 }

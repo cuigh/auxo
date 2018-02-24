@@ -140,10 +140,10 @@ func newConfig(opts *Options) jc.Configuration {
 }
 
 type loggerAdapter struct {
-	*log.Logger
+	log.Logger
 }
 
-func (l *loggerAdapter) getLogger() *log.Logger {
+func (l *loggerAdapter) getLogger() log.Logger {
 	if l.Logger == nil {
 		l.Logger = log.Get(PkgName)
 	}

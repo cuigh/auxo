@@ -22,7 +22,7 @@ type Option func(*Logger)
 type Logger struct {
 	layout string
 	format string
-	logger *log.Logger
+	logger log.Logger
 	fields []field
 }
 

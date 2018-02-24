@@ -24,7 +24,7 @@ func Name(name string) Option {
 
 type Prometheus struct {
 	name       string
-	logger     *log.Logger
+	logger     log.Logger
 	reqCounter *prometheus.CounterVec
 	reqTime    *prometheus.SummaryVec
 	//reqSize    prometheus.Summary

@@ -59,7 +59,9 @@ func Security(security SecurityPolicy) Option {
 
 func UserFilter(filter string) Option {
 	return func(r *Realm) {
-		r.userFilter = filter
+		if filter != "" {
+			r.userFilter = filter
+		}
 	}
 }
 
@@ -73,18 +75,22 @@ func Binding(dn, pwd string) Option {
 
 func NameAttr(attr string) Option {
 	return func(r *Realm) {
-		r.nameAttr = attr
+		if attr != "" {
+			r.nameAttr = attr
+		}
 	}
 }
 
 func EmailAttr(attr string) Option {
 	return func(r *Realm) {
-		r.emailAttr = attr
+		if attr != "" {
+			r.emailAttr = attr
+		}
 	}
 }
 
 type Realm struct {
-	logger *log.Logger
+	logger log.Logger
 
 	// options
 	addr     string

@@ -1,13 +1,10 @@
 package cache
 
 import (
-	"strings"
-
-	"time"
-
 	"fmt"
-
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/ext/times"
@@ -77,7 +74,7 @@ type cacher struct {
 	keyer   Keyer
 	def     *KeyInfo
 	keys    map[string]*KeyInfo
-	logger  *log.Logger
+	logger  log.Logger
 }
 
 func newCacher(p Provider, opts *Options) *cacher {
