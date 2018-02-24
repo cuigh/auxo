@@ -56,6 +56,16 @@ func Count(g *sync.WaitGroup, fn func(), r Recovery) {
 	fn()
 }
 
+// Pipeline calls all functions in order. If a function returns an error, Pipeline will return this error immediately.
+func Pipeline(fns ...func() error) error {
+	for _, fn := range fns {
+		if err := fn(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Schedule call fn with recover continuously. It returns a Canceler that can
 // be used to cancel the call using its Cancel method.
 func Schedule(d time.Duration, fn func(), r Recovery) Canceler {
