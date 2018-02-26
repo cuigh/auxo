@@ -12,7 +12,6 @@ import (
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/net/rpc/registry"
-	"github.com/cuigh/auxo/net/rpc/resolver"
 	"github.com/cuigh/auxo/util/cast"
 	"github.com/cuigh/auxo/util/retry"
 	"github.com/cuigh/auxo/util/run"
@@ -66,7 +65,6 @@ func (b *Builder) Build(server registry.Server, opts data.Map) (registry.Registr
 // Builder implements a common Registry based on valkeyrie.
 type Registry struct {
 	server   registry.Server
-	client   resolver.Client
 	store    store.Store
 	key      string
 	interval time.Duration
@@ -77,6 +75,7 @@ type Registry struct {
 
 func (r *Registry) Register() {
 	if r.canceler == nil {
+		r.register()
 		r.canceler = run.Schedule(r.interval, r.register, nil)
 	}
 }

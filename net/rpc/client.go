@@ -582,9 +582,11 @@ func (m *clientManager) create(name string) (c *Client, err error) {
 	if m.Option != nil {
 		opts = m.Option(name)
 	}
-	err = config.UnmarshalOption(key, &opts)
-	if err != nil {
-		return nil, err
+	if config.Exist(key) {
+		err = config.UnmarshalOption(key, &opts)
+		if err != nil {
+			return nil, err
+		}
 	}
 	opts.Name = name
 	c, err = NewClient(opts)
