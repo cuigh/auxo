@@ -284,7 +284,7 @@ func (c *SimpleCriteriaSet) DateRange(col interface{}, start, end time.Time) *Si
 func (c *SimpleCriteriaSet) add(col interface{}, t int, val interface{}) *SimpleCriteriaSet {
 	c.Items = append(c.Items, &OneColumnCriteria{
 		Column: c.toColumn(col),
-		Type:   EQ,
+		Type:   t,
 		Value:  val,
 	})
 	return c
@@ -300,7 +300,7 @@ func (c *SimpleCriteriaSet) addIf(when bool, col interface{}, t int, val interfa
 func (c *SimpleCriteriaSet) add2(left, right interface{}, t int) *SimpleCriteriaSet {
 	c.Items = append(c.Items, &TwoColumnCriteria{
 		Left:  c.toColumn(left),
-		Type:  EQ,
+		Type:  t,
 		Right: c.toColumn(right),
 	})
 	return c
