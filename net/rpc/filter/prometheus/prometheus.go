@@ -33,8 +33,8 @@ func Client(opts ...Option) rpc.CFilter {
 	for _, opt := range opts {
 		opt(options)
 	}
-	reqCounter := registerCounter(options, "requests_total", "How many RPC requests processed, partitioned by error code and action.", "code", "action", "server")
-	reqTime := registerSummary(options, "request_duration_seconds", "The RPC request latencies in seconds, partitioned by action.", "action")
+	reqCounter := registerCounter(options, "requests_total", "How many RPC requests processed, partitioned by error code and action.", "server", "action", "code")
+	reqTime := registerSummary(options, "request_duration_seconds", "The RPC request latencies in seconds, partitioned by action.", "server", "action")
 
 	return func(next rpc.CHandler) rpc.CHandler {
 		return func(c *rpc.Call) (err error) {
@@ -42,9 +42,9 @@ func Client(opts ...Option) rpc.CFilter {
 			defer func() {
 				status := strconv.Itoa(int(rpc.StatusOf(err)))
 				d := float64(time.Since(start)) / float64(time.Second)
-				action := texts.Join(".", c.Server(), c.Request().Head.Service, c.Request().Head.Method)
-				reqCounter.WithLabelValues(status, action, c.Server()).Inc()
-				reqTime.WithLabelValues(action).Observe(d)
+				action := texts.Join(".", c.Request().Head.Service, c.Request().Head.Method)
+				reqCounter.WithLabelValues(c.Server(), action, status).Inc()
+				reqTime.WithLabelValues(c.Server(), action).Observe(d)
 			}()
 
 			err = next(c)
