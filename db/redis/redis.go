@@ -48,6 +48,7 @@ type Options struct {
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	PoolSize     int
+	DB           int
 	MasterNames  []string
 }
 
@@ -137,6 +138,7 @@ func (f *factory) createSentinel(opts *Options) Client {
 			ReadTimeout:   opts.ReadTimeout,
 			WriteTimeout:  opts.WriteTimeout,
 			PoolSize:      opts.PoolSize,
+			DB:            opts.DB,
 		}
 		return redis.NewFailoverClient(options)
 	}
@@ -162,6 +164,7 @@ func (f *factory) createSingle(opts *Options) Client {
 		ReadTimeout:  opts.ReadTimeout,
 		WriteTimeout: opts.WriteTimeout,
 		PoolSize:     opts.PoolSize,
+		DB:           opts.DB,
 	}
 	return redis.NewClient(options)
 }
