@@ -154,21 +154,24 @@ func (m *Manager) AddDataSource(data []byte, ct string) {
 	m.AddSource(src)
 }
 
+
 func (m *Manager) addDefaultFolders() {
 	exec, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
-
-	dir := filepath.Join(filepath.Dir(exec), "config")
-	if files.NotExist(dir) {
-		wd, err := os.Getwd()
-		if err == nil {
-			dir = filepath.Join(wd, "config")
+	defaultDirs := []string{"config", "cfg"}
+	for _, configDir := range defaultDirs {
+		dir := filepath.Join(filepath.Dir(exec), configDir)
+		if files.NotExist(dir) {
+			wd, err := os.Getwd()
+			if err == nil {
+				dir = filepath.Join(wd, configDir)
+			}
 		}
-	}
-	if files.Exist(dir) {
-		m.AddFolder(dir)
+		if files.Exist(dir) {
+			m.AddFolder(dir)
+		}
 	}
 }
 
