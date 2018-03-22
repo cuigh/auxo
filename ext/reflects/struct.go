@@ -65,7 +65,38 @@ func NewFieldInfo(f *reflect.StructField) *FieldInfo {
 		accessor:    fieldAccessors[f.Type],
 	}
 	if fi.accessor == nil {
-		fi.accessor = defaultFieldAccessor
+		switch fi.Type.Kind() {
+		case reflect.Int:
+			fi.accessor = fieldAccessors[TypeInt]
+		case reflect.Int8:
+			fi.accessor = fieldAccessors[TypeInt8]
+		case reflect.Int16:
+			fi.accessor = fieldAccessors[TypeInt16]
+		case reflect.Int32:
+			fi.accessor = fieldAccessors[TypeInt32]
+		case reflect.Int64:
+			fi.accessor = fieldAccessors[TypeInt64]
+		case reflect.Uint:
+			fi.accessor = fieldAccessors[TypeUint]
+		case reflect.Uint8:
+			fi.accessor = fieldAccessors[TypeUint8]
+		case reflect.Uint16:
+			fi.accessor = fieldAccessors[TypeUint16]
+		case reflect.Uint32:
+			fi.accessor = fieldAccessors[TypeUint32]
+		case reflect.Uint64:
+			fi.accessor = fieldAccessors[TypeUint64]
+		case reflect.Float32:
+			fi.accessor = fieldAccessors[TypeFloat32]
+		case reflect.Float64:
+			fi.accessor = fieldAccessors[TypeFloat64]
+		case reflect.Bool:
+			fi.accessor = fieldAccessors[TypeBool]
+		case reflect.String:
+			fi.accessor = fieldAccessors[TypeString]
+		default:
+			fi.accessor = defaultFieldAccessor
+		}
 	}
 	return fi
 }

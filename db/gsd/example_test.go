@@ -49,7 +49,7 @@ func ExampleDB_Remove() {
 	user := &User{
 		ID: 3,
 	}
-	err := db.Remove(user).Submit()
+	_, err := db.Remove(user)
 	fmt.Println("Error:", err)
 	// Output:
 	// Error: <nil>
