@@ -40,10 +40,7 @@ func (c *executeContext) Fill(i interface{}) error {
 	}
 	defer r.Close()
 
-	if r.Next() {
-		return r.Fill(i)
-	}
-	return ErrNoRows
+	return r.Fill(i)
 }
 
 func (c *executeContext) Reader() (Reader, error) {

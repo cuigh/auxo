@@ -73,10 +73,7 @@ func (c *stmtContext) Fill(i interface{}) error {
 	}
 	defer r.Close()
 
-	if r.Next() {
-		return r.Fill(i)
-	}
-	return ErrNoRows
+	return r.Fill(i)
 }
 
 func (c *stmtContext) For(fn func(r Reader) error) error {

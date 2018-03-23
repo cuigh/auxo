@@ -38,49 +38,67 @@ func (r *reader) Scan(dst ...interface{}) error {
 }
 
 func (r *reader) Fill(i interface{}) error {
+	t := reflect.TypeOf(i)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+		switch t.Kind() {
+		case reflect.Struct:
+			return r.fillOne(i, t)
+		case reflect.Slice:
+			return r.fillList(i, t)
+		}
+	}
+	return errors.New("gsd: Filling target must be struct-pointer or slice-pointer of struct")
+}
+
+func (r *reader) fillOne(i interface{}, t reflect.Type) error {
+	rows := (*sql.Rows)(r)
+	if !rows.Next() {
+		return ErrNoRows
+	}
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return err
+	}
+
+	m := GetMeta(t)
+	values := m.Pointers(i, cols...)
+	return rows.Scan(values...)
+}
+
+func (r *reader) fillList(i interface{}, t reflect.Type) error {
 	rows := (*sql.Rows)(r)
 	cols, err := rows.Columns()
 	if err != nil {
 		return err
 	}
 
-	t := reflect.TypeOf(i)
+	var elemIsPtr bool
+	t = t.Elem()
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
-		switch t.Kind() {
-		case reflect.Struct:
-			m := GetMeta(t)
-			values := m.Pointers(i, cols...)
-			return rows.Scan(values...)
-		case reflect.Slice, reflect.Array:
-			var elemIsPtr bool
-			t = t.Elem()
-			if t.Kind() == reflect.Ptr {
-				t = t.Elem()
-				elemIsPtr = true
-			}
-			m := GetMeta(t)
-			sv := reflect.ValueOf(i).Elem()
-			slice := sv.Slice(0, 0)
-			for rows.Next() {
-				v := reflect.New(t)
-				values := m.Pointers(v.Interface(), cols...)
-				err := rows.Scan(values...)
-				if err != nil {
-					return err
-				}
-				if !elemIsPtr {
-					v = v.Elem()
-				}
-				slice = reflect.Append(slice, v)
-			}
-			if rows.Err() == nil {
-				sv.Set(slice)
-			}
-			return rows.Err()
-		}
+		elemIsPtr = true
 	}
-	return errors.New("gsd: Fill of non-struct pointer")
+	m := GetMeta(t)
+	sv := reflect.ValueOf(i).Elem()
+	slice := sv.Slice(0, 0)
+	for rows.Next() {
+		v := reflect.New(t)
+		values := m.Pointers(v.Interface(), cols...)
+		err := rows.Scan(values...)
+		if err != nil {
+			return err
+		}
+		if !elemIsPtr {
+			v = v.Elem()
+		}
+		slice = reflect.Append(slice, v)
+	}
+	if rows.Err() == nil {
+		sv.Set(slice)
+	}
+	return rows.Err()
 }
 
 func (r *reader) Next() bool {
