@@ -49,6 +49,7 @@ type Options struct {
 	WriteTimeout time.Duration
 	PoolSize     int
 	MasterNames  []string
+	Db           int
 }
 
 func (f *factory) Open(name string) (cmd Client, err error) {
@@ -162,6 +163,7 @@ func (f *factory) createSingle(opts *Options) Client {
 		ReadTimeout:  opts.ReadTimeout,
 		WriteTimeout: opts.WriteTimeout,
 		PoolSize:     opts.PoolSize,
+		DB:           opts.Db,
 	}
 	return redis.NewClient(options)
 }
