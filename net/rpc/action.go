@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"reflect"
+	"fmt"
 
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/cuigh/auxo/log"
+	"github.com/cuigh/auxo/util/debug"
 )
 
 var newers = map[reflect.Type]Newer{}
@@ -233,7 +235,7 @@ func (a *action) do(c Context) (r interface{}, err error) {
 	// type 5: func(ctx, ...) (result, error)
 	defer func() {
 		if e := recover(); e != nil {
-			log.Get(PkgName).Error("rpc > PANIC: ", e)
+			log.Get(PkgName).Error("rpc > PANIC: ", e,fmt.Sprintf("%s",debug.Stack()))
 			err = errors.Convert(e)
 		}
 	}()
