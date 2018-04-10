@@ -36,6 +36,7 @@ func TestTryToSlice(t *testing.T) {
 		Input interface{}
 		Type  reflect.Type
 	}{
+		{"", reflects.TypeString},
 		{"1,false,1", reflects.TypeBool},
 		{"1,2,3", reflects.TypeString},
 		{"1,2,3", reflects.TypeInt},

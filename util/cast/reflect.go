@@ -60,7 +60,11 @@ func TryToValue(i interface{}, t reflect.Type) (v reflect.Value, err error) {
 // Argument t is element type of slice.
 func TryToSliceValue(i interface{}, t reflect.Type) (slice reflect.Value, err error) {
 	if s, ok := i.(string); ok {
-		i = strings.Split(s, ",")
+		if s == "" {
+			i = []string(nil)
+		} else {
+			i = strings.Split(s, ",")
+		}
 	}
 
 	v := reflect.ValueOf(i)
