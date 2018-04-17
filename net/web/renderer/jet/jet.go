@@ -86,7 +86,7 @@ func New(opts ...Option) (*Renderer, error) {
 	set.SetDevelopmentMode(options.debug)
 	// Add common functions
 	set.AddGlobalFunc("eq", equal)
-	set.AddGlobalFunc("or", or)
+	set.AddGlobalFunc("choose", choose)
 	set.AddGlobal("printf", fmt.Sprintf)
 	set.AddGlobal("limit", renderer.Limit)
 	set.AddGlobal("slice", renderer.Slice)

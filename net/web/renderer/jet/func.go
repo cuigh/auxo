@@ -20,9 +20,9 @@ func equal(args jet.Arguments) reflect.Value {
 	return reflect.ValueOf(v1.Interface() == v.Interface())
 }
 
-// or returns first non-empty argument or the last argument.
-func or(args jet.Arguments) reflect.Value {
-	args.RequireNumOfArguments("eq", 2, -1)
+// choose returns first non-empty argument or the last argument if not found.
+func choose(args jet.Arguments) reflect.Value {
+	args.RequireNumOfArguments("choose", 2, -1)
 
 	var v reflect.Value
 	for i, n := 0, args.NumOfArguments(); i < n; i++ {
