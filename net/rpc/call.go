@@ -50,17 +50,10 @@ func (c *Call) Err() error {
 
 // Wait implements interface of AsyncError.
 func (c *Call) Wait() (err error) {
-	ctx := c.ctx
-	if timeout := c.n.c.opts.CallTimeout; timeout > 0 {
-		var cancel ct.CancelFunc
-		ctx, cancel = ct.WithTimeout(c.ctx, timeout)
-		defer cancel()
-	}
-
 	select {
 	case err = <-c.err:
-	case <-ctx.Done():
-		if err = ctx.Err(); err == ct.Canceled {
+	case <-c.ctx.Done():
+		if err = c.ctx.Err(); err == ct.Canceled {
 			err = NewError(StatusCanceled, err.Error())
 		} else {
 			err = NewError(StatusDeadlineExceeded, err.Error())

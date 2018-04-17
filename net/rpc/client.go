@@ -353,6 +353,12 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 		return err
 	}
 
+	if c.opts.CallTimeout > 0 {
+		var cancel ct.CancelFunc
+		ctx, cancel = ct.WithTimeout(ctx, c.opts.CallTimeout)
+		defer cancel()
+	}
+
 	err = n.Call(ctx, service, method, args, reply)
 	if err == nil || c.opts.Fail == FailFast || StatusOf(err) > 100 {
 		return err
