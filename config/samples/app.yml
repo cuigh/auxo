@@ -2,6 +2,15 @@ name: 'auxo'
 debug: true
 banner: true
 
+global:
+      mq:
+        nsq:
+          nsqd_addr:
+          - "127.0.0.1:4150"
+          max_in_flight: 5
+          concurrent: 3
+          max_attempt: 2
+          channel_name: test.nsq
 log:
   loggers:
   - level: info

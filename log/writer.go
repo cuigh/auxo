@@ -10,6 +10,7 @@ import (
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/log/console"
 	"github.com/cuigh/auxo/log/file"
+	"github.com/cuigh/auxo/log/nsq"
 )
 
 var writerBuilders = WriterBuilders{
@@ -21,6 +22,9 @@ var writerBuilders = WriterBuilders{
 	},
 	"file": func(options data.Map) (io.Writer, error) {
 		return file.New(options)
+	},
+	"nsq": func(options data.Map) (io.Writer, error) {
+		return nsq.New(options)
 	},
 }
 
