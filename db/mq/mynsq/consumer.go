@@ -119,8 +119,8 @@ func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 		return
 	}
 	t.consumer.ChangeMaxInFlight(t.maxInFlight)
-	// t.consumer.AddConcurrentHandlers(gonsq.Handler(t.handler), t.concurrentNum)
-	t.consumer.AddHandler(gonsq.Handler(t.handler))
+	t.consumer.AddConcurrentHandlers(gonsq.Handler(t.handler), t.concurrentNum)
+	// t.consumer.AddHandler(gonsq.Handler(t.handler))
 	// 不断进行重连，直到连接成功
 	for {
 		// 只要连上了就不会退出的, 为空判断由入口保证
