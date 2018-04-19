@@ -1,9 +1,9 @@
 package mynsq_test
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/db/mq/mynsq"
 	gonsq "github.com/nsqio/go-nsq"
@@ -24,14 +24,14 @@ func Test_Consumer(t *testing.T) {
 
 func testHandler() gonsq.HandlerFunc {
 	return func(nm *gonsq.Message) error {
-		logs.Info(string(nm.Body))
+		fmt.Println(string(nm.Body))
 		return nil
 	}
 }
 
 func testFailHandler() mynsq.FailMessageFunc {
 	return func(message mynsq.FailMessage) (err error) {
-		logs.Error("error msg trigger,msg:", string(message.Body), ",messageid:", message.MessageID)
+		fmt.Println("error msg trigger,msg:", string(message.Body), ",messageid:", message.MessageID)
 		err = nil
 		return
 	}

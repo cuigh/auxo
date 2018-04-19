@@ -2,10 +2,10 @@ package mynsq
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/cuigh/auxo/util/lazy"
 	gonsq "github.com/nsqio/go-nsq"
 )
@@ -77,7 +77,7 @@ var (
 func MustGetConsumer() *myConsumer {
 	v, err := mynsqConsumerValue.Get()
 	if err != nil {
-		logs.Error("MustGetComsumer | must open comsumer failed")
+		fmt.Println("MustGetComsumer | must open comsumer failed")
 		os.Exit(-1)
 	}
 	return v.(*myConsumer)
@@ -86,7 +86,7 @@ func MustGetConsumer() *myConsumer {
 func consumerCreate() (d interface{}, err error) {
 	options, err := loadOptions()
 	if err != nil {
-		logs.Error("consumerCreate | loadOptions| err=%v", err)
+		fmt.Printf("consumerCreate | loadOptions| err=%v\n", err)
 		return nil, err
 	}
 	ret := &myConsumer{
@@ -95,7 +95,7 @@ func consumerCreate() (d interface{}, err error) {
 	}
 	err = ret.init(options, true)
 	if err != nil {
-		logs.Error("consumerCreate | ret.init | err=%v", err)
+		fmt.Printf("consumerCreate | ret.init | err=%v\n", err)
 		return nil, err
 	}
 	d = interface{}(ret)
@@ -105,7 +105,7 @@ func consumerCreate() (d interface{}, err error) {
 // Connect 连接
 func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 	if len(nsqdAddr) == 0 {
-		logs.Warn("nsqd地址为空，跳过连接,topic:", t.topic)
+		fmt.Println("nsqd地址为空，跳过连接,topic:", t.topic)
 		return
 	}
 	var (
@@ -115,7 +115,7 @@ func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 	)
 	t.consumer, err = gonsq.NewConsumer(t.topic, channelName, t.config)
 	if err != nil {
-		logs.Error("新建nsq consumer失败，err:%s,topic:%s,channel:%s", err.Error(), t.topic, channelName)
+		fmt.Printf("新建nsq consumer失败，err:%s,topic:%s,channel:%s\n", err.Error(), t.topic, channelName)
 		return
 	}
 	t.consumer.ChangeMaxInFlight(t.maxInFlight)
@@ -130,7 +130,7 @@ func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 			err = t.consumer.ConnectToNSQDs(nsqdAddr)
 		}
 		if err != nil {
-			logs.Warn("连接nsqd(addr:%v)失败,err:%s", nsqdAddr, err.Error())
+			fmt.Printf("连接nsqd(addr:%v)失败,err:%s\n", nsqdAddr, err.Error())
 			retryNum++
 			sleepSeconds = 5
 			if retryNum%6 == 0 {
@@ -139,12 +139,12 @@ func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 			time.Sleep(time.Duration(sleepSeconds) * time.Second)
 			continue
 		}
-		if debug {
-			t.consumer.SetLogger(logs.GetLogger(), gonsq.LogLevelDebug)
-		} else {
-			t.consumer.SetLogger(logs.GetLogger(), gonsq.LogLevelWarning)
-		}
-		logs.Info("连接nsqd(%v)成功", nsqdAddr)
+		// if debug {
+		// 	t.consumer.SetLogger(log., gonsq.LogLevelDebug)
+		// } else {
+		// 	t.consumer.SetLogger(fmt.GetLogger(), gonsq.LogLevelWarning)
+		// }
+		fmt.Printf("连接nsqd(%v)成功\n", nsqdAddr)
 		break
 	}
 	<-t.consumer.StopChan

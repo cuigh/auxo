@@ -2,11 +2,11 @@ package mynsq
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"time"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/util/lazy"
 	gonsq "github.com/nsqio/go-nsq"
@@ -24,7 +24,7 @@ type myProducer struct {
 func MustGetProducer() *myProducer {
 	v, err := mynsqProducerValue.Get()
 	if err != nil {
-		logs.Error("MustGetProducer | must open producer failed")
+		fmt.Println("MustGetProducer | must open producer failed")
 		os.Exit(-1)
 	}
 	return v.(*myProducer)
@@ -44,7 +44,7 @@ func create() (d interface{}, err error) {
 		err = errors.New("初始化 nsq producer 失败, err:" + err.Error())
 		return
 	}
-	w.SetLogger(logs.GetLogger(), gonsq.LogLevelDebug)
+	// w.SetLogger(fmt.GetLogger(), gonsq.LogLevelDebug)
 	ret := &myProducer{producer: w}
 	d = interface{}(ret)
 	return d, err
