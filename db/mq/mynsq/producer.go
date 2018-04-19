@@ -44,7 +44,7 @@ func create() (d interface{}, err error) {
 		err = errors.New("初始化 nsq producer 失败, err:" + err.Error())
 		return
 	}
-	// w.SetLogger(fmt.GetLogger(), gonsq.LogLevelDebug)
+	w.SetLogger(&interLog{}, gonsq.LogLevelDebug)
 	ret := &myProducer{producer: w}
 	d = interface{}(ret)
 	return d, err

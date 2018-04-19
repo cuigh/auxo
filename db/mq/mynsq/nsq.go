@@ -1,6 +1,8 @@
 package mynsq
 
 import (
+	"fmt"
+
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/errors"
 )
@@ -14,6 +16,14 @@ type Options struct {
 	Concurrent     int
 	MaxAttempt     int
 	ChannelName    string
+}
+
+type interLog struct {
+}
+
+func (il *interLog) Output(calldepth int, s string) error {
+	fmt.Println(s)
+	return nil
 }
 
 func loadOptions() (*Options, error) {

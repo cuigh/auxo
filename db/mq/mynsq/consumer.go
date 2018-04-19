@@ -139,11 +139,11 @@ func (t *topicInfo) connect(channelName string, nsqdAddr []string, debug bool) {
 			time.Sleep(time.Duration(sleepSeconds) * time.Second)
 			continue
 		}
-		// if debug {
-		// 	t.consumer.SetLogger(log., gonsq.LogLevelDebug)
-		// } else {
-		// 	t.consumer.SetLogger(fmt.GetLogger(), gonsq.LogLevelWarning)
-		// }
+		if debug {
+			t.consumer.SetLogger(&interLog{}, gonsq.LogLevelDebug)
+		} else {
+			t.consumer.SetLogger(&interLog{}, gonsq.LogLevelWarning)
+		}
 		fmt.Printf("连接nsqd(%v)成功\n", nsqdAddr)
 		break
 	}
