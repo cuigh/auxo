@@ -151,7 +151,7 @@ func newFileField(name string, args ...string) *fileField {
 	//{F:S|L=E}
 	f := &fileField{
 		baseField: baseField(name),
-		skip:      7,
+		skip:      8,
 		full:      len(args) == 0 || args[0] == "F" || args[0] == "full",
 	}
 	return f
