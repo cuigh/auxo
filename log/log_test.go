@@ -14,12 +14,22 @@ func init() {
 	config.AddFolder("../config/samples")
 }
 
-func TestLogger(t *testing.T) {
+func TestJSONLayout(t *testing.T) {
+	l := log.Get("")
+	assert.NotNil(t, l)
+
+	l.Debug("debug")
+	l.WithField("foo", "bar").Info("info")
+	l.Warn("warn")
+	l.Error("error")
+}
+
+func TestTextLayout(t *testing.T) {
 	l := log.Get("auxo.net.web")
 	assert.NotNil(t, l)
 
 	l.Debug("debug")
-	l.Info("info")
+	l.WithField("foo", "bar").Info("info")
 	l.Warn("warn")
 	l.Error("error")
 }

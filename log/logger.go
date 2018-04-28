@@ -82,12 +82,12 @@ func (l *logger) IsEnabled(lvl Level) bool {
 }
 
 func (l *logger) WithField(key string, value interface{}) Entry {
-	e := &entry{logger: l}
+	e := l.getEntry()
 	return e.WithField(key, value)
 }
 
 func (l *logger) WithFields(fields map[string]interface{}) Entry {
-	e := &entry{logger: l}
+	e := l.getEntry()
 	return e.WithFields(fields)
 }
 
@@ -202,6 +202,7 @@ func (l *logger) getEntry() *entry {
 }
 
 func (l *logger) putEntry(e *entry) {
+	e.fields = nil
 	l.entries.Put(e)
 }
 

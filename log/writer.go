@@ -80,7 +80,10 @@ func newWriter(name, typeName, format, layout string, options data.Map) (*Writer
 	if format == "json" {
 		parser = JSONLayout{}
 		write = func(fields []field, buf *bytes.Buffer, e *entry) (err error) {
-			m := map[string]interface{}{}
+			m := e.fields
+			if m == nil {
+				m = map[string]interface{}{}
+			}
 			for _, f := range fields {
 				m[f.Name()] = f.Value(e)
 			}
