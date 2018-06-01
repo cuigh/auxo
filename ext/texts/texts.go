@@ -19,17 +19,15 @@ func Join(sep string, a ...string) string {
 		// Remove if golang.org/issue/6714 is fixed
 		if sep == "" {
 			return a[0] + a[1]
-		} else {
-			return a[0] + sep + a[1]
 		}
+		return a[0] + sep + a[1]
 	case 3:
 		// Special case for common small values.
 		// Remove if golang.org/issue/6714 is fixed
 		if sep == "" {
 			return a[0] + a[1] + a[2]
-		} else {
-			return a[0] + sep + a[1] + sep + a[2]
 		}
+		return a[0] + sep + a[1] + sep + a[2]
 	}
 
 	var n int

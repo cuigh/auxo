@@ -63,31 +63,31 @@ func (c *insertContext) Create(i interface{}, filter ...ColumnFilter) error {
 		}
 
 		return c.Submit()
-	} else {
-		m = GetMeta(t)
-		c.info.Table = m.Table
-		if c.info.Filter == nil {
-			c.info.Columns = m.Inserts
-			c.info.Values = m.InsertValues(i)
-		} else {
-			c.info.Columns = c.info.Filter(m.Inserts)
-			c.info.Values = m.Values(i, c.info.Columns...)
-		}
+	}
 
-		// set auto increment id
-		r, err := c.Result()
-		if err != nil {
+	m = GetMeta(t)
+	c.info.Table = m.Table
+	if c.info.Filter == nil {
+		c.info.Columns = m.Inserts
+		c.info.Values = m.InsertValues(i)
+	} else {
+		c.info.Columns = c.info.Filter(m.Inserts)
+		c.info.Values = m.Values(i, c.info.Columns...)
+	}
+
+	// set auto increment id
+	r, err := c.Result()
+	if err != nil {
+		return err
+	}
+	if m.Auto != "" {
+		if id, err := r.LastInsertId(); err == nil {
+			m.SetAutoValue(i, id)
+		} else {
 			return err
 		}
-		if m.Auto != "" {
-			if id, err := r.LastInsertId(); err == nil {
-				m.SetAutoValue(i, id)
-			} else {
-				return err
-			}
-		}
-		return nil
 	}
+	return nil
 }
 
 func (c *insertContext) Columns(cols ...string) InsertColumnsClause {

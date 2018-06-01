@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/cuigh/auxo/cache"
-	_ "github.com/cuigh/auxo/cache/memory"
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/db/gsd"
 	"github.com/cuigh/auxo/ext/reflects"
@@ -165,57 +164,57 @@ func buildFindProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 			outs[1] = reflects.ZeroError
 			return
 		})
-	} else {
-		return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
-			outs = make([]reflect.Value, 2)
-			var (
-				r    = reflect.New(ret)
-				i    = r.Interface()
-				m    = gsd.GetMeta(rt)
-				args = make([]interface{}, len(ins))
-			)
-			for i, in := range ins {
-				args[i] = in.Interface()
-			}
+	}
 
-			// check cache
-			if value := cache.Get(key, args...); value != nil {
-				if err := value.Scan(i); err == nil {
-					if rt == ret {
-						outs[0] = r.Elem()
-					} else {
-						outs[0] = r
-					}
-					outs[1] = reflects.ZeroError
-					return
-				} else {
-					log.Get(PkgName).Debug("load from cache failed: ", err)
-				}
-			}
+	return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
+		outs = make([]reflect.Value, 2)
+		var (
+			r    = reflect.New(ret)
+			i    = r.Interface()
+			m    = gsd.GetMeta(rt)
+			args = make([]interface{}, len(ins))
+		)
+		for i, in := range ins {
+			args[i] = in.Interface()
+		}
 
-			db, err := lazy.Try()
+		// check cache
+		if value := cache.Get(key, args...); value != nil {
+			err := value.Scan(i)
 			if err == nil {
-				w := &gsd.SimpleCriteriaSet{}
-				for i, key := range m.PrimaryKeys {
-					w.Equal(key, args[i])
+				if rt == ret {
+					outs[0] = r.Elem()
+				} else {
+					outs[0] = r
 				}
-				err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(i)
-			}
-			if err != nil {
-				outs[0], outs[1] = zr, reflects.Error(err)
+				outs[1] = reflects.ZeroError
 				return
 			}
+			log.Get(PkgName).Debug("load from cache failed: ", err)
+		}
 
-			if rt == ret {
-				outs[0] = r.Elem()
-			} else {
-				outs[0] = r
+		db, err := lazy.Try()
+		if err == nil {
+			w := &gsd.SimpleCriteriaSet{}
+			for i, key := range m.PrimaryKeys {
+				w.Equal(key, args[i])
 			}
-			outs[1] = reflects.ZeroError
-			cache.Set(i, key, args...)
+			err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(i)
+		}
+		if err != nil {
+			outs[0], outs[1] = zr, reflects.Error(err)
 			return
-		})
-	}
+		}
+
+		if rt == ret {
+			outs[0] = r.Elem()
+		} else {
+			outs[0] = r
+		}
+		outs[1] = reflects.ZeroError
+		cache.Set(i, key, args...)
+		return
+	})
 }
 
 func buildLoadProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v reflect.Value) {
@@ -231,36 +230,36 @@ func buildLoadProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 			outs[0] = reflects.Error(err)
 			return
 		})
-	} else {
-		return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
-			outs = make([]reflect.Value, 1)
-			var (
-				i    = ins[0].Interface()
-				m    = gsd.GetMeta(ins[0].Type())
-				args = m.PrimaryKeyValues(i)
-			)
-
-			// check cache
-			if value := cache.Get(key, args...); value != nil {
-				if err := value.Scan(i); err == nil {
-					outs[0] = reflects.ZeroError
-					return
-				} else {
-					log.Get(PkgName).Debug("load from cache failed: ", err)
-				}
-			}
-
-			db, err := lazy.Try()
-			if err == nil {
-				err = db.Load(i)
-				if err == nil {
-					cache.Set(i, key, args...)
-				}
-			}
-			outs[0] = reflects.Error(err)
-			return
-		})
 	}
+
+	return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
+		outs = make([]reflect.Value, 1)
+		var (
+			i    = ins[0].Interface()
+			m    = gsd.GetMeta(ins[0].Type())
+			args = m.PrimaryKeyValues(i)
+		)
+
+		// check cache
+		if value := cache.Get(key, args...); value != nil {
+			err := value.Scan(i)
+			if err == nil {
+				outs[0] = reflects.ZeroError
+				return
+			}
+			log.Get(PkgName).Debug("load from cache failed: ", err)
+		}
+
+		db, err := lazy.Try()
+		if err == nil {
+			err = db.Load(i)
+			if err == nil {
+				cache.Set(i, key, args...)
+			}
+		}
+		outs[0] = reflects.Error(err)
+		return
+	})
 }
 
 func buildRemoveProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v reflect.Value) {
@@ -327,34 +326,34 @@ func buildSearchProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (
 			outs[2] = reflects.Error(err)
 			return
 		})
-	} else {
-		return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
-			outs = make([]reflect.Value, 1)
-			var (
-				i    = ins[0].Interface()
-				m    = gsd.GetMeta(ins[0].Type())
-				args = m.PrimaryKeyValues(i)
-			)
-
-			// check cache
-			if value := cache.Get(key, args...); value != nil {
-				if err := value.Scan(i); err == nil {
-					outs[0] = reflects.ZeroError
-					return
-				} else {
-					log.Get(PkgName).Debug("load from cache failed: ", err)
-				}
-			}
-
-			db, err := lazy.Try()
-			if err == nil {
-				err = db.Load(i)
-				if err == nil {
-					cache.Set(i, key, args...)
-				}
-			}
-			outs[0] = reflects.Error(err)
-			return
-		})
 	}
+
+	return reflect.MakeFunc(ft, func(ins []reflect.Value) (outs []reflect.Value) {
+		outs = make([]reflect.Value, 1)
+		var (
+			i    = ins[0].Interface()
+			m    = gsd.GetMeta(ins[0].Type())
+			args = m.PrimaryKeyValues(i)
+		)
+
+		// check cache
+		if value := cache.Get(key, args...); value != nil {
+			err := value.Scan(i)
+			if err == nil {
+				outs[0] = reflects.ZeroError
+				return
+			}
+			log.Get(PkgName).Debug("load from cache failed: ", err)
+		}
+
+		db, err := lazy.Try()
+		if err == nil {
+			err = db.Load(i)
+			if err == nil {
+				cache.Set(i, key, args...)
+			}
+		}
+		outs[0] = reflects.Error(err)
+		return
+	})
 }

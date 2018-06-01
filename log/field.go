@@ -172,9 +172,8 @@ func (f fileField) file() string {
 			file = filepath.Base(file)
 		}
 		return file + ":" + strconv.Itoa(line)
-	} else {
-		return "?file?"
 	}
+	return "?file?"
 }
 
 /********** messageField **********/

@@ -85,9 +85,8 @@ func format(msgAndArgs []interface{}, format string, args ...interface{}) string
 	case 0:
 		if len(args) == 0 {
 			return format
-		} else {
-			return fmt.Sprintf(format, args...)
 		}
+		return fmt.Sprintf(format, args...)
 	case 1:
 		return msgAndArgs[0].(string)
 	default:

@@ -214,12 +214,12 @@ func (a *action) fillArgs(c *context) (args []interface{}) {
 				c.req.Args[i] = a.args[i].New()
 			}
 			return c.req.Args[1:]
-		} else {
-			for i := 0; i < l; i++ {
-				c.req.Args[i] = reflect.New(a.in[i]).Interface()
-			}
-			return c.req.Args
 		}
+
+		for i := 0; i < l; i++ {
+			c.req.Args[i] = reflect.New(a.in[i]).Interface()
+		}
+		return c.req.Args
 	}
 	return
 }

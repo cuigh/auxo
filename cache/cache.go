@@ -1,9 +1,8 @@
 package cache
 
 import (
-	"time"
-
 	"sync"
+	"time"
 
 	"github.com/cuigh/auxo/config"
 	"github.com/cuigh/auxo/data"
@@ -126,9 +125,8 @@ func (f *factory) initCacher(name string) (Cacher, error) {
 	}
 	if name == "" {
 		return nil, errors.New("can't find default cache config")
-	} else {
-		return nil, errors.New("can't find cache config for: " + name)
 	}
+	return nil, errors.New("can't find cache config for: " + name)
 }
 
 func (f *factory) loadOptions(name string) (*Options, error) {

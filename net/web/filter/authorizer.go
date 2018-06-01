@@ -10,7 +10,7 @@ import (
 
 type Authorizer struct {
 	Checker         func(user web.User, handler web.HandlerInfo) bool
-	LoginUrl        string
+	LoginURL        string
 	UnauthorizedMsg string
 	ForbiddenMsg    string
 }
@@ -27,8 +27,8 @@ func (a *Authorizer) Apply(next web.HandlerFunc) web.HandlerFunc {
 		panic("Authorizer requires an checker function")
 	}
 
-	if a.LoginUrl == "" {
-		a.LoginUrl = "/login"
+	if a.LoginURL == "" {
+		a.LoginURL = "/login"
 	}
 	if a.UnauthorizedMsg == "" {
 		a.UnauthorizedMsg = "You are not logged in"
@@ -52,13 +52,13 @@ func (a *Authorizer) Apply(next web.HandlerFunc) web.HandlerFunc {
 					"url":       ctx.Route(),
 					"code":      http.StatusUnauthorized,
 					"message":   a.UnauthorizedMsg,
-					"login_url": a.LoginUrl,
+					"login_url": a.LoginURL,
 				})
 			} else if ctx.IsAJAX() {
 				return ctx.Status(http.StatusUnauthorized).HTML(a.UnauthorizedMsg)
 			}
 
-			u, err := url.Parse(a.LoginUrl)
+			u, err := url.Parse(a.LoginURL)
 			if err != nil {
 				return err
 			}

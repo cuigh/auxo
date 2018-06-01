@@ -307,10 +307,10 @@ func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriter
 			p.Quote(b, c.Name())
 			b.WriteString(" IS NOT NULL")
 			return
-		} else {
-			p.Quote(b, c.Name())
-			b.WriteString("<>?")
 		}
+
+		p.Quote(b, c.Name())
+		b.WriteString("<>?")
 	case gsd.LT:
 		p.Quote(b, c.Name())
 		b.WriteString("<?")
@@ -343,10 +343,10 @@ func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriter
 			p.Quote(b, c.Name())
 			b.WriteString(" IS NULL")
 			return
-		} else {
-			p.Quote(b, c.Name())
-			b.WriteString("=?")
 		}
+
+		p.Quote(b, c.Name())
+		b.WriteString("=?")
 	}
 	b.Args = append(b.Args, c.Value)
 	return

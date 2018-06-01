@@ -219,9 +219,8 @@ func (c *selectContext) List(i interface{}, total *int) error {
 
 	if r.NextSet() && r.Next() {
 		return r.Scan(total)
-	} else {
-		return errors.New("gsd: can't read count")
 	}
+	return errors.New("gsd: can't read count")
 }
 
 func (c *selectContext) Load(i interface{}) error {

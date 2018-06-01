@@ -75,7 +75,7 @@ func (c *Context) Usage() {
 	}
 }
 
-// Config returns the help argument.
+// Help returns the help argument.
 func (c *Context) Help() bool {
 	f := c.cmd.Flags.Lookup("help")
 	if f != nil {
@@ -84,7 +84,7 @@ func (c *Context) Help() bool {
 	return false
 }
 
-// Config returns the version argument.
+// Version returns the version argument.
 func (c *Context) Version() bool {
 	f := c.cmd.Flags.Lookup("version")
 	if f != nil {

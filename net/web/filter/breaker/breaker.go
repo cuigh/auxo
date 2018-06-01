@@ -24,14 +24,14 @@ func (sb *SimpleBreaker) Try(handler web.HandlerFunc, ctx web.Context, logger lo
 		return sb.Breaker.Try(func() error {
 			return handler(ctx)
 		})
-	} else {
-		return sb.Breaker.Try(func() error {
-			return handler(ctx)
-		}, func(err error) error {
-			log.Get(PkgName).Debug("breaker > fallback for error: ", err)
-			return sb.Fallback(ctx)
-		})
 	}
+
+	return sb.Breaker.Try(func() error {
+		return handler(ctx)
+	}, func(err error) error {
+		log.Get(PkgName).Debug("breaker > fallback for error: ", err)
+		return sb.Fallback(ctx)
+	})
 }
 
 func (sb *SimpleBreaker) Apply(next web.HandlerFunc) web.HandlerFunc {

@@ -126,12 +126,13 @@ func isSimpleType(t reflect.Type) bool {
 }
 
 func unmarshalSimpleValue(f reflect.Value, opt interface{}) error {
-	if v, err := cast.TryToValue(opt, f.Type()); err != nil {
+	v, err := cast.TryToValue(opt, f.Type())
+	if err != nil {
 		return decodeError(opt, f.Type(), err)
-	} else {
-		f.Set(v)
-		return nil
 	}
+
+	f.Set(v)
+	return nil
 }
 
 func unmarshalSliceValue(f reflect.Value, opt interface{}) error {

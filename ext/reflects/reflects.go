@@ -39,17 +39,15 @@ var (
 func Error(err error) reflect.Value {
 	if err == nil {
 		return ZeroError
-	} else {
-		return reflect.ValueOf(err).Convert(TypeError)
 	}
+	return reflect.ValueOf(err).Convert(TypeError)
 }
 
 func Value(i interface{}, t reflect.Type) reflect.Value {
 	if i == nil {
 		return reflect.Zero(t)
-	} else {
-		return reflect.ValueOf(i)
 	}
+	return reflect.ValueOf(i)
 }
 
 // Interface convert v to it's interface value, if v is nil value, return nil directly

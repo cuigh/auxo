@@ -375,13 +375,13 @@ func (s *Server) heartbeat(sn *session) bool {
 			s.logger.Info("server > close session [%v] for heartbeat timeout", sn.id)
 			sn.Close()
 			return false
-		} else {
-			err := sn.Encode(&Response{})
-			if err != nil {
-				s.logger.Error("server > failed to send heartbeat request: ", err)
-			}
-			return true
 		}
+
+		err := sn.Encode(&Response{})
+		if err != nil {
+			s.logger.Error("server > failed to send heartbeat request: ", err)
+		}
+		return true
 	}
 	return false
 }

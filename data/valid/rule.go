@@ -232,33 +232,33 @@ func rangeRule(ctx *Context, arg *Argument) error {
 				return err
 			}
 			return assert(value == expected, "range1", ctx, arg, value)
-		} else {
-			start, err := toInt64(pair[0], -1)
-			if err != nil {
-				return err
-			}
-			end, err := toInt64(pair[1], int64(math.MaxInt32))
-			if err != nil {
-				return err
-			}
+		}
 
-			if arg.Left == LeftOpen {
-				err = assert(value > start, "range2", ctx, arg, value)
-			} else if arg.Left == LeftSquare {
-				err = assert(value >= start, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		start, err := toInt64(pair[0], -1)
+		if err != nil {
+			return err
+		}
+		end, err := toInt64(pair[1], int64(math.MaxInt32))
+		if err != nil {
+			return err
+		}
 
-			if arg.Right == RightOpen {
-				err = assert(value < end, "range2", ctx, arg, value)
-			} else if arg.Right == RightSquare {
-				err = assert(value <= end, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		if arg.Left == LeftOpen {
+			err = assert(value > start, "range2", ctx, arg, value)
+		} else if arg.Left == LeftSquare {
+			err = assert(value >= start, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
+		}
+
+		if arg.Right == RightOpen {
+			err = assert(value < end, "range2", ctx, arg, value)
+		} else if arg.Right == RightSquare {
+			err = assert(value <= end, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		value := v.Uint()
@@ -268,33 +268,33 @@ func rangeRule(ctx *Context, arg *Argument) error {
 				return err
 			}
 			return assert(value == expected, "range1", ctx, arg, value)
-		} else {
-			start, err := toUint64(pair[0], 0)
-			if err != nil {
-				return err
-			}
-			end, err := toUint64(pair[1], uint64(math.MaxUint32))
-			if err != nil {
-				return err
-			}
+		}
 
-			if arg.Left == LeftOpen {
-				err = assert(value > start, "range2", ctx, arg, value)
-			} else if arg.Left == LeftSquare {
-				err = assert(value >= start, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		start, err := toUint64(pair[0], 0)
+		if err != nil {
+			return err
+		}
+		end, err := toUint64(pair[1], uint64(math.MaxUint32))
+		if err != nil {
+			return err
+		}
 
-			if arg.Right == RightOpen {
-				err = assert(value < end, "range2", ctx, arg, value)
-			} else if arg.Right == RightSquare {
-				err = assert(value <= end, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		if arg.Left == LeftOpen {
+			err = assert(value > start, "range2", ctx, arg, value)
+		} else if arg.Left == LeftSquare {
+			err = assert(value >= start, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
+		}
+
+		if arg.Right == RightOpen {
+			err = assert(value < end, "range2", ctx, arg, value)
+		} else if arg.Right == RightSquare {
+			err = assert(value <= end, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
 		}
 	case reflect.Float32, reflect.Float64:
 		value := v.Float()
@@ -304,33 +304,33 @@ func rangeRule(ctx *Context, arg *Argument) error {
 				return err
 			}
 			return assert(value == expected, "range1", ctx, arg, value)
-		} else {
-			start, err := toFloat64(pair[0], -1)
-			if err != nil {
-				return err
-			}
-			end, err := toFloat64(pair[1], float64(math.MaxUint32))
-			if err != nil {
-				return err
-			}
+		}
 
-			if arg.Left == LeftOpen {
-				err = assert(value > start, "range2", ctx, arg, value)
-			} else if arg.Left == LeftSquare {
-				err = assert(value >= start, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		start, err := toFloat64(pair[0], -1)
+		if err != nil {
+			return err
+		}
+		end, err := toFloat64(pair[1], float64(math.MaxUint32))
+		if err != nil {
+			return err
+		}
 
-			if arg.Right == RightOpen {
-				err = assert(value < end, "range2", ctx, arg, value)
-			} else if arg.Right == RightSquare {
-				err = assert(value <= end, "range2", ctx, arg, value)
-			}
-			if err != nil {
-				return err
-			}
+		if arg.Left == LeftOpen {
+			err = assert(value > start, "range2", ctx, arg, value)
+		} else if arg.Left == LeftSquare {
+			err = assert(value >= start, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
+		}
+
+		if arg.Right == RightOpen {
+			err = assert(value < end, "range2", ctx, arg, value)
+		} else if arg.Right == RightSquare {
+			err = assert(value <= end, "range2", ctx, arg, value)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil

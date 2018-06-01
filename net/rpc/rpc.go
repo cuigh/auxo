@@ -77,9 +77,8 @@ var (
 func NewError(code StatusCode, format string, args ...interface{}) *errors.CodedError {
 	if len(args) == 0 {
 		return errors.Coded(int32(code), format)
-	} else {
-		return errors.Coded(int32(code), fmt.Sprintf(format, args...))
 	}
+	return errors.Coded(int32(code), fmt.Sprintf(format, args...))
 }
 
 func StatusOf(err error) int32 {

@@ -37,14 +37,14 @@ func (e *executor) Exec(ctx context.Context, query string, args ...interface{}) 
 }
 
 func (e *executor) QueryRow(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	span := e.startSpan("query_row", ctx, query, args...)
+	span := e.startSpan(ctx, "query_row", query, args...)
 	defer span.Finish()
 
 	return e.Executor.QueryRow(ctx, query, args...)
 }
 
 func (e *executor) QueryRows(ctx context.Context, query string, args ...interface{}) (r *sql.Rows, err error) {
-	span := e.startSpan("query_rows", ctx, query, args...)
+	span := e.startSpan(ctx, "query_rows", query, args...)
 	defer func() {
 		ext.Error.Set(span, err != nil)
 		span.Finish()
@@ -54,7 +54,7 @@ func (e *executor) QueryRows(ctx context.Context, query string, args ...interfac
 	return
 }
 
-func (e *executor) startSpan(operation string, ctx context.Context, query string, args ...interface{}) trace.Span {
+func (e *executor) startSpan(ctx context.Context, operation string, query string, args ...interface{}) trace.Span {
 	span := e.Tracer.StartChildFromContext(ctx, operation)
 	ext.Component.Set(span, component)
 	ext.DBType.Set(span, "sql")

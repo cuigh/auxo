@@ -20,7 +20,7 @@ type Form struct {
 	CookieName        string // default '_u'
 	CookieDomain      string
 	CookiePath        string
-	DefaultUrl        string
+	DefaultURL        string
 	Remember          bool
 	SlidingExpiration bool
 	Timeout           time.Duration
@@ -36,7 +36,7 @@ func NewForm(identifier FormIdentifier) *Form {
 	return &Form{
 		CookieName: "_u",
 		CookiePath: "/",
-		DefaultUrl: "/",
+		DefaultURL: "/",
 		Identifier: identifier,
 	}
 }
@@ -85,7 +85,7 @@ func (f *Form) Login(validator FormValidator) web.HandlerFunc {
 
 		url := ctx.Q("from")
 		if url == "" {
-			url = f.DefaultUrl
+			url = f.DefaultURL
 		}
 
 		ct := ctx.Request().Header.Get(web.HeaderContentType)
@@ -106,7 +106,7 @@ func (f *Form) Logout(ctx web.Context) error {
 		MaxAge: -1,
 	}
 	ctx.SetCookie(c)
-	return ctx.Redirect(f.DefaultUrl)
+	return ctx.Redirect(f.DefaultURL)
 }
 
 // Apply implements `web.Filter` interface.
@@ -117,8 +117,8 @@ func (f *Form) Apply(next web.HandlerFunc) web.HandlerFunc {
 	if f.CookiePath == "" {
 		f.CookiePath = "/"
 	}
-	if f.DefaultUrl == "" {
-		f.DefaultUrl = "/"
+	if f.DefaultURL == "" {
+		f.DefaultURL = "/"
 	}
 
 	//logger := log.Get(PkgName)

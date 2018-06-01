@@ -1,4 +1,4 @@
-// Package implements command-line flag parsing. It's a wrapper of flag pkg in stdlib.
+// Package flag implements command-line flag parsing. It's a wrapper of flag pkg in stdlib.
 package flag
 
 import (
