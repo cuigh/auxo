@@ -421,6 +421,7 @@ func (s *Server) decodeArgs(sc ServerCodec, ctx *context) (err error) {
 
 func (s *Server) encode(ctx *context, r interface{}, err error) {
 	ctx.resp.Head.ID = ctx.req.Head.ID
+	ctx.resp.Head.Assets = ctx.req.Head.Assets
 	//ctx.resp.Head.Type = 0
 	if err == nil {
 		ctx.resp.Result.Value = r

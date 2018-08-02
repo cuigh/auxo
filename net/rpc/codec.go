@@ -57,10 +57,11 @@ type Stream interface {
 
 type RequestHead struct {
 	//Type    byte         `json:"type"` // 0-rpc, 1-heartbeat
-	ID      uint64       `json:"id"` // len(ID) == 0 for a heartbeat response
+	ID      uint64       `json:"id"` // ID == 0 for a heartbeat response
 	Service string       `json:"service,omitempty"`
 	Method  string       `json:"method,omitempty"`
 	Labels  data.Options `json:"labels,omitempty"`
+	Assets  data.Options `json:"assets,omitempty"` // it would be send back to client
 	//TraceID []byte
 }
 
@@ -71,7 +72,8 @@ type Request struct {
 
 type ResponseHead struct {
 	//Type byte   `json:"type"` // 0-rpc, 1-heartbeat
-	ID uint64 `json:"id"` // len(ID) == 0 for a heartbeat request
+	ID     uint64       `json:"id"` // ID == 0 for a heartbeat request
+	Assets data.Options `json:"assets,omitempty"`
 }
 
 type Result struct {
