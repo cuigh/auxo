@@ -217,7 +217,7 @@ func (a *action) fillArgs(c *context) (args []interface{}) {
 		}
 
 		for i := 0; i < l; i++ {
-			c.req.Args[i] = reflect.New(a.in[i]).Interface()
+			c.req.Args[i] = a.args[i].New()
 		}
 		return c.req.Args
 	}
