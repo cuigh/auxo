@@ -209,7 +209,6 @@ func (a *action) fillArgs(c *context) (args []interface{}) {
 	if l := len(a.in); l > 0 {
 		c.req.Args = make([]interface{}, l)
 		if a.ctx {
-			c.req.Args[0] = c.ctx
 			for i := 1; i < l; i++ {
 				c.req.Args[i] = a.args[i].New()
 			}
@@ -242,6 +241,9 @@ func (a *action) do(c Context) (r interface{}, err error) {
 	var in []reflect.Value
 	req := c.Request()
 	if n := len(req.Args); n > 0 {
+		if a.ctx {
+			req.Args[0] = c.Context()
+		}
 		in = make([]reflect.Value, n)
 		for i, arg := range req.Args {
 			in[i] = a.args[i].Value(arg)
