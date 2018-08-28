@@ -110,14 +110,13 @@ func Start() {
 			Flags:    Flags,
 			children: children,
 		}
-		i   int
-		arg string
+		i int
 	)
 
 	cmd.Flags.Desc = Desc
 
-	for i, arg = range args {
-		if c := cmd.children[arg]; c == nil {
+	for l := len(args); i < l; i++ {
+		if c := cmd.children[args[i]]; c == nil {
 			break
 		} else {
 			cmd = c
