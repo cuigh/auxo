@@ -13,7 +13,7 @@ import (
 var (
 	Name     string
 	Desc     string
-	Action   func(ctx *Context)
+	Action   func(ctx *Context) error
 	Flags    = flag.Default
 	children = CommandSet{}
 )
@@ -25,12 +25,12 @@ func AddCommand(sub *Command) {
 type Command struct {
 	Name     string
 	Desc     string
-	Action   func(ctx *Context)
+	Action   func(ctx *Context) error
 	Flags    *flag.Set
 	children CommandSet
 }
 
-func NewCommand(name, desc string, action func(ctx *Context)) *Command {
+func NewCommand(name, desc string, action func(ctx *Context) error) *Command {
 	return &Command{
 		Name:     name,
 		Desc:     desc,

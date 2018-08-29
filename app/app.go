@@ -152,7 +152,14 @@ func Start() {
 	}
 
 	if cmd.Action != nil {
-		cmd.Action(ctx)
+		if err := cmd.Action(ctx); err != nil {
+			log.Get(PkgName).Error(err)
+			if e, ok := err.(Error); ok {
+				os.Exit(e.Code())
+			} else {
+				os.Exit(1)
+			}
+		}
 	}
 }
 
@@ -182,4 +189,29 @@ func printVersion() {
 		rev = "?"
 	}
 	fmt.Printf("%s %s (auxo: %s, rev: %s)", Name, Version, auxo.Version, rev)
+}
+
+type Error interface {
+	error
+	Code() int
+}
+
+type fatalError struct {
+	msg  string
+	code int
+}
+
+func (e *fatalError) Error() string {
+	return e.msg
+}
+
+func (e *fatalError) Code() int {
+	return e.code
+}
+
+func Fatal(code int, msg interface{}) Error {
+	return &fatalError{
+		code: code,
+		msg:  fmt.Sprint(msg),
+	}
 }
