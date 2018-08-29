@@ -1,6 +1,7 @@
 package gsd_test
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/cuigh/auxo/db/gsd"
@@ -11,14 +12,14 @@ func ExampleDB_Load() {
 	db := gsd.MustOpen("test")
 
 	user := &User{ID: 1}
-	err := db.Load(user)
+	err := db.Load(context.TODO(), user)
 	if err != nil {
 		fmt.Println("Load failed:", err)
 	}
 	fmt.Println("Name:", user.Name)
 
 	user = &User{ID: -1}
-	err = db.Load(user)
+	err = db.Load(context.TODO(), user)
 	if err == gsd.ErrNoRows {
 		fmt.Println("Error:", err.Error())
 	}
@@ -31,7 +32,7 @@ func ExampleDB_Select() {
 	db := gsd.MustOpen("test")
 
 	user := &User{}
-	err := db.Select("id", "name", "salary", "age", "sex", "create_time").
+	err := db.Select(context.TODO(), "id", "name", "salary", "age", "sex", "create_time").
 		From("user").
 		Where(Equal("id", 1)).
 		Fill(user)
@@ -49,7 +50,7 @@ func ExampleDB_Remove() {
 	user := &User{
 		ID: 3,
 	}
-	_, err := db.Remove(user)
+	_, err := db.Remove(context.TODO(), user)
 	fmt.Println("Error:", err)
 	// Output:
 	// Error: <nil>

@@ -26,7 +26,7 @@ type executor struct {
 }
 
 func (e *executor) Exec(ctx context.Context, query string, args ...interface{}) (r sql.Result, err error) {
-	span := e.startSpan("exec", ctx, query, args...)
+	span := e.startSpan(ctx, "exec", query, args...)
 	defer func() {
 		ext.Error.Set(span, err != nil)
 		span.Finish()

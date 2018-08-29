@@ -1,6 +1,7 @@
 package gsd_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cuigh/auxo/db/gsd"
@@ -9,7 +10,7 @@ import (
 
 func TestTX_Commit(t *testing.T) {
 	db := gsd.MustOpen("test")
-	err := db.Transact(func(tx gsd.TX) error {
+	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
 		count, err := tx.Count("user").Value()
 		t.Log(count, err)
 		return err
@@ -20,7 +21,7 @@ func TestTX_Commit(t *testing.T) {
 // todo:
 func TestTX_Rollback(t *testing.T) {
 	db := gsd.MustOpen("test")
-	err := db.Transact(func(tx gsd.TX) error {
+	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
 		count, err := tx.Count("user").Value()
 		t.Log(count, err)
 		return err
@@ -31,7 +32,7 @@ func TestTX_Rollback(t *testing.T) {
 // todo:
 func TestTX_Cancel(t *testing.T) {
 	db := gsd.MustOpen("test")
-	err := db.Transact(func(tx gsd.TX) error {
+	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
 		count, err := tx.Count("user").Value()
 		t.Log(count, err)
 		return err

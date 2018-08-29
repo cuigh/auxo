@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"reflect"
 	"strings"
 
@@ -149,7 +150,8 @@ func buildFindProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 				w.Equal(key, ins[i].Interface())
 			}
 			r := reflect.New(ret)
-			err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(r.Interface())
+			// TODO: support context.Context
+			err = db.Select(context.TODO(), m.Selects...).From(m.Table).Where(w).Fill(r.Interface())
 			if err != nil {
 				outs[0] = zr
 				outs[1] = reflects.Error(err)
@@ -199,7 +201,7 @@ func buildFindProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 			for i, key := range m.PrimaryKeys {
 				w.Equal(key, args[i])
 			}
-			err = db.Select(m.Selects...).From(m.Table).Where(w).Fill(i)
+			err = db.Select(context.TODO(), m.Selects...).From(m.Table).Where(w).Fill(i)
 		}
 		if err != nil {
 			outs[0], outs[1] = zr, reflects.Error(err)
@@ -225,7 +227,7 @@ func buildLoadProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 			outs = make([]reflect.Value, 1)
 			db, err := lazy.Try()
 			if err == nil {
-				err = db.Load(ins[0].Interface())
+				err = db.Load(context.TODO(), ins[0].Interface())
 			}
 			outs[0] = reflects.Error(err)
 			return
@@ -252,7 +254,7 @@ func buildLoadProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (v 
 
 		db, err := lazy.Try()
 		if err == nil {
-			err = db.Load(i)
+			err = db.Load(context.TODO(), i)
 			if err == nil {
 				cache.Set(i, key, args...)
 			}
@@ -269,7 +271,7 @@ func buildRemoveProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 
 		db, err := lazy.Try()
 		if err == nil {
-			_, err = db.Remove(ins[0].Interface())
+			_, err = db.Remove(context.TODO(), ins[0].Interface())
 		}
 		outs[0] = reflects.Error(err)
 		return
@@ -283,7 +285,7 @@ func buildModifyProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 
 		db, err := lazy.Try()
 		if err == nil {
-			_, err = db.Modify(ins[0].Interface())
+			_, err = db.Modify(context.TODO(), ins[0].Interface())
 		}
 		outs[0] = reflects.Error(err)
 		return
@@ -297,7 +299,7 @@ func buildCreateProxy(lazy *gsd.LazyDB, ft reflect.Type, _ data.Options) (v refl
 
 		db, err := lazy.Try()
 		if err == nil {
-			err = db.Create(ins[0].Interface())
+			err = db.Create(context.TODO(), ins[0].Interface())
 		}
 		outs[0] = reflects.Error(err)
 		return
@@ -320,7 +322,7 @@ func buildSearchProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (
 				fm := gsd.GetMeta(ins[0].Type())
 				rm := gsd.GetMeta(outs[0].Elem().Type())
 				w := fm.WhereValues(i)
-				err = db.Select(rm.Selects...).From(rm.Table).Where(w).Page(1, 1).List(nil, &count)
+				err = db.Select(context.TODO(), rm.Selects...).From(rm.Table).Where(w).Page(1, 1).List(nil, &count)
 			}
 			// todo:
 			outs[2] = reflects.Error(err)
@@ -348,7 +350,7 @@ func buildSearchProxy(lazy *gsd.LazyDB, ft reflect.Type, options data.Options) (
 
 		db, err := lazy.Try()
 		if err == nil {
-			err = db.Load(i)
+			err = db.Load(context.TODO(), i)
 			if err == nil {
 				cache.Set(i, key, args...)
 			}

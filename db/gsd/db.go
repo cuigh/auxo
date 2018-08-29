@@ -27,35 +27,22 @@ type Options struct {
 }
 
 type DB interface {
-	Insert(table string) InsertClause
-	InsertContext(ctx context.Context, table string) InsertClause
-	Create(i interface{}, filter ...ColumnFilter) error
-	CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error
-	Delete(table string) DeleteClause
-	DeleteContext(ctx context.Context, table string) DeleteClause
-	Remove(i interface{}) (r Result, err error)
-	RemoveContext(ctx context.Context, i interface{}) (r Result, err error)
-	Update(table string) UpdateClause
-	UpdateContext(ctx context.Context, table string) UpdateClause
-	Modify(i interface{}, filter ...ColumnFilter) (r Result, err error)
-	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
-	Select(cols ...string) SelectClause
-	SelectContext(ctx context.Context, cols ...string) SelectClause
-	//Distinct(cols ...string) SelectClause
-	Query(cols *Columns, distinct ...bool) SelectClause
-	QueryContext(ctx context.Context, cols *Columns, distinct ...bool) SelectClause
-	Load(i interface{}) error
-	LoadContext(ctx context.Context, i interface{}) error
-	Count(table interface{}) CountClause
-	CountContext(ctx context.Context, table interface{}) CountClause
-	Execute(sql string, args ...interface{}) ExecuteClause
-	ExecuteContext(ctx context.Context, sql string, args ...interface{}) ExecuteClause
-	//Call(sp string, args ...interface{}) CallClause
-	Prepare(query string) (*Stmt, error)
-	PrepareContext(ctx context.Context, query string) (*Stmt, error)
+	Insert(ctx context.Context, table string) InsertClause
+	Create(ctx context.Context, i interface{}, filter ...ColumnFilter) error
+	Delete(ctx context.Context, table string) DeleteClause
+	Remove(ctx context.Context, i interface{}) (r Result, err error)
+	Update(ctx context.Context, table string) UpdateClause
+	Modify(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
+	Select(ctx context.Context, cols ...string) SelectClause
+	//Distinct(ctx context.Context, cols ...string) SelectClause
+	Query(ctx context.Context, cols *Columns, distinct ...bool) SelectClause
+	Load(ctx context.Context, i interface{}) error
+	Count(ctx context.Context, table interface{}) CountClause
+	Execute(ctx context.Context, sql string, args ...interface{}) ExecuteClause
+	//Call(ctx context.Context, sp string, args ...interface{}) CallClause
+	Prepare(ctx context.Context, query string) (*Stmt, error)
 	Stmt(name string, b func() string) (*Stmt, error)
-	Transact(fn func(tx TX) error, opts ...*sql.TxOptions) (err error)
-	TransactContext(ctx context.Context, fn func(tx TX) error, opts ...*sql.TxOptions) (err error)
+	Transact(ctx context.Context, fn func(tx TX) error, opts ...*sql.TxOptions) (err error)
 }
 
 type database struct {
@@ -93,106 +80,60 @@ func (d *database) QueryRows(ctx context.Context, query string, args ...interfac
 	return d.db.QueryContext(ctx, query, args...)
 }
 
-func (d *database) Insert(table string) InsertClause {
-	// must release ctx after execute
-	return ctxPool.GetInsert(context.Background(), d, d.e).Insert(table)
-}
-func (d *database) InsertContext(ctx context.Context, table string) InsertClause {
+func (d *database) Insert(ctx context.Context, table string) InsertClause {
 	// must release ctx after execute
 	return ctxPool.GetInsert(ctx, d, d.e).Insert(table)
 }
 
-func (d *database) Create(i interface{}, filter ...ColumnFilter) error { // (int64, error)
-	return ctxPool.GetInsert(context.Background(), d, d.e).Create(i, filter...)
-}
-
-func (d *database) CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error { // (int64, error)
+func (d *database) Create(ctx context.Context, i interface{}, filter ...ColumnFilter) error { // (int64, error)
 	return ctxPool.GetInsert(ctx, d, d.e).Create(i, filter...)
 }
 
-func (d *database) Delete(table string) DeleteClause {
-	return ctxPool.GetDelete(context.Background(), d, d.e).Delete(table)
-}
-
-func (d *database) DeleteContext(ctx context.Context, table string) DeleteClause {
+func (d *database) Delete(ctx context.Context, table string) DeleteClause {
 	return ctxPool.GetDelete(ctx, d, d.e).Delete(table)
 }
 
-func (d *database) Remove(i interface{}) (r Result, err error) {
-	return ctxPool.GetDelete(context.Background(), d, d.e).Remove(i)
-}
-func (d *database) RemoveContext(ctx context.Context, i interface{}) (r Result, err error) {
+func (d *database) Remove(ctx context.Context, i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(ctx, d, d.e).Remove(i)
 }
 
-func (d *database) Update(table string) UpdateClause {
-	return ctxPool.GetUpdate(context.Background(), d, d.e).Update(table)
-}
-
-func (d *database) UpdateContext(ctx context.Context, table string) UpdateClause {
+func (d *database) Update(ctx context.Context, table string) UpdateClause {
 	return ctxPool.GetUpdate(ctx, d, d.e).Update(table)
 }
 
-func (d *database) Modify(i interface{}, filter ...ColumnFilter) (r Result, err error) {
-	return ctxPool.GetUpdate(context.Background(), d, d.e).Modify(i, filter...)
-}
-func (d *database) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
+func (d *database) Modify(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(ctx, d, d.e).Modify(i, filter...)
 }
 
 // Save inserts or updates table
-//func (d *database) Save(i interface{}) {
+//func (d *database) Save(ctx context.Context, i interface{}) {
 //}
 
-func (d *database) Select(cols ...string) SelectClause {
-	return ctxPool.GetSelect(context.Background(), d, d.e).Select(NewColumns(cols...))
-}
-func (d *database) SelectContext(ctx context.Context, cols ...string) SelectClause {
+func (d *database) Select(ctx context.Context, cols ...string) SelectClause {
 	return ctxPool.GetSelect(ctx, d, d.e).Select(NewColumns(cols...))
 }
 
-func (d *database) Query(cols *Columns, distinct ...bool) SelectClause {
-	return ctxPool.GetSelect(context.Background(), d, d.e).Select(cols, distinct...)
-}
-
-func (d *database) QueryContext(ctx context.Context, cols *Columns, distinct ...bool) SelectClause {
+func (d *database) Query(ctx context.Context, cols *Columns, distinct ...bool) SelectClause {
 	return ctxPool.GetSelect(ctx, d, d.e).Select(cols, distinct...)
 }
 
-//func (d *database) Find(i interface{}) {
+//func (d *database) Find(ctx context.Context, i interface{}) {
 //}
 
 // Load fetch a single row by primary keys. It returns ErrNoRows if no record was found.
-func (d *database) Load(i interface{}) error {
-	return ctxPool.GetSelect(context.Background(), d, d.e).Load(i)
-}
-
-// Load fetch a single row by primary keys. It returns ErrNoRows if no record was found.
-func (d *database) LoadContext(ctx context.Context, i interface{}) error {
+func (d *database) Load(ctx context.Context, i interface{}) error {
 	return ctxPool.GetSelect(ctx, d, d.e).Load(i)
 }
 
-func (d *database) Count(table interface{}) CountClause {
-	return (*countContext)(ctxPool.GetSelect(context.Background(), d, d.e)).Count(table)
-}
-
-func (d *database) CountContext(ctx context.Context, table interface{}) CountClause {
+func (d *database) Count(ctx context.Context, table interface{}) CountClause {
 	return (*countContext)(ctxPool.GetSelect(ctx, d, d.e)).Count(table)
 }
 
-func (d *database) Execute(sql string, args ...interface{}) ExecuteClause {
-	return &executeContext{sql: sql, args: args, db: d, Executor: d.e, Context: context.Background()}
-}
-
-func (d *database) ExecuteContext(ctx context.Context, sql string, args ...interface{}) ExecuteClause {
+func (d *database) Execute(ctx context.Context, sql string, args ...interface{}) ExecuteClause {
 	return &executeContext{sql: sql, args: args, db: d, Executor: d.e, Context: ctx}
 }
 
-//func (d *database) Call(sp string, args ...interface{}) (*sql.Rows, error) {
-//	return d.db.Query(sp, args...)
-//}
-//
-//func (d *database) CallContext(ctx context.Context,sp string, args ...interface{}) (*sql.Rows, error) {
+//func (d *database) Call(ctx context.Context,sp string, args ...interface{}) (*sql.Rows, error) {
 //	return d.db.Query(sp, args...)
 //}
 
@@ -204,11 +145,7 @@ func (d *database) ExecuteContext(ctx context.Context, sql string, args ...inter
 //	return d.db.Stats()
 //}
 
-func (d *database) Transact(fn func(tx TX) error, opts ...*sql.TxOptions) (err error) {
-	return d.TransactContext(context.Background(), fn, opts...)
-}
-
-func (d *database) TransactContext(ctx context.Context, fn func(tx TX) error, opts ...*sql.TxOptions) (err error) {
+func (d *database) Transact(ctx context.Context, fn func(tx TX) error, opts ...*sql.TxOptions) (err error) {
 	var trans *sql.Tx
 	if len(opts) == 0 {
 		trans, err = d.db.BeginTx(ctx, nil)
@@ -242,15 +179,7 @@ func (d *database) TransactContext(ctx context.Context, fn func(tx TX) error, op
 	return
 }
 
-func (d *database) Prepare(query string) (*Stmt, error) {
-	stmt, err := d.db.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	return (*Stmt)(stmt), nil
-}
-
-func (d *database) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
+func (d *database) Prepare(ctx context.Context, query string) (*Stmt, error) {
 	stmt, err := d.db.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err

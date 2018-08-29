@@ -12,30 +12,18 @@ import (
 var ErrTXCancelled = errors.New("gsd: transaction has been cancelled")
 
 type TX interface {
-	Insert(table string) InsertClause
-	InsertContext(ctx context.Context, table string) InsertClause
-	Create(i interface{}, filter ...ColumnFilter) error
-	CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error
-	Delete(table string) DeleteClause
-	DeleteContext(ctx context.Context, table string) DeleteClause
-	Remove(i interface{}) (r Result, err error)
-	RemoveContext(ctx context.Context, i interface{}) (r Result, err error)
-	Update(table string) UpdateClause
-	UpdateContext(ctx context.Context, table string) UpdateClause
-	Modify(i interface{}, filter ...ColumnFilter) (r Result, err error)
-	ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
-	Select(cols ...string) SelectClause
-	SelectContext(ctx context.Context, cols ...string) SelectClause
-	Query(cols *Columns, distinct ...bool) SelectClause
-	QueryContext(ctx context.Context, cols *Columns, distinct ...bool) SelectClause
-	Load(i interface{}) error
-	LoadContext(ctx context.Context, i interface{}) error
-	Count(table interface{}) CountClause
-	CountContext(ctx context.Context, table interface{}) CountClause
-	Execute(sql string, args ...interface{}) ExecuteClause
-	ExecuteContext(ctx context.Context, sql string, args ...interface{}) ExecuteClause
-	Prepare(query string) (*Stmt, error)
-	PrepareContext(ctx context.Context, query string) (*Stmt, error)
+	Insert(ctx context.Context, table string) InsertClause
+	Create(ctx context.Context, i interface{}, filter ...ColumnFilter) error
+	Delete(ctx context.Context, table string) DeleteClause
+	Remove(ctx context.Context, i interface{}) (r Result, err error)
+	Update(ctx context.Context, table string) UpdateClause
+	Modify(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error)
+	Select(ctx context.Context, cols ...string) SelectClause
+	Query(ctx context.Context, cols *Columns, distinct ...bool) SelectClause
+	Load(ctx context.Context, i interface{}) error
+	Count(ctx context.Context, table interface{}) CountClause
+	Execute(ctx context.Context, sql string, args ...interface{}) ExecuteClause
+	Prepare(ctx context.Context, query string) (*Stmt, error)
 	Stmt(name string, b func() string) (*Stmt, error)
 	Commit() error
 	Rollback() error
@@ -80,103 +68,51 @@ func (t *transaction) Rollback() error {
 	return t.tx.Rollback()
 }
 
-func (t *transaction) Insert(table string) InsertClause {
-	return ctxPool.GetInsert(context.Background(), t.db, t.e).Insert(table)
-}
-
-func (t *transaction) InsertContext(ctx context.Context, table string) InsertClause {
+func (t *transaction) Insert(ctx context.Context, table string) InsertClause {
 	return ctxPool.GetInsert(ctx, t.db, t.e).Insert(table)
 }
 
-func (t *transaction) Create(i interface{}, filter ...ColumnFilter) error {
-	return ctxPool.GetInsert(context.Background(), t.db, t.e).Create(i, filter...)
-}
-
-func (t *transaction) CreateContext(ctx context.Context, i interface{}, filter ...ColumnFilter) error {
+func (t *transaction) Create(ctx context.Context, i interface{}, filter ...ColumnFilter) error {
 	return ctxPool.GetInsert(ctx, t.db, t.e).Create(i, filter...)
 }
 
-func (t *transaction) Delete(table string) DeleteClause {
-	return ctxPool.GetDelete(context.Background(), t.db, t.e).Delete(table)
-}
-
-func (t *transaction) DeleteContext(ctx context.Context, table string) DeleteClause {
+func (t *transaction) Delete(ctx context.Context, table string) DeleteClause {
 	return ctxPool.GetDelete(ctx, t.db, t.e).Delete(table)
 }
 
-func (t *transaction) Remove(i interface{}) (r Result, err error) {
-	return ctxPool.GetDelete(context.Background(), t.db, t.e).Remove(i)
-}
-
-func (t *transaction) RemoveContext(ctx context.Context, i interface{}) (r Result, err error) {
+func (t *transaction) Remove(ctx context.Context, i interface{}) (r Result, err error) {
 	return ctxPool.GetDelete(ctx, t.db, t.e).Remove(i)
 }
 
-func (t *transaction) Update(table string) UpdateClause {
-	return ctxPool.GetUpdate(context.Background(), t.db, t.e).Update(table)
-}
-
-func (t *transaction) UpdateContext(ctx context.Context, table string) UpdateClause {
+func (t *transaction) Update(ctx context.Context, table string) UpdateClause {
 	return ctxPool.GetUpdate(ctx, t.db, t.e).Update(table)
 }
 
-func (t *transaction) Modify(i interface{}, filter ...ColumnFilter) (r Result, err error) {
-	return ctxPool.GetUpdate(context.Background(), t.db, t.e).Modify(i, filter...)
-}
-
-func (t *transaction) ModifyContext(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
+func (t *transaction) Modify(ctx context.Context, i interface{}, filter ...ColumnFilter) (r Result, err error) {
 	return ctxPool.GetUpdate(ctx, t.db, t.e).Modify(i, filter...)
 }
 
-func (t *transaction) Select(cols ...string) SelectClause {
-	return ctxPool.GetSelect(context.Background(), t.db, t.e).Select(NewColumns(cols...))
-}
-
-func (t *transaction) SelectContext(ctx context.Context, cols ...string) SelectClause {
+func (t *transaction) Select(ctx context.Context, cols ...string) SelectClause {
 	return ctxPool.GetSelect(ctx, t.db, t.e).Select(NewColumns(cols...))
 }
 
-func (t *transaction) Query(cols *Columns, distinct ...bool) SelectClause {
-	return ctxPool.GetSelect(context.Background(), t.db, t.e).Select(cols, distinct...)
-}
-
-func (t *transaction) QueryContext(ctx context.Context, cols *Columns, distinct ...bool) SelectClause {
+func (t *transaction) Query(ctx context.Context, cols *Columns, distinct ...bool) SelectClause {
 	return ctxPool.GetSelect(ctx, t.db, t.e).Select(cols, distinct...)
 }
 
-func (t *transaction) Load(i interface{}) error {
-	return ctxPool.GetSelect(context.Background(), t.db, t.e).Load(i)
-}
-
-func (t *transaction) LoadContext(ctx context.Context, i interface{}) error {
+func (t *transaction) Load(ctx context.Context, i interface{}) error {
 	return ctxPool.GetSelect(ctx, t.db, t.e).Load(i)
 }
 
-func (t *transaction) Count(table interface{}) CountClause {
-	return (*countContext)(ctxPool.GetSelect(context.Background(), t.db, t.e)).Count(table)
-}
-
-func (t *transaction) CountContext(ctx context.Context, table interface{}) CountClause {
+func (t *transaction) Count(ctx context.Context, table interface{}) CountClause {
 	return (*countContext)(ctxPool.GetSelect(ctx, t.db, t.e)).Count(table)
 }
 
-func (t *transaction) Execute(sql string, args ...interface{}) ExecuteClause {
-	return &executeContext{sql: sql, args: args, db: t.db, Executor: t.e, Context: context.Background()}
-}
-
-func (t *transaction) ExecuteContext(ctx context.Context, sql string, args ...interface{}) ExecuteClause {
+func (t *transaction) Execute(ctx context.Context, sql string, args ...interface{}) ExecuteClause {
 	return &executeContext{sql: sql, args: args, db: t.db, Executor: t.e, Context: ctx}
 }
 
-func (t *transaction) Prepare(query string) (*Stmt, error) {
-	stmt, err := t.tx.Prepare(query)
-	if err != nil {
-		return nil, err
-	}
-	return (*Stmt)(stmt), nil
-}
-
-func (t *transaction) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
+func (t *transaction) Prepare(ctx context.Context, query string) (*Stmt, error) {
 	stmt, err := t.tx.PrepareContext(ctx, query)
 	if err != nil {
 		return nil, err
