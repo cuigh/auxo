@@ -5,11 +5,8 @@ import (
 	"reflect"
 )
 
-type updateValue struct {
-	Value interface{}
-}
-type IncValue *updateValue
-type DecValue *updateValue
+type IncValue interface{}
+type DecValue interface{}
 type ExprValue string
 
 type UpdateInfo struct {
@@ -49,13 +46,13 @@ func (c *updateContext) Set(col string, val interface{}) SetClause {
 
 func (c *updateContext) Inc(col string, val interface{}) SetClause {
 	c.info.Columns = append(c.info.Columns, col)
-	c.info.Values = append(c.info.Values, IncValue(&updateValue{val}))
+	c.info.Values = append(c.info.Values, IncValue(val))
 	return c
 }
 
 func (c *updateContext) Dec(col string, val interface{}) SetClause {
 	c.info.Columns = append(c.info.Columns, col)
-	c.info.Values = append(c.info.Values, DecValue(&updateValue{val}))
+	c.info.Values = append(c.info.Values, DecValue(val))
 	return c
 }
 

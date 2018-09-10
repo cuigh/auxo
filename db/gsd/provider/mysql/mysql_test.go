@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"context"
 	"testing"
 
 	"github.com/cuigh/auxo/config"
@@ -22,7 +23,7 @@ func TestCreate(t *testing.T) {
 	db := gsd.MustOpen("test")
 
 	user := &User{3, "abc"}
-	err := db.Create(user)
+	err := db.Create(context.TODO(), user)
 	assert.NoError(t, err)
 }
 
@@ -33,7 +34,7 @@ func TestCreateSlice(t *testing.T) {
 		{3, "abc"},
 		{4, "xyz"},
 	}
-	err := db.Create(users)
+	err := db.Create(context.TODO(), users)
 	assert.NoError(t, err)
 }
 
@@ -43,7 +44,7 @@ func BenchmarkCreate(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		db := gsd.MustOpen("test")
-		err := db.Create(user)
+		err := db.Create(context.TODO(), user)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -59,7 +60,7 @@ func BenchmarkCreateSlice(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		db := gsd.MustOpen("test")
-		err := db.Create(users)
+		err := db.Create(context.TODO(), users)
 		if err != nil {
 			b.Fatal(err)
 		}

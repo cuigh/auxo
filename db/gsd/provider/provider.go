@@ -104,11 +104,11 @@ func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error)
 		case gsd.IncValue:
 			p.Quote(b, col)
 			b.Write([]byte{'+', '?'})
-			b.Args = append(b.Args, v.Value)
+			b.Args = append(b.Args, v)
 		case gsd.DecValue:
 			p.Quote(b, col)
 			b.Write([]byte{'-', '?'})
-			b.Args = append(b.Args, v.Value)
+			b.Args = append(b.Args, v)
 		case gsd.ExprValue:
 			b.WriteString(string(v))
 		default:
