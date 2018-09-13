@@ -138,7 +138,7 @@ func (f *factory) initSession(name string) (*Session, error) {
 		for k, v := range f.sessions {
 			sessions[k] = v
 		}
-		sessions[name] = p
+		sessions[name] = session
 		f.sessions = sessions
 	}
 	return session, err
