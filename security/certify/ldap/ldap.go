@@ -140,16 +140,37 @@ func (r *Realm) Login(token certify.Token) (security.User, error) {
 	defer c.Close()
 
 	// bind
-	err = r.bind(c, st.Name(), st.Password())
-	if err != nil {
-		r.logger.Error("ldap > Failed to bind: ", err)
-		return nil, certify.ErrInvalidToken
+	if r.bindDN == "" {
+		// simple auth
+		err = c.Bind(fmt.Sprintf(r.userDN, st.Name()), st.Password())
+		if err != nil {
+			r.logger.Error("ldap > Failed to bind: ", err)
+			return nil, certify.ErrInvalidToken
+		}
+	} else {
+		// bind auth
+		err = c.Bind(r.bindDN, r.bindPwd)
+		if err != nil {
+			r.logger.Error("ldap > Failed to bind: ", err)
+			return nil, err
+		}
 	}
 
-	// If user wasn't exist, we need create it
-	entry, err := r.search(c, st.Name(), r.nameAttr, r.emailAttr)
+	// search
+	var entry *ldap.Entry
+	entry, err = r.search(c, st.Name(), r.nameAttr, r.emailAttr)
 	if err != nil {
+		r.logger.Error("ldap > Failed to search: ", err)
 		return nil, err
+	}
+
+	if r.bindDN != "" {
+		// validate password if bind auth is used
+		err = c.Bind(entry.DN, st.Password())
+		if err != nil {
+			r.logger.Error("ldap > Failed to bind: ", err)
+			return nil, certify.ErrInvalidToken
+		}
 	}
 
 	return &User{
@@ -157,24 +178,6 @@ func (r *Realm) Login(token certify.Token) (security.User, error) {
 		name:      entry.GetAttributeValue(r.nameAttr),
 		email:     entry.GetAttributeValue(r.emailAttr),
 	}, nil
-}
-
-func (r *Realm) bind(c *ldap.Conn, name, pwd string) (err error) {
-	if r.bindDN == "" {
-		// simple auth
-		err = c.Bind(fmt.Sprintf(r.userDN, name), pwd)
-	} else {
-		// bind auth
-		err = c.Bind(r.bindDN, r.bindPwd)
-		if err == nil {
-			var entry *ldap.Entry
-			entry, err = r.search(c, name, "cn")
-			if err == nil {
-				err = c.Bind(entry.DN, pwd)
-			}
-		}
-	}
-	return
 }
 
 func (r *Realm) search(c *ldap.Conn, name string, attrs ...string) (entry *ldap.Entry, err error) {
