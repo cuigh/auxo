@@ -69,10 +69,10 @@ func TestGet(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
-	source := `name: auxo`
+	source := `test.name: auxo`
 	m := initManager()
 	m.AddDataSource([]byte(source), "yaml")
-	assert.Equal(t, "auxo", m.Get("name"))
+	assert.Equal(t, "auxo", m.Get("test.name"))
 }
 
 func TestFlags(t *testing.T) {

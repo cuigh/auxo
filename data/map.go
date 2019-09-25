@@ -39,7 +39,7 @@ func (m Map) Contains(key string) bool {
 	return ok
 }
 
-// Merge merges all key-value pairs in m from src.
+// Merge merges all key-value pairs of src into m.
 func (m Map) Merge(src Map) {
 	for k, sv := range src {
 		if tv, ok := m[k]; ok {
@@ -48,17 +48,18 @@ func (m Map) Merge(src Map) {
 			if ok1 && ok2 {
 				m1.Merge(m2)
 			}
+			continue
+		}
+
+		if tm, ok := m.tryConvert(sv); ok {
+			m[k] = tm
 		} else {
-			if tm, ok := m.tryConvert(sv); ok {
-				m[k] = tm
-			} else {
-				m[k] = sv
-			}
+			m[k] = sv
 		}
 	}
 }
 
-// Cover merges and replaces all key-value pairs in m from src
+// Cover merges and replaces all key-value pairs of src into m
 func (m Map) Cover(src Map) {
 	for k, sv := range src {
 		if tv, ok := m[k]; ok {
@@ -66,8 +67,12 @@ func (m Map) Cover(src Map) {
 			m2, ok2 := m.tryConvert(sv)
 			if ok1 && ok2 {
 				m1.Cover(m2)
-				continue
+			} else if ok2 {
+				m[k] = m2
+			} else {
+				m[k] = sv
 			}
+			continue
 		}
 
 		if tm, ok := m.tryConvert(sv); ok {
