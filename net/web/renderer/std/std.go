@@ -2,41 +2,48 @@ package std
 
 import (
 	"errors"
-	"html/template"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-
 	"github.com/cuigh/auxo/app"
 	"github.com/cuigh/auxo/ext/files"
 	"github.com/cuigh/auxo/net/web"
+	"html/template"
+	"io"
+	"io/fs"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 )
 
 type Options struct {
 	debug bool
+	fs    fs.FS
 	dir   string
 	exts  []string
 	fm    template.FuncMap
 }
 
 func (opts *Options) ensure() error {
-	if opts.dir == "" {
-		d := filepath.Dir(app.Path())
-		p := filepath.Join(d, "views")
-		if files.Exist(p) {
-			opts.dir = p
-		} else {
-			p = filepath.Join(d, "resources/views")
+	if opts.fs == nil {
+		if opts.dir == "" {
+			d := filepath.Dir(app.Path())
+			p := filepath.Join(d, "views")
 			if files.Exist(p) {
 				opts.dir = p
+			} else {
+				p = filepath.Join(d, "resources/views")
+				if files.Exist(p) {
+					opts.dir = p
+				}
 			}
 		}
+		if opts.dir == "" {
+			return errors.New("std: can't locate templates directory")
+		}
+	} else {
+		if opts.dir == "" {
+			opts.dir = "."
+		}
 	}
-	if opts.dir == "" {
-		return errors.New("std: can't locate templates directory")
-	}
+
 	if len(opts.exts) == 0 {
 		opts.exts = []string{".html", ".gohtml"}
 	}
@@ -45,8 +52,9 @@ func (opts *Options) ensure() error {
 
 type Option func(opts *Options)
 
-func Dir(dir string) Option {
+func Dir(fs fs.FS, dir string) Option {
 	return func(opts *Options) {
+		opts.fs = fs
 		opts.dir = dir
 	}
 }
@@ -97,11 +105,9 @@ func New(opts ...Option) (r *Renderer, err error) {
 	r = &Renderer{
 		opts: options,
 	}
-	if !r.opts.debug {
-		r.t, err = r.compile()
-		if err != nil {
-			return nil, err
-		}
+	err = r.compile()
+	if err != nil {
+		return nil, err
 	}
 	return r, nil
 }
@@ -115,59 +121,87 @@ func Must(opts ...Option) *Renderer {
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, ctx web.Context) (err error) {
-	var t *template.Template
-	if r.opts.debug {
-		// on debug mode, always recompile templates
-		t, err = r.compile()
-		if err != nil {
-			return
-		}
-	} else {
-		t = r.t
-	}
-	return t.ExecuteTemplate(w, name, data)
+	return r.t.ExecuteTemplate(w, name, data)
 }
 
-func (r *Renderer) compile() (*template.Template, error) {
-	t := template.New(r.opts.dir)
-	// Walk the supplied directory and compile any files that match our extension list.
-	if err := filepath.Walk(r.opts.dir, func(path string, info os.FileInfo, err error) error {
-		// fmt.Println("path: ", path)
-		// if is a dir, return immediately.(dir is not a valid golang template)
-		if info == nil || info.IsDir() {
-			return nil
-		}
-
-		rel, err := filepath.Rel(r.opts.dir, path)
-		if err != nil {
-			return err
-		}
-
-		ext := ""
-		if strings.Index(rel, ".") != -1 {
-			ext = filepath.Ext(rel)
-		}
-
-		for _, e := range r.opts.exts {
-			if ext == e {
-				buf, err := ioutil.ReadFile(path)
-				if err != nil {
-					panic(err)
-				}
-
-				name := rel[0 : len(rel)-len(ext)]
-				// fmt.Println("name: ", filepath.ToSlash(name))
-				tpl := t.New(filepath.ToSlash(name))
-				tpl.Funcs(r.opts.fm)
-
-				// Break out if this parsing fails. We don't want any silent server starts.
-				template.Must(tpl.Parse(string(buf)))
-				break
+func (r *Renderer) compile() (err error) {
+	if r.opts.fs == nil {
+		err = filepath.Walk(r.opts.dir, func(p string, d os.FileInfo, e error) error {
+			if err != nil {
+				return err
 			}
-		}
-		return nil
-	}); err != nil {
-		return nil, err
+			if d.IsDir() {
+				return nil
+			}
+
+			ext := filepath.Ext(p)
+			if !r.match(ext) {
+				return nil
+			}
+
+			rel, err := filepath.Rel(r.opts.dir, p)
+			if err != nil {
+				return err
+			}
+
+			data, err := ioutil.ReadFile(p)
+			if err != nil {
+				return err
+			}
+
+			name := filepath.ToSlash(rel[0 : len(rel)-len(ext)])
+			r.parse(name, data)
+			return nil
+		})
+	} else {
+		err = fs.WalkDir(r.opts.fs, r.opts.dir, func(p string, d fs.DirEntry, e error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() {
+				return nil
+			}
+
+			ext := filepath.Ext(p)
+			if !r.match(ext) {
+				return nil
+			}
+
+			rel, err := filepath.Rel(r.opts.dir, p)
+			if err != nil {
+				return err
+			}
+
+			data, err := fs.ReadFile(r.opts.fs, p)
+			if err != nil {
+				return err
+			}
+
+			name := filepath.ToSlash(rel[0 : len(rel)-len(ext)])
+			r.parse(name, data)
+			return nil
+		})
 	}
-	return t, nil
+	return
+}
+
+func (r *Renderer) match(ext string) bool {
+	for _, e := range r.opts.exts {
+		if e == ext {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *Renderer) parse(name string, data []byte) {
+	var tpl *template.Template
+	if r.t == nil {
+		r.t = template.New(name)
+		tpl = r.t
+	} else {
+		tpl = r.t.New(name)
+	}
+	tpl.Funcs(r.opts.fm)
+	template.Must(tpl.Parse(string(data)))
 }

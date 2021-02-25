@@ -9,7 +9,7 @@ import (
 	"github.com/cuigh/auxo/log"
 	"github.com/cuigh/auxo/security"
 	"github.com/cuigh/auxo/security/certify"
-	"github.com/go-ldap/ldap"
+	"github.com/go-ldap/ldap/v3"
 )
 
 const PkgName = "auxo.security.certify.ldap"

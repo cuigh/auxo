@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/CloudyKit/jet"
+	"github.com/CloudyKit/jet/v6"
 	"github.com/cuigh/auxo/test/assert"
 )
 
@@ -22,10 +22,10 @@ func TestEqual(t *testing.T) {
 		//{"", nil, true},
 	}
 
-	set := jet.NewHTMLSet()
+	set := jet.NewSet(jet.NewInMemLoader())
 	set.AddGlobalFunc("eq", equal)
 
-	tpl, err := set.LoadTemplate("test", `{{ if eq(.X, .Y) }}true{{ else }}false{{ end }}`)
+	tpl, err := set.Parse("test", `{{ if eq(.X, .Y) }}true{{ else }}false{{ end }}`)
 	assert.NoError(t, err)
 
 	for _, c := range cases {

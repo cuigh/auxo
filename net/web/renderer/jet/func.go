@@ -3,7 +3,7 @@ package jet
 import (
 	"reflect"
 
-	"github.com/CloudyKit/jet"
+	"github.com/CloudyKit/jet/v6"
 	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/cuigh/auxo/util/cast"
 )
