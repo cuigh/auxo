@@ -4,6 +4,8 @@ import (
 	scontext "context"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"io/fs"
 	slog "log"
 	"net"
 	"net/http"
@@ -237,6 +239,22 @@ func (s *Server) File(path, file string) {
 	})
 }
 
+// FSFile registers a route in order to server a single file of file system.
+func (s *Server) FSFile(path string, fs fs.FS, file string) {
+	s.Get(path, func(c Context) error {
+		f, err := fs.Open(file)
+		if err != nil {
+			return err
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		http.ServeContent(c.Response(), c.Request(), fi.Name(), fi.ModTime(), f.(io.ReadSeeker))
+		return nil
+	})
+}
+
 // FileSystem serves files from a custom file system.
 func (s *Server) FileSystem(prefix string, fs http.FileSystem) {
 	fileServer := http.FileServer(fs)
@@ -247,6 +265,11 @@ func (s *Server) FileSystem(prefix string, fs http.FileSystem) {
 	p := path.Join(prefix, "/*")
 	s.Head(p, handler)
 	s.Get(p, handler)
+}
+
+// FS serves files from a file system.
+func (s *Server) FS(prefix string, f fs.FS) {
+	s.FileSystem(prefix, http.FS(f))
 }
 
 func (s *Server) register(method, path string, handler HandlerFunc, opts ...HandlerOption) {
