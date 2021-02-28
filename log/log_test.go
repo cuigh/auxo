@@ -34,6 +34,15 @@ func TestTextLayout(t *testing.T) {
 	l.Error("error")
 }
 
+func TestNsqLogger(t *testing.T) {
+	l := log.Get("auxo.mq.nsq")
+	assert.NotNil(t, l)
+
+	l.Debug("debug")
+	l.Info("info")
+	l.Warn("warn")
+	l.Error("error")
+}
 func TestFileLogger(t *testing.T) {
 	l := log.Get("test")
 	for i := 0; i < 100; i++ {
