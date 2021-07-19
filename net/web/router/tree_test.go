@@ -302,6 +302,7 @@ func TestTree_Add(t *testing.T) {
 		{http.MethodGet, "/user/:id/edit", true},
 		{http.MethodGet, "/doc/*doc", false},
 		{http.MethodPost, "/doc/*name", true},
+		{http.MethodPost, "/doc/rpc/*name", false},
 	}
 
 	tree := router.New(router.Options{})
@@ -360,7 +361,10 @@ func TestTree_Find(t *testing.T) {
 
 	tree := router.New(router.Options{})
 	for _, c := range cases {
-		tree.Add(http.MethodGet, c.Route, placeholder)
+		_, err := tree.Add(http.MethodGet, c.Route, placeholder)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	tree.Print(os.Stdout)
 
@@ -386,7 +390,10 @@ func TestTree_Find(t *testing.T) {
 
 func TestTree_Walk(t *testing.T) {
 	tree := router.New(router.Options{})
-	tree.Add(http.MethodGet, "/", placeholder)
+	_,err:=tree.Add(http.MethodGet, "/", placeholder)
+	if err != nil {
+		t.Fatal(err)
+	}
 	i := 0
 	tree.Walk(func(r router.Route, m string) {
 		i++
@@ -452,7 +459,7 @@ func BenchmarkFindParam(b *testing.B) {
 	}
 }
 
-func buildGithubRoute(t assert.Tester) *router.Tree {
+func buildGithubRoute(t testing.TB) *router.Tree {
 	tree := router.New(router.Options{})
 	for _, api := range githubAPI {
 		_, err := tree.Add(api.Method, api.Path, placeholder)

@@ -187,6 +187,10 @@ func (n *node) find(method, path string, paramValues []string, paramIndex int) (
 			r, tsr1 = c.find(method, path[len(c.text):], paramValues, paramIndex)
 		} else if lp == ln {
 			r = c.getRoute(method)
+			if r == nil && c.any != nil {
+				paramValues[paramIndex] = ""
+				return c.any.getRoute(method), false
+			}
 		} else {
 			tsr1 = ln == lp+1 && c.text[i] == '/' && c.routes != nil
 		}
