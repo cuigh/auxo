@@ -48,7 +48,7 @@ type Requester interface {
 	// P returns path parameter by name, it's an alias of Path method.
 	P(name string) string
 
-	// ParamNames returns path parameter names.
+	// PathNames returns path parameter names.
 	PathNames() []string
 
 	// SetPathNames sets path parameter names.
@@ -167,7 +167,7 @@ type Context interface {
 	// User returns info of current visitor.
 	User() User
 
-	// User set user info of current visitor. Generally used by authentication filter.
+	// SetUser set user info of current visitor. Generally used by authentication filter.
 	SetUser(user User)
 
 	// Get retrieves data from the context.
@@ -511,7 +511,7 @@ func (c *context) Content(file string, cd ...ContentDisposition) error {
 
 	f, err := os.Open(file)
 	if err != nil {
-		return ErrNotFound
+		return toError(err)
 	}
 	defer f.Close()
 

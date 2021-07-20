@@ -3,9 +3,8 @@ package web
 import (
 	scontext "context"
 	"crypto/tls"
+	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	slog "log"
 	"net"
 	"net/http"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	"github.com/cuigh/auxo/config"
-	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/ext/reflects"
 	"github.com/cuigh/auxo/ext/texts"
 	"github.com/cuigh/auxo/log"
@@ -219,57 +217,17 @@ func (s *Server) handleField(prefix string, t reflect.Type, sf *reflect.StructFi
 	}
 }
 
-// Static serves files from the given file system root.
-func (s *Server) Static(prefix, root string) {
-	//fs := http.StripPrefix(prefix, http.FileServer(http.Dir(root)))
-	handler := func(c Context) error {
-		return c.Content(path.Join(root, c.Path("")))
-		//fs.ServeHTTP(c.Response(), c.Request())
-		//return nil
-	}
+// Static serves static files from a custom file system.
+func (s *Server) Static(prefix string, sys http.FileSystem, fallback string, filters ...Filter) {
 	p := path.Join(prefix, "/*")
-	s.Head(p, handler)
-	s.Get(p, handler)
+	handler := WrapFileSystem(sys, fallback)
+	s.registerInfo(p, newHandlerInfo(handler, nil, filters...), http.MethodGet)
 }
 
-// File registers a route in order to server a single file of the local filesystem.
-func (s *Server) File(path, file string) {
-	s.Get(path, func(c Context) error {
-		return c.Content(file)
-	})
-}
-
-// FSFile registers a route in order to server a single file of file system.
-func (s *Server) FSFile(path string, fs fs.FS, file string) {
-	s.Get(path, func(c Context) error {
-		f, err := fs.Open(file)
-		if err != nil {
-			return err
-		}
-		fi, err := f.Stat()
-		if err != nil {
-			return err
-		}
-		http.ServeContent(c.Response(), c.Request(), fi.Name(), fi.ModTime(), f.(io.ReadSeeker))
-		return nil
-	})
-}
-
-// FileSystem serves files from a custom file system.
-func (s *Server) FileSystem(prefix string, fs http.FileSystem) {
-	fileServer := http.FileServer(fs)
-	handler := func(c Context) error {
-		fileServer.ServeHTTP(c.Response(), c.Request())
-		return nil
-	}
-	p := path.Join(prefix, "/*")
-	s.Head(p, handler)
-	s.Get(p, handler)
-}
-
-// FS serves files from a file system.
-func (s *Server) FS(prefix string, f fs.FS) {
-	s.FileSystem(prefix, http.FS(f))
+// File registers a route in order to server a single file of filesystem.
+func (s *Server) File(path string, fs http.FileSystem, name string, filters ...Filter) {
+	handler := WrapFile(fs, name)
+	s.registerInfo(path, newHandlerInfo(handler, nil, filters...), http.MethodGet)
 }
 
 func (s *Server) register(method, path string, handler HandlerFunc, opts ...HandlerOption) {

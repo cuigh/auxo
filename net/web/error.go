@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"os"
 	"reflect"
 
 	"github.com/cuigh/auxo/data"
@@ -10,10 +11,12 @@ import (
 
 // Errors
 var (
-	ErrUnsupportedMediaType   = NewError(http.StatusUnsupportedMediaType)
-	ErrNotFound               = NewError(http.StatusNotFound)
 	ErrUnauthorized           = NewError(http.StatusUnauthorized)
+	ErrForbidden              = NewError(http.StatusForbidden)
+	ErrNotFound               = NewError(http.StatusNotFound)
 	ErrMethodNotAllowed       = NewError(http.StatusMethodNotAllowed)
+	ErrUnsupportedMediaType   = NewError(http.StatusUnsupportedMediaType)
+	ErrInternalServerError    = NewError(http.StatusInternalServerError)
 	ErrRendererNotRegistered  = errors.New("Renderer not registered")
 	ErrBinderNotRegistered    = errors.New("Binder not registered")
 	ErrValidatorNotRegistered = errors.New("Validator not registered")
@@ -47,6 +50,16 @@ func NewError(code int, msg ...string) *Error {
 		e.Detail = msg[1]
 	}
 	return (*Error)(e)
+}
+
+func toError(err error) *Error {
+	if os.IsNotExist(err) {
+		return ErrNotFound
+	}
+	if os.IsPermission(err) {
+		return ErrForbidden
+	}
+	return ErrInternalServerError
 }
 
 type ErrorHandlerFunc func(Context, error)

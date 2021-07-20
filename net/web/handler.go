@@ -1,10 +1,12 @@
 package web
 
 import (
+	"errors"
+	"fmt"
+	"io/fs"
 	"net/http"
 
 	"github.com/cuigh/auxo/data"
-	"github.com/cuigh/auxo/errors"
 )
 
 var (
@@ -25,6 +27,46 @@ func WrapHandler(h http.Handler) HandlerFunc {
 		h.ServeHTTP(c.Response(), c.Request())
 		return nil
 	}
+}
+
+func WrapFile(fs http.FileSystem, name string) HandlerFunc {
+	return func(c Context) error {
+		// TODO: handle directory
+		f, err := fs.Open(name)
+		if err != nil {
+			return toError(err)
+		}
+		fi, err := f.Stat()
+		if err != nil {
+			return toError(err)
+		}
+		http.ServeContent(c.Response(), c.Request(), fi.Name(), fi.ModTime(), f)
+		return nil
+	}
+}
+
+func WrapFileSystem(sys http.FileSystem, fallback string) HandlerFunc {
+	if fallback != "" {
+		sys = fallbackFileSystem{FileSystem: sys, fallback: fallback}
+	}
+	fileServer := http.FileServer(sys)
+	return func(c Context) error {
+		fileServer.ServeHTTP(c.Response(), c.Request())
+		return nil
+	}
+}
+
+type fallbackFileSystem struct {
+	http.FileSystem
+	fallback string
+}
+
+func (ffs fallbackFileSystem) Open(name string) (http.File, error) {
+	f, err := ffs.FileSystem.Open(name)
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		f, err = ffs.FileSystem.Open(ffs.fallback)
+	}
+	return f, err
 }
 
 // Filter defines a filter interface.
@@ -98,7 +140,7 @@ func (a *AuthorizeMode) Unmarshal(i interface{}) error {
 		*a = parseAuthorizeMode(s, AuthAuthenticated)
 		return nil
 	}
-	return errors.Format("can't convert %v to authorizeMode", i)
+	return fmt.Errorf("can't convert %v to authorizeMode", i)
 }
 
 func (a AuthorizeMode) String() string {

@@ -136,7 +136,6 @@ type Router interface {
 	Match(methods []string, path string, h HandlerFunc, opts ...HandlerOption)
 	Handle(path string, controller interface{}, filters ...Filter)
 
-	Static(prefix, root string)
-	File(path, file string)
-	FileSystem(path string, fs http.FileSystem)
+	Static(prefix string, fs http.FileSystem, fallback string, filters ...Filter)
+	File(path string, fs http.FileSystem, name string, filters ...Filter)
 }

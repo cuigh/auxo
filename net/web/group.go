@@ -89,19 +89,14 @@ func (g *Group) Handle(path string, controller interface{}, filters ...Filter) {
 	g.server.Handle(g.prefix+path, controller, g.mergeFilters(filters)...)
 }
 
-// Static serves files from the given file system root.
-func (g *Group) Static(prefix, root string) {
-	g.server.Static(prefix, root)
+// Static serves static files from a custom file system.
+func (g *Group) Static(prefix string, fs http.FileSystem, fallback string, filters ...Filter) {
+	g.server.Static(g.prefix+prefix, fs, fallback, g.mergeFilters(filters)...)
 }
 
 // File registers a route in order to server a single file of the local filesystem.
-func (g *Group) File(path, file string) {
-	g.server.File(g.prefix+path, file)
-}
-
-// FileSystem serves files from a custom file system.
-func (g *Group) FileSystem(path string, fs http.FileSystem) {
-	g.server.FileSystem(g.prefix+path, fs)
+func (g *Group) File(path string, fs http.FileSystem, name string, filters ...Filter) {
+	g.server.File(g.prefix+path, fs, name, g.mergeFilters(filters)...)
 }
 
 func (g *Group) add(path string, handler HandlerFunc, opts []HandlerOption, methods ...string) {
