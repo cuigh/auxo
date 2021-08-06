@@ -18,7 +18,7 @@ type Context interface {
 	SetContext(ctx ct.Context)
 	// User returns info of current visitor.
 	User() security.User
-	// User set user info of current visitor. Generally used by authentication filter.
+	// SetUser set user info of current visitor. Generally used by authentication filter.
 	SetUser(user security.User)
 }
 

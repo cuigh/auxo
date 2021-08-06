@@ -235,7 +235,7 @@ func TestDB_Transact(t *testing.T) {
 	// Commit
 	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
 		user := &User{ID: 1}
-		tx.Load(user)
+		tx.Load(context.TODO(), user)
 		return nil
 	})
 	assert.NoError(t, err)
@@ -246,7 +246,7 @@ func TestDB_Transact(t *testing.T) {
 			ID:   1,
 			Name: "abc",
 		}
-		tx.Create(user)
+		tx.Create(context.TODO(), user)
 		return gsd.ErrTXCancelled
 	})
 	assert.NoError(t, err)

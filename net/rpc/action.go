@@ -119,7 +119,7 @@ type Action interface {
 	Name() string
 	// In returns input arguments of the action
 	In() []reflect.Type
-	// In returns output arguments of the action
+	// Out returns output arguments of the action
 	Out() []reflect.Type
 	// Context returns true if the first in-arg is `context.Context`
 	Context() bool

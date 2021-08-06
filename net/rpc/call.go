@@ -107,7 +107,7 @@ func newCallPool(n *Node) *callPool {
 	return cp
 }
 
-// acquire a *Call from pool and add it to pending.
+// Acquire takes a *Call from pool and add it to pending.
 func (cp *callPool) Acquire(id uint64) *Call {
 	cp.Lock()
 	c := cp.free
@@ -122,7 +122,7 @@ func (cp *callPool) Acquire(id uint64) *Call {
 	return c
 }
 
-// release a *Call to pool and remove it from pending.
+// Release releases a *Call to pool and remove it from pending.
 func (cp *callPool) Release(c *Call) {
 	if c.released == 0 && atomic.AddUint32(&c.released, 1) == 1 {
 		cp.Lock()
@@ -133,7 +133,7 @@ func (cp *callPool) Release(c *Call) {
 	}
 }
 
-// find pending *Call by id.
+// Find finds pending *Call by id.
 func (cp *callPool) Find(id uint64) (c *Call) {
 	cp.RLock()
 	c = cp.pending[id]
@@ -141,7 +141,7 @@ func (cp *callPool) Find(id uint64) (c *Call) {
 	return
 }
 
-// clear all pending *Calls.
+// Clear removes all pending *Calls.
 func (cp *callPool) Clear(fn func(c *Call)) {
 	cp.Lock()
 	for k, c := range cp.pending {
