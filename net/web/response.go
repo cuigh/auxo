@@ -14,7 +14,6 @@ type ResponseWriter interface {
 	http.ResponseWriter
 	http.Flusher
 	http.Hijacker
-	http.CloseNotifier
 	http.Pusher
 	WriteString(s string) (n int, err error)
 	Committed() bool
@@ -103,14 +102,6 @@ func (r *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		return h.Hijack()
 	}
 	return nil, nil, http.ErrNotSupported
-}
-
-// CloseNotify implements the http.CloseNotifier interface to allow detecting
-// when the underlying connection has gone away.
-// This mechanism can be used to cancel long operations on the server if the
-// client has disconnected before the response is ready.
-func (r *responseWriter) CloseNotify() <-chan bool {
-	return r.ResponseWriter.(http.CloseNotifier).CloseNotify()
 }
 
 func (r *responseWriter) Push(target string, opts *http.PushOptions) error {
