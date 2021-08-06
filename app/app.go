@@ -56,6 +56,13 @@ func Path() string {
 	return p
 }
 
+// Ensure exits program and log err if err is not nil.
+func Ensure(err error) {
+	if err != nil {
+		log.Get(PkgName).Fatal("app > ", err)
+	}
+}
+
 // Run executes program and subscribe exit signals.
 func Run(s Server, signals ...os.Signal) {
 	RunFunc(s.Serve, s.Close, signals...)

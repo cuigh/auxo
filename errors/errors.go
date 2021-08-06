@@ -12,6 +12,13 @@ var (
 	NotSupported   = serrors.New("not supported")
 )
 
+// Panic throws err if err is not nil.
+func Panic(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 type Causer interface {
 	Cause() error
 }
@@ -70,7 +77,7 @@ func Cause(err error) error {
 	return err
 }
 
-// Wrap wrap an error as a new one.
+// Wrap wraps an error as a new one.
 func Wrap(err error, msg string, args ...interface{}) error {
 	e := &wrappedError{
 		cause: err,
