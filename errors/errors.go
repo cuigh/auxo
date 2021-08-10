@@ -12,13 +12,6 @@ var (
 	NotSupported   = serrors.New("not supported")
 )
 
-// Panic throws err if err is not nil.
-func Panic(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 type Causer interface {
 	Cause() error
 }

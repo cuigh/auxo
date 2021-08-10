@@ -1,6 +1,5 @@
 db.mongo:
     test:
-      address: localhost:27017/test
-      pool_size: 100
-      dial_timeout: 5s
-      consistency: Primary
+      address: mongodb://localhost:27017/test
+      max_pool_size: 100
+      min_pool_size: 1

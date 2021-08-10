@@ -9,7 +9,7 @@ import (
 	"github.com/cuigh/auxo/util/lazy"
 )
 
-var global *Container = New()
+var global = New()
 
 // TODO: generic method for golang v1.18
 //func Get[T any]() T {
@@ -89,7 +89,9 @@ func (c *Container) Put(builder interface{}, opts ...Option) {
 	if s.name != "" {
 		c.names[s.name] = s
 	}
-	c.types[t.Out(0)] = s
+	if _, ok := c.types[t.Out(0)]; !ok {
+		c.types[t.Out(0)] = s
+	}
 }
 
 // Call invoke fn with specified services as it's params.
