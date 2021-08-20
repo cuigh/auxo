@@ -16,7 +16,7 @@ func FindFile(name string, exts ...string) string {
 	return m.FindFile(name, exts...)
 }
 
-// FindFile searches all config directories and return all found files.
+// FindFiles searches all config directories and return all found files.
 func FindFiles(name string, exts ...string) []string {
 	return m.FindFiles(name, exts...)
 }
@@ -46,7 +46,7 @@ func BindEnv(key string, envKey string) {
 	m.BindEnv(key, envKey)
 }
 
-// SetProfiles sets active profiles. Profiles are only valid to local file sources.
+// SetProfile sets active profiles. Profiles are only valid to local file sources.
 func SetProfile(profiles ...string) {
 	m.SetProfile(profiles...)
 }
@@ -56,7 +56,7 @@ func SetName(name string) {
 	m.SetName(name)
 }
 
-// AddFolders adds directories to searching list.
+// AddFolder adds directories to searching list.
 func AddFolder(dirs ...string) {
 	m.AddFolder(dirs...)
 }
@@ -86,7 +86,7 @@ func Unmarshal(v interface{}) error {
 	return m.Unmarshal(v)
 }
 
-// Unmarshal exports specific option to struct.
+// UnmarshalOption exports specific option to struct.
 func UnmarshalOption(name string, v interface{}) error {
 	return m.UnmarshalOption(name, v)
 }
@@ -126,27 +126,27 @@ func GetInt64(key string) int64 {
 	return m.GetInt64(key)
 }
 
-// GetInt returns option as uint.
+// GetUint returns option as uint.
 func GetUint(key string) uint {
 	return m.GetUint(key)
 }
 
-// GetInt8 returns option as uint8.
+// GetUint8 returns option as uint8.
 func GetUint8(key string) uint8 {
 	return m.GetUint8(key)
 }
 
-// GetInt16 returns option as uint16.
+// GetUint16 returns option as uint16.
 func GetUint16(key string) uint16 {
 	return m.GetUint16(key)
 }
 
-// GetInt32 returns option as uint32.
+// GetUint32 returns option as uint32.
 func GetUint32(key string) uint32 {
 	return m.GetUint32(key)
 }
 
-// GetInt64 returns option as uint64.
+// GetUint64 returns option as uint64.
 func GetUint64(key string) uint64 {
 	return m.GetUint64(key)
 }

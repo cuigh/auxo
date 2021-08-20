@@ -135,19 +135,6 @@ func Start() {
 		config.BindFlags(cmd.Flags.Inner())
 	}
 
-	// trigger initializers
-	for _, fn := range initializers {
-		if err := fn(); err != nil {
-			panic(err)
-		}
-	}
-	defer func() {
-		// trigger closers
-		for _, fn := range closers {
-			fn()
-		}
-	}()
-
 	ctx := &Context{cmd: cmd}
 	handleCommonFlags(ctx)
 
@@ -157,6 +144,20 @@ func Start() {
 		fmt.Println("\tVERSION " + auxo.Version)
 		fmt.Println()
 	}
+
+	// trigger initializers
+	for _, fn := range initializers {
+		if err := fn(); err != nil {
+			panic(err)
+		}
+	}
+
+	defer func() {
+		// trigger closers
+		for _, fn := range closers {
+			fn()
+		}
+	}()
 
 	if cmd.Action != nil {
 		if err := cmd.Action(ctx); err != nil {

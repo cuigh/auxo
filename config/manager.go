@@ -73,7 +73,7 @@ func (m *Manager) FindFile(name string, exts ...string) string {
 	return ""
 }
 
-// FindFile searches all config directories and return all found files.
+// FindFiles searches all config directories and return all found files.
 func (m *Manager) FindFiles(name string, exts ...string) []string {
 	var list []string
 	for _, dir := range m.dirs {
@@ -125,7 +125,7 @@ func (m *Manager) BindEnv(key string, envKey string) {
 	m.env.SetAlias(key, envKey)
 }
 
-// SetProfiles sets active profiles. Profiles are only valid to local file sources.
+// SetProfile sets active profiles. Profiles are only valid to local file sources.
 func (m *Manager) SetProfile(profiles ...string) {
 	m.profiles = profiles
 }
@@ -135,7 +135,7 @@ func (m *Manager) SetName(name string) {
 	m.name = name
 }
 
-// AddFolders adds directories to searching list.
+// AddFolder adds directories to searching list.
 func (m *Manager) AddFolder(dirs ...string) {
 	m.dirs = append(m.dirs, dirs...)
 }
