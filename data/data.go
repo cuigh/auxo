@@ -151,12 +151,12 @@ func (c Chan) WriteOnly() WriteChan {
 	return (chan struct{})(c)
 }
 
-// Send send a notification to channel. It blocks if channel is full.
+// Send sends a notification to channel. It blocks if channel is full.
 func (c Chan) Send() {
 	c <- Empty
 }
 
-// Send send a notification to channel. It returns false if channel is full.
+// TrySend sends a notification to channel. It returns false if channel is full.
 func (c Chan) TrySend() bool {
 	select {
 	case c <- Empty:
@@ -166,12 +166,12 @@ func (c Chan) TrySend() bool {
 	}
 }
 
-// Receive receive a notification from channel. It blocks if channel is empty.
+// Receive receives a notification from channel. It blocks if channel is empty.
 func (c Chan) Receive() {
 	<-c
 }
 
-// Receive receive a notification from channel. It returns false if channel is empty.
+// TryReceive receives a notification from channel. It returns false if channel is empty.
 func (c Chan) TryReceive() bool {
 	select {
 	case <-c:
@@ -184,12 +184,12 @@ func (c Chan) TryReceive() bool {
 // ReadChan is a receive-only notification channel
 type ReadChan <-chan struct{}
 
-// Receive receive a notification from channel. It blocks if channel is empty.
+// Receive receives a notification from channel. It blocks if channel is empty.
 func (c ReadChan) Receive() {
 	<-c
 }
 
-// Receive receive a notification from channel. It returns false if channel is empty.
+// TryReceive receives a notification from channel. It returns false if channel is empty.
 func (c ReadChan) TryReceive() bool {
 	select {
 	case <-c:
@@ -202,12 +202,12 @@ func (c ReadChan) TryReceive() bool {
 // WriteChan is a send-only notification channel
 type WriteChan chan<- struct{}
 
-// Send send a notification to channel. It blocks if channel is full.
+// Send sends a notification to channel. It blocks if channel is full.
 func (c WriteChan) Send() {
 	c <- Empty
 }
 
-// Send send a notification to channel. It returns false if channel is full.
+// TrySend sends a notification to channel. It returns false if channel is full.
 func (c WriteChan) TrySend() bool {
 	select {
 	case c <- Empty:

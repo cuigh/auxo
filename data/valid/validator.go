@@ -81,6 +81,11 @@ func (v *Validator) Validate(i interface{}) error {
 	ctx := &Context{messages: messages}
 	sv := reflects.StructOf(value)
 	return sv.VisitFields(func(fv reflect.Value, fi *reflect.StructField) error {
+		// ignore unexported fields.
+		if fi.PkgPath != "" {
+			return nil
+		}
+
 		rules, err := v.parseRules(fi.Tag.Get(key))
 		if err != nil {
 			return err
