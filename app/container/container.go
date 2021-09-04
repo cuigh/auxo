@@ -105,7 +105,7 @@ func (c *Container) Call(fn interface{}) error {
 	results, err := c.call(t, v)
 	if err != nil {
 		return err
-	} else if len(results) > 0 && results[0].Type() == reflects.TypeError {
+	} else if len(results) > 0 && results[0].Type() == reflects.TypeError && !results[0].IsNil(){
 		return results[0].Interface().(error)
 	}
 	return nil
