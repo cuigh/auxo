@@ -33,13 +33,16 @@ func Days(n int32) time.Duration {
 	return Day * time.Duration(n)
 }
 
+func Weeks(n int32) time.Duration {
+	return Week * time.Duration(n)
+}
+
 func Date(t time.Time) time.Time {
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 }
 
 func Today() time.Time {
-	now := time.Now()
-	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
+	return Date(time.Now())
 }
 
 func Yesterday() time.Time {
@@ -48,6 +51,14 @@ func Yesterday() time.Time {
 
 func Tomorrow() time.Time {
 	return Today().AddDate(0, 0, 1)
+}
+
+func FromUnixMilli(ms int64) time.Time {
+	return time.Unix(ms/1e3, (ms%1000)*1e6)
+}
+
+func ToUnixMilli(t time.Time) int64 {
+	return t.Unix()*1000 + int64(t.Nanosecond())/1e6
 }
 
 //type field struct {
