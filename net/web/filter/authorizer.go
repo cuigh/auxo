@@ -68,7 +68,7 @@ func (a *Authorizer) Apply(next web.HandlerFunc) web.HandlerFunc {
 			return ctx.Redirect(u.String())
 		}
 
-		if auth == web.AuthExplicit && !a.Checker(user, ctx.Handler()) {
+		if auth != web.AuthAuthenticated && !a.Checker(user, ctx.Handler()) {
 			return web.NewError(http.StatusForbidden, a.ForbiddenMsg)
 		}
 		return next(ctx)

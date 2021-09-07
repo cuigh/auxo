@@ -22,7 +22,7 @@ type Entry struct {
 	}
 }
 
-// Entry represents the options of Server.
+// Options represents the options of Server.
 type Options struct {
 	// Name is used as HTTP `Server` header, default is auxo/[auxo.Version]
 	Name                  string
@@ -36,8 +36,8 @@ type Options struct {
 	IdleTimeout           time.Duration
 	MaxHeaderSize         size.Size
 	MaxBodySize           size.Size
-	Authorize             AuthorizeMode // default authorize mode
-	IndexPages            []string      // static index pages, default: index.html
+	Authorize             string   // default authorize
+	IndexPages            []string // static index pages, default: index.html
 	//IndexUrl              string
 	//LoginUrl              string
 	//UnauthorizedUrl       string

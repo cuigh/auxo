@@ -2,7 +2,6 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 
@@ -110,54 +109,19 @@ func (h HandlerFunc) Chain(filters ...Filter) HandlerFunc {
 type HandlerInfo interface {
 	Action() HandlerFunc
 	Name() string
-	Authorize() AuthorizeMode
+	Authorize() string
 	Option(name string) string
 }
 
 const (
-	AuthAnonymous     AuthorizeMode = iota // everyone
-	AuthAuthenticated                      // all logged-in user
-	AuthExplicit                           // must be explicit granted
+	AuthAnonymous     = "*" // everyone
+	AuthAuthenticated = "?" // logged-in users
 )
-
-type AuthorizeMode uint8
-
-func parseAuthorizeMode(s string, def AuthorizeMode) AuthorizeMode {
-	switch s {
-	case "?", "authenticated":
-		return AuthAuthenticated
-	case "!", "explicit":
-		return AuthExplicit
-	case "*", "anonymous":
-		return AuthAnonymous
-	default:
-		return def
-	}
-}
-
-func (a *AuthorizeMode) Unmarshal(i interface{}) error {
-	if s, ok := i.(string); ok {
-		*a = parseAuthorizeMode(s, AuthAuthenticated)
-		return nil
-	}
-	return fmt.Errorf("can't convert %v to authorizeMode", i)
-}
-
-func (a AuthorizeMode) String() string {
-	switch a {
-	case AuthAuthenticated:
-		return "authenticated"
-	case AuthExplicit:
-		return "explicit"
-	default:
-		return "anonymous"
-	}
-}
 
 type handlerInfo struct {
 	action    HandlerFunc
 	name      string
-	authorize AuthorizeMode
+	authorize string
 	options   data.Options
 }
 
@@ -180,7 +144,7 @@ func (h *handlerInfo) Name() string {
 	return h.name
 }
 
-func (h *handlerInfo) Authorize() AuthorizeMode {
+func (h *handlerInfo) Authorize() string {
 	return h.authorize
 }
 
@@ -214,9 +178,9 @@ func WithFilterFunc(filters ...FilterFunc) HandlerOption {
 	}
 }
 
-func WithAuthorize(mode AuthorizeMode) HandlerOption {
+func WithAuthorize(authorize string) HandlerOption {
 	return func(info *handlerInfo) {
-		info.authorize = mode
+		info.authorize = authorize
 	}
 }
 

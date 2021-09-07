@@ -195,12 +195,15 @@ func (s *Server) handleField(prefix string, t reflect.Type, sf *reflect.StructFi
 		case "path", "p":
 			p = v
 		case "authorize", "auth", "a":
-			info.authorize = parseAuthorizeMode(v, s.cfg.Authorize)
+			info.authorize = v
 		case "method", "m":
 			methods = strings.Split(strings.ToUpper(v), ",")
 		default:
 			info.addOption(k, v)
 		}
+	}
+	if info.authorize == "" {
+		info.authorize = s.cfg.Authorize
 	}
 
 	if info.name == "" {
