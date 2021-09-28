@@ -8,6 +8,7 @@ import (
 	"github.com/cuigh/auxo/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
 func MustOpen(name string) *mongo.Database {
@@ -19,7 +20,9 @@ func MustOpen(name string) *mongo.Database {
 }
 
 func Open(name string) (*mongo.Database, error) {
+	db := name
 	opts := &options.ClientOptions{}
+
 	err := config.UnmarshalOption("db.mongo."+name, opts)
 	if err != nil {
 		return nil, err
@@ -27,6 +30,9 @@ func Open(name string) (*mongo.Database, error) {
 
 	if addr := config.GetString("db.mongo." + name + ".address"); addr != "" {
 		opts.ApplyURI(addr)
+		if cs, err := connstring.Parse(addr); err == nil && cs.Database != "" {
+			db = cs.Database
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -37,5 +43,5 @@ func Open(name string) (*mongo.Database, error) {
 		panic(err)
 	}
 
-	return client.Database(name), nil
+	return client.Database(db), nil
 }

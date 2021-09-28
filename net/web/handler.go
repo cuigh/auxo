@@ -116,6 +116,7 @@ type HandlerInfo interface {
 const (
 	AuthAnonymous     = "*" // everyone
 	AuthAuthenticated = "?" // logged-in users
+	AuthAdministrator = "!" // administrators
 )
 
 type handlerInfo struct {
