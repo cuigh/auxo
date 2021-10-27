@@ -24,6 +24,10 @@ func TryFind(name string) (interface{}, error) {
 	return global.TryFind(name)
 }
 
+func Range(fn func(name string, service interface{}) bool) {
+	global.Range(fn)
+}
+
 func Put(builder interface{}, opts ...Option) {
 	global.Put(builder, opts...)
 }
@@ -66,6 +70,19 @@ func (c *Container) Find(name string) interface{} {
 	return s
 }
 
+// Range calls fn sequentially for each service present in the map. If fn returns false, range stops the iteration.
+func (c *Container) Range(fn func(name string, service interface{}) bool) {
+	for n, s := range c.names {
+		i, err := s.instance(c)
+		if err != nil {
+			panic(err)
+		}
+		if !fn(n, i) {
+			return
+		}
+	}
+}
+
 // Put registers the service to container.
 func (c *Container) Put(builder interface{}, opts ...Option) {
 	t := reflect.TypeOf(builder)
@@ -105,7 +122,7 @@ func (c *Container) Call(fn interface{}) error {
 	results, err := c.call(t, v)
 	if err != nil {
 		return err
-	} else if len(results) > 0 && results[0].Type() == reflects.TypeError && !results[0].IsNil(){
+	} else if len(results) > 0 && results[0].Type() == reflects.TypeError && !results[0].IsNil() {
 		return results[0].Interface().(error)
 	}
 	return nil

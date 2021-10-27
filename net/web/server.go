@@ -463,7 +463,7 @@ func (s *Server) printRoutes() {
 	})
 }
 
-// Shutdown gracefully shutdown the internal HTTP servers with timeout.
+// Close gracefully shutdown the internal HTTP servers with timeout.
 func (s *Server) Close(timeout time.Duration) {
 	if timeout <= 0 {
 		for _, server := range s.servers {
