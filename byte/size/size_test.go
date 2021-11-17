@@ -1,9 +1,8 @@
 package size
 
 import (
-	"testing"
-
 	"encoding/json"
+	"testing"
 
 	"github.com/cuigh/auxo/test/assert"
 )
@@ -67,14 +66,5 @@ func TestSizeUnmarshalJSON(t *testing.T) {
 	var s Size
 	err := json.Unmarshal([]byte(input), &s)
 	assert.NoError(t, err)
-	assert.Equal(t, expected, s)
-}
-
-func TestSizeUnmarshalOption(t *testing.T) {
-	const input = "2 K"
-	const expected = Size(2048)
-
-	var s Size
-	s.UnmarshalOption(input)
 	assert.Equal(t, expected, s)
 }

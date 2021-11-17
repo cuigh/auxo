@@ -8,7 +8,7 @@ import (
 	"github.com/cuigh/auxo/errors"
 )
 
-// Size represents human readable bytes.
+// Size represents human-readable bytes.
 type Size uint64
 
 const (
@@ -35,8 +35,8 @@ var (
 	}
 )
 
-// Parse parses human readable bytes string to Size.
-// For example, 1K/1KB(or 1 KB) will return 1024 bytes.
+// Parse parses human-readable bytes string to Size.
+// For example, 1 K/1 KB(or 1K) will return 1024 bytes.
 func Parse(value string) (s Size, err error) {
 	var (
 		i    int
@@ -77,8 +77,8 @@ func Parse(value string) (s Size, err error) {
 	return
 }
 
-// String formats Size to human readable string with specified options.
-// For example, 1024 bytes will return 1KB.
+// Format formats Size to human-readable string with specified options.
+// For example, 1024 bytes will return 1 KB.
 func (s Size) Format(opts Options) string {
 	var (
 		unit  string
@@ -133,7 +133,7 @@ func (s Size) Format(opts Options) string {
 	return ss + unit
 }
 
-// String formats Size to human readable string with default options.
+// String formats Size to human-readable string with default options.
 // For example, 1024 bytes will return '1 KB'.
 func (s Size) String() string {
 	return s.Format(defaultOpts)
