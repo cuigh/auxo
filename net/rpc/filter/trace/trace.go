@@ -52,6 +52,7 @@ func Client() rpc.CFilter {
 		return func(c *rpc.Call) (err error) {
 			req := c.Request()
 			span := tracer.StartChildFromContext(c.Context(), req.Head.Service+"."+req.Head.Method)
+			span.SetTag("rpc.server", c.Server())
 			ext.SpanKindRPCClient.Set(span)
 			ext.Component.Set(span, component)
 			tracer.Inject(span.Context(), trace.TextMap, (*rpcLabels)(&req.Head.Labels))

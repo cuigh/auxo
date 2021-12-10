@@ -16,7 +16,6 @@ const PkgName = "auxo.security.certify.ldap"
 
 type User struct {
 	id        string
-	loginName string
 	name      string
 	email     string
 }
@@ -25,20 +24,28 @@ func (u *User) ID() string {
 	return u.id
 }
 
+func (u *User) SetID(id string) {
+	u.id = id
+}
+
 func (u *User) Name() string {
 	return u.name
+}
+
+func (u *User) SetName(name string) {
+	u.name = name
 }
 
 func (u *User) Anonymous() bool {
 	return u.id == ""
 }
 
-func (u *User) LoginName() string {
-	return u.loginName
-}
-
 func (u *User) Email() string {
 	return u.email
+}
+
+func (u *User) SetEmail(email string) {
+	u.email = email
 }
 
 type SecurityPolicy int32
@@ -174,7 +181,6 @@ func (r *Realm) Login(token certify.Token) (security.User, error) {
 	}
 
 	return &User{
-		loginName: st.Name(),
 		name:      entry.GetAttributeValue(r.nameAttr),
 		email:     entry.GetAttributeValue(r.emailAttr),
 	}, nil
