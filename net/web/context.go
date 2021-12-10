@@ -124,6 +124,8 @@ type Responser interface {
 	// JSONP sends a JSONP response. It uses `callback` to construct the JSONP payload.
 	JSONP(callback string, i interface{}) error
 
+	Result(code int32, info string, data interface{}) error
+
 	// XML sends an XML response.
 	XML(i interface{}, indent ...string) error
 
@@ -464,6 +466,19 @@ func (c *context) JSONP(callback string, i interface{}) error {
 	}
 	_, err = c.response.Write([]byte(");"))
 	return err
+}
+
+func (c *context) Result(code int32, info string, data interface{}) error {
+	m := map[string]interface{}{
+		"code": code,
+	}
+	if info != "" {
+		m["info"] = info
+	}
+	if data != nil {
+		m["data"] = data
+	}
+	return c.JSON(m)
 }
 
 func (c *context) XML(i interface{}, indent ...string) (err error) {
