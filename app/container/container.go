@@ -91,7 +91,7 @@ func (c *Container) Put(builder interface{}, opts ...Option) {
 		panic("container: builder must be a function with one return value")
 	}
 
-	s := &service{t: t, v: v}
+	s := &service{t: t, v: v, singleton: true}
 	for _, opt := range opts {
 		opt(s)
 	}
