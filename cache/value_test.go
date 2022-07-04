@@ -1,10 +1,9 @@
 package cache_test
 
 import (
+	"errors"
 	"testing"
 	"time"
-
-	"errors"
 
 	"github.com/cuigh/auxo/cache"
 	"github.com/cuigh/auxo/test/assert"
@@ -12,14 +11,14 @@ import (
 
 func TestValue(t *testing.T) {
 	i := 0
-	v := cache.Value{
+	v := cache.Value[int]{
 		TTL: 100 * time.Millisecond,
-		Load: func() (interface{}, error) {
+		Load: func() (int, error) {
 			if i == 0 {
 				i++
-				return &struct{}{}, nil
+				return i, nil
 			}
-			return nil, errors.New("mock error")
+			return 0, errors.New("mock error")
 		},
 	}
 
@@ -31,7 +30,7 @@ func TestValue(t *testing.T) {
 
 	value, err = v.Get()
 	assert.Error(t, err)
-	assert.Nil(t, value)
+	assert.Equal(t, 0, value)
 
 	value, err = v.Get(true)
 	assert.NoError(t, err)

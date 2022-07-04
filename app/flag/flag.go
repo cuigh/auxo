@@ -34,9 +34,9 @@ const (
 type UsageStyle int32
 
 const (
-	// Compact: left-right style
+	// Compact is left-right style
 	Compact UsageStyle = iota
-	// Manual: up-down style
+	// Manual is up-down style
 	Manual
 )
 
@@ -55,6 +55,10 @@ var Default = Wrap(flag.CommandLine, "")
 // Register adds common flags like help/version/profile/config etc.
 func Register(f CommonFlag) {
 	Default.Register(f)
+}
+
+func Var(v flag.Value, full, short string, usage string) {
+	Default.Var(v, full, short, usage)
 }
 
 func Bool(full, short string, value bool, usage string) *bool {
@@ -136,6 +140,17 @@ type Flag struct {
 	Usage     string
 }
 
+type StringList []string
+
+func (l *StringList) String() string {
+	return fmt.Sprint(*l)
+}
+
+func (l *StringList) Set(value string) error {
+	*l = append(*l, value)
+	return nil
+}
+
 func (f *Flag) usageTitle() string {
 	var name string
 	if f.FullName != "" && f.ShortName != "" {
@@ -170,6 +185,16 @@ func Wrap(fs *flag.FlagSet, desc string) *Set {
 	}
 	f.inner.Usage = f.Usage
 	return f
+}
+
+func (s *Set) Var(v flag.Value, full, short string, usage string) {
+	s.addFlag(full, short, nil, usage)
+	if full != "" {
+		s.inner.Var(v, full, usage)
+	}
+	if short != "" {
+		s.inner.Var(v, short, usage)
+	}
 }
 
 func (s *Set) String(full, short, value, usage string) *string {

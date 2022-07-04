@@ -1,4 +1,4 @@
-package container
+package ioc
 
 import (
 	"reflect"
@@ -16,27 +16,32 @@ var global = New()
 //	return global.Get[T]()
 //}
 
-func Find(name string) interface{} {
-	return global.Find(name)
+func Find[T any](name string) T {
+	return global.Find(name).(T)
 }
 
-func TryFind(name string) (interface{}, error) {
-	return global.TryFind(name)
+func TryFind[T any](name string) (t T, err error) {
+	var s any
+	s, err = global.TryFind(name)
+	if err == nil {
+		t = s.(T)
+	}
+	return
 }
 
-func Range(fn func(name string, service interface{}) bool) {
+func Range(fn func(name string, service any) bool) {
 	global.Range(fn)
 }
 
-func Put(builder interface{}, opts ...Option) {
+func Put(builder any, opts ...Option) {
 	global.Put(builder, opts...)
 }
 
-func Call(fn interface{}) (err error) {
+func Call(fn any) (err error) {
 	return global.Call(fn)
 }
 
-func Bind(target interface{}) (err error) {
+func Bind(target any) (err error) {
 	return global.Bind(target)
 }
 
@@ -53,7 +58,7 @@ func New() *Container {
 }
 
 // TryFind returns the service instance with the specified name.
-func (c *Container) TryFind(name string) (interface{}, error) {
+func (c *Container) TryFind(name string) (any, error) {
 	s, ok := c.names[name]
 	if !ok {
 		return nil, errors.Format("container: service '%s' not registered", name)
@@ -62,7 +67,7 @@ func (c *Container) TryFind(name string) (interface{}, error) {
 }
 
 // Find returns the service instance with the specified name.
-func (c *Container) Find(name string) interface{} {
+func (c *Container) Find(name string) any {
 	s, err := c.TryFind(name)
 	if err != nil {
 		panic(err)
@@ -71,7 +76,7 @@ func (c *Container) Find(name string) interface{} {
 }
 
 // Range calls fn sequentially for each service present in the map. If fn returns false, range stops the iteration.
-func (c *Container) Range(fn func(name string, service interface{}) bool) {
+func (c *Container) Range(fn func(name string, service any) bool) {
 	for n, s := range c.names {
 		i, err := s.instance(c)
 		if err != nil {
@@ -84,7 +89,7 @@ func (c *Container) Range(fn func(name string, service interface{}) bool) {
 }
 
 // Put registers the service to container.
-func (c *Container) Put(builder interface{}, opts ...Option) {
+func (c *Container) Put(builder any, opts ...Option) {
 	t := reflect.TypeOf(builder)
 	v := reflect.ValueOf(builder)
 	if t.Kind() != reflect.Func || t.NumOut() != 1 || v.IsNil() {
@@ -97,7 +102,7 @@ func (c *Container) Put(builder interface{}, opts ...Option) {
 	}
 	if s.singleton {
 		s.value = &lazy.Value{
-			New: func() (interface{}, error) {
+			New: func() (any, error) {
 				return s.build(c)
 			},
 		}
@@ -112,7 +117,7 @@ func (c *Container) Put(builder interface{}, opts ...Option) {
 }
 
 // Call invoke fn with specified services as it's params.
-func (c *Container) Call(fn interface{}) error {
+func (c *Container) Call(fn any) error {
 	v := reflect.ValueOf(fn)
 	t := reflect.TypeOf(fn)
 	if v.IsNil() || t.Kind() != reflect.Func {
@@ -142,7 +147,7 @@ func (c *Container) call(t reflect.Type, v reflect.Value) ([]reflect.Value, erro
 }
 
 // Bind fills struct fields with specific services.
-func (c *Container) Bind(target interface{}) error {
+func (c *Container) Bind(target any) error {
 	targetType := reflect.TypeOf(target)
 	if targetType.Kind() == reflect.Ptr {
 		elem := targetType.Elem()
@@ -157,7 +162,7 @@ func (c *Container) Bind(target interface{}) error {
 
 				var (
 					f   = targetValue.Field(i)
-					svc interface{}
+					svc any
 					err error
 				)
 				switch tag {
@@ -183,7 +188,7 @@ func (c *Container) Bind(target interface{}) error {
 	return errors.New("container: target must be a pointer of structure")
 }
 
-func (c *Container) get(t reflect.Type) (interface{}, error) {
+func (c *Container) get(t reflect.Type) (any, error) {
 	if s := c.types[t]; s != nil {
 		return s.instance(c)
 	}
@@ -197,17 +202,18 @@ type service struct {
 
 	// options
 	name      string
+	group     string
 	singleton bool
 }
 
-func (s *service) instance(c *Container) (interface{}, error) {
+func (s *service) instance(c *Container) (any, error) {
 	if s.singleton {
 		return s.value.Get()
 	}
 	return s.build(c)
 }
 
-func (s *service) build(c *Container) (interface{}, error) {
+func (s *service) build(c *Container) (any, error) {
 	results, err := c.call(s.t, s.v)
 	if err != nil {
 		return nil, err
@@ -221,6 +227,13 @@ type Option func(opts *service)
 func Name(name string) Option {
 	return func(opts *service) {
 		opts.name = name
+	}
+}
+
+// Group set service's group.
+func Group(group string) Option {
+	return func(opts *service) {
+		opts.group = group
 	}
 }
 

@@ -6,25 +6,25 @@ import (
 )
 
 // Value is a simple auto refresh cache hold.
-type Value struct {
+type Value[T any] struct {
 	locker sync.Mutex
 	value  interface{}
 	next   time.Time
 	TTL    time.Duration
-	Load   func() (interface{}, error)
+	Load   func() (T, error)
 }
 
 // Get return cached value, it will return expired value if dirty is true and loading failed.
-func (v *Value) Get(dirty ...bool) (value interface{}, err error) {
+func (v *Value[T]) Get(dirty ...bool) (value T, err error) {
 	if v.value != nil && time.Now().Before(v.next) {
-		return v.value, nil
+		return v.value.(T), nil
 	}
 
 	v.locker.Lock()
 	defer v.locker.Unlock()
 
 	if v.value != nil && time.Now().Before(v.next) {
-		return v.value, nil
+		return v.value.(T), nil
 	}
 
 	value, err = v.Load()
@@ -36,14 +36,14 @@ func (v *Value) Get(dirty ...bool) (value interface{}, err error) {
 		v.value, v.next = value, time.Now().Add(ttl)
 	} else {
 		if v.value != nil && (len(dirty) > 0 && dirty[0]) {
-			return v.value, nil
+			return v.value.(T), nil
 		}
 	}
 	return
 }
 
 // MustGet return cached value, it panics if error occurs.
-func (v *Value) MustGet(dirty ...bool) (value interface{}) {
+func (v *Value[T]) MustGet(dirty ...bool) (value T) {
 	value, err := v.Get(dirty...)
 	if err != nil {
 		panic(err)
@@ -52,6 +52,6 @@ func (v *Value) MustGet(dirty ...bool) (value interface{}) {
 }
 
 // Reset clears internal cache value.
-func (v *Value) Reset() {
+func (v *Value[T]) Reset() {
 	v.value = nil
 }
