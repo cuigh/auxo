@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/abronan/valkeyrie"
 	"github.com/abronan/valkeyrie/store"
 	"github.com/cuigh/auxo/data"
@@ -15,7 +16,6 @@ import (
 	"github.com/cuigh/auxo/net/transport"
 	"github.com/cuigh/auxo/util/cast"
 	"github.com/cuigh/auxo/util/run"
-	"github.com/cuigh/auxo/util/semver"
 )
 
 const PkgName = "auxo.net.rpc.resolver.valkeyrie"

@@ -1,7 +1,6 @@
 package web
 
 import (
-	ctx "context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -14,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/cuigh/auxo/data"
 	"github.com/cuigh/auxo/log"
@@ -194,8 +192,6 @@ type Context interface {
 	Requester
 
 	Responser
-
-	ctx.Context
 }
 
 type context struct {
@@ -209,22 +205,6 @@ type context struct {
 	user       User
 	data       data.Map
 	server     *Server
-}
-
-func (c *context) Deadline() (deadline time.Time, ok bool) {
-	return c.request.Context().Deadline()
-}
-
-func (c *context) Done() <-chan struct{} {
-	return c.request.Context().Done()
-}
-
-func (c *context) Err() error {
-	return c.request.Context().Err()
-}
-
-func (c *context) Value(key interface{}) interface{} {
-	return c.request.Context().Value(key)
 }
 
 func (c *context) Request() *http.Request {

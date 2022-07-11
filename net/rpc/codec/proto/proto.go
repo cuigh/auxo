@@ -10,7 +10,7 @@ import (
 	"github.com/cuigh/auxo/errors"
 	"github.com/cuigh/auxo/net/rpc"
 	"github.com/cuigh/auxo/util/cast"
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -38,8 +38,6 @@ type ClientCodec struct {
 	rpc.Stream
 	req        *Request
 	resp       *Response
-	sendBuf    *proto.Buffer
-	receiveBuf *proto.Buffer
 	bufPool    *buffer.GroupPool
 	maxMsgSize int
 	lock       sync.Mutex // protect for writing
@@ -49,9 +47,9 @@ func (c *ClientCodec) Encode(req *rpc.Request) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.req.ID = req.Head.ID
-	c.req.Service = req.Head.Service
-	c.req.Method = req.Head.Method
+	c.req.ID = &req.Head.ID
+	c.req.Service = &req.Head.Service
+	c.req.Method = &req.Head.Method
 	if l := len(req.Args); l > 0 {
 		c.req.Args = make([][]byte, l)
 		for i, arg := range req.Args {
@@ -65,14 +63,18 @@ func (c *ClientCodec) Encode(req *rpc.Request) (err error) {
 	if l := len(req.Head.Labels); l > 0 {
 		c.req.Labels = make([]*Label, l)
 		for i, label := range req.Head.Labels {
-			c.req.Labels[i] = (*Label)(&label)
+			c.req.Labels[i] = &Label{
+				Name:  label.Name,
+				Value: label.Value,
+			}
 		}
 	}
-	err = c.sendBuf.Marshal(c.req)
+
+	var d []byte
+	d, err = proto.Marshal(c.req)
 	if err == nil {
-		err = c.write(c.sendBuf.Bytes())
+		c.write(d)
 	}
-	c.sendBuf.Reset()
 	return err
 }
 
@@ -113,16 +115,13 @@ func (c *ClientCodec) DecodeHead(head *rpc.ResponseHead) error {
 	}
 
 	// unmarshal message
-	c.receiveBuf.SetBuf(buf)
 	c.resp.reset()
-	err = c.receiveBuf.Unmarshal(c.resp)
+	err = proto.Unmarshal(buf, c.resp)
 	c.bufPool.Put(b)
-	if err != nil {
-		return err
+	if err == nil {
+		head.ID = *c.resp.ID
 	}
-
-	head.ID = c.resp.ID
-	return nil
+	return err
 }
 
 func (c *ClientCodec) DecodeResult(result *rpc.Result) (err error) {
@@ -132,7 +131,11 @@ func (c *ClientCodec) DecodeResult(result *rpc.Result) (err error) {
 			err = proto.Unmarshal(c.resp.Result, result.Value.(proto.Message))
 		}
 	} else {
-		result.Error = (*errors.CodedError)(c.resp.Error)
+		result.Error = &errors.CodedError{
+			Code:    c.resp.Error.GetCode(),
+			Message: c.resp.Error.GetMessage(),
+			Detail:  c.resp.Error.GetDetail(),
+		}
 	}
 	return
 }
@@ -145,8 +148,6 @@ type ServerCodec struct {
 	rpc.Stream
 	req        *Request
 	resp       *Response
-	sendBuf    *proto.Buffer
-	receiveBuf *proto.Buffer
 	bufPool    *buffer.GroupPool
 	maxMsgSize int
 	lock       sync.Mutex // protect for writing
@@ -156,7 +157,7 @@ func (c *ServerCodec) Encode(resp *rpc.Response) (err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.resp.ID = resp.Head.ID
+	c.resp.ID = &resp.Head.ID
 	if resp.Result.Error == nil {
 		d, err := proto.Marshal(resp.Result.Value.(proto.Message))
 		if err != nil {
@@ -166,14 +167,18 @@ func (c *ServerCodec) Encode(resp *rpc.Response) (err error) {
 		c.resp.Error = nil
 	} else {
 		c.resp.Result = nil
-		c.resp.Error = (*Error)(resp.Result.Error)
+		c.resp.Error = &Error{
+			Code:    &resp.Result.Error.Code,
+			Message: &resp.Result.Error.Message,
+			Detail:  &resp.Result.Error.Detail,
+		}
 	}
 
-	err = c.sendBuf.Marshal(c.resp)
+	var d []byte
+	d, err = proto.Marshal(c.resp)
 	if err == nil {
-		err = c.write(c.sendBuf.Bytes())
+		err = c.write(d)
 	}
-	c.sendBuf.Reset()
 	return
 }
 
@@ -214,19 +219,22 @@ func (c *ServerCodec) DecodeHead(head *rpc.RequestHead) error {
 	}
 
 	// unmarshal message
-	c.receiveBuf.SetBuf(buf)
 	c.req.reset()
-	err = c.receiveBuf.Unmarshal(c.req)
+	err = proto.Unmarshal(buf, c.req)
 	c.bufPool.Put(b)
 	if err != nil {
 		return err
 	}
 
-	head.ID = c.req.ID
-	head.Service = c.req.Service
-	head.Method = c.req.Method
+	head.ID = *c.req.ID
+	head.Service = *c.req.Service
+	head.Method = *c.req.Method
 	for _, l := range c.req.Labels {
-		head.Labels = append(head.Labels, (data.Option)(*l))
+		label := data.Option{
+			Name:  l.GetName(),
+			Value: l.GetValue(),
+		}
+		head.Labels = append(head.Labels, label)
 	}
 	return nil
 }
@@ -260,8 +268,6 @@ func (b Builder) NewClient(s rpc.Stream, opts data.Map) rpc.ClientCodec {
 		Stream:     s,
 		req:        &Request{},
 		resp:       &Response{},
-		sendBuf:    proto.NewBuffer(make([]byte, 0, 4<<10)),
-		receiveBuf: proto.NewBuffer(make([]byte, 0, 4<<10)),
 		maxMsgSize: maxSize,
 		bufPool:    buffer.NewGroupPool(4<<10, maxSize, 2), // 4KB -> 2MB
 	}
@@ -273,8 +279,6 @@ func (b Builder) NewServer(s rpc.Stream, opts data.Map) rpc.ServerCodec {
 		Stream:     s,
 		req:        &Request{},
 		resp:       &Response{},
-		sendBuf:    proto.NewBuffer(make([]byte, 0, 4<<10)),
-		receiveBuf: proto.NewBuffer(make([]byte, 0, 4<<10)),
 		maxMsgSize: maxSize,
 		bufPool:    buffer.NewGroupPool(4<<10, maxSize, 2), // 4KB -> 2MB
 	}

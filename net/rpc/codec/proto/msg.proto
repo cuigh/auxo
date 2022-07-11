@@ -1,6 +1,7 @@
-syntax = "proto2";
+syntax = "proto3";
 
 package proto;
+option go_package = ".";
 
 message Request {
     optional uint64 ID = 1;
@@ -17,8 +18,8 @@ message Response {
 }
 
 message Label {
-    required string Name = 1;
-    required string Value = 2;
+    string Name = 1;
+    string Value = 2;
 }
 
 message Error {
