@@ -109,7 +109,11 @@ func (c *Container) Put(builder any, opts ...Option) {
 	}
 
 	if s.name != "" {
-		c.names[s.name] = s
+		if _, ok := c.names[s.name]; ok {
+			panic("duplicate service name: " + s.name)
+		} else {
+			c.names[s.name] = s
+		}
 	}
 	if _, ok := c.types[t.Out(0)]; !ok {
 		c.types[t.Out(0)] = s
