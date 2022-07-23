@@ -2,7 +2,7 @@ rpc:
   client:
     test:
       desc: "test service"
-      version: >=1.0, <2
+      version: ">=1.0, <2"
       group: api
       fail: fast
       address:

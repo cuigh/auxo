@@ -123,9 +123,8 @@ func loadTLSConfig(opts data.Map) (*tls.Config, error) {
 			return nil, err
 		}
 		c = &tls.Config{
-			Certificates:             []tls.Certificate{cert},
-			PreferServerCipherSuites: true,
-			InsecureSkipVerify:       !verify,
+			Certificates:       []tls.Certificate{cert},
+			InsecureSkipVerify: !verify,
 		}
 	}
 	return c, nil

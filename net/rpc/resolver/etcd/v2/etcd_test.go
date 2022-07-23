@@ -15,7 +15,10 @@ func TestResolver(t *testing.T) {
 	opts := data.Map{
 		"address": "192.168.50.57:12379",
 	}
-	r := resolver.Get("etcd").Build(c, opts)
+	r, err := resolver.Get("etcd").Build(c, opts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	addrs, err := r.Resolve()
 	t.Log(addrs, err)
 }

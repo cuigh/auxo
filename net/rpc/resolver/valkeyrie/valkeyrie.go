@@ -69,7 +69,7 @@ func (b *Builder) Build(client resolver.Client, opts data.Map) (resolver.Resolve
 	return r, nil
 }
 
-// Builder implements a common Resolver based on valkeyrie.
+// Resolver implements a common Resolver based on valkeyrie.
 type Resolver struct {
 	client     resolver.Client
 	store      store.Store
