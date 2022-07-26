@@ -24,35 +24,31 @@ func (Builder) Name() string {
 }
 
 func (Builder) Build(_ resolver.Client, opts data.Map) (resolver.Resolver, error) {
-	addrs := opts.Get("addresses").([]transport.Address)
+	addr := cast.ToString(opts.Get("address"))
 	interval := cast.ToDuration(opts.Get("refresh_interval"))
 	if interval <= 0 {
-		interval = 30 * time.Second
+		interval = 10 * time.Second
 	}
 	return &Resolver{
-		addrs:    addrs,
+		addr:     addr,
 		interval: interval,
 		logger:   log.Get(PkgName),
 	}, nil
 }
 
 type Resolver struct {
-	addrs    []transport.Address
+	addr     string
 	interval time.Duration
 	logger   log.Logger
 	canceler run.Canceler
 }
 
 func (r *Resolver) Resolve() ([]transport.Address, error) {
-	var list []transport.Address
-	for _, addr := range r.addrs {
-		addrs, err := r.resolve(addr)
-		if err != nil {
-			return nil, err
-		}
-		list = append(list, addrs...)
+	addrs, err := r.resolve(r.addr)
+	if err != nil {
+		return nil, err
 	}
-	return list, nil
+	return addrs, nil
 }
 
 func (r *Resolver) Watch(notify func([]transport.Address)) {
@@ -67,13 +63,13 @@ func (r *Resolver) Watch(notify func([]transport.Address)) {
 	}
 }
 
-func (r *Resolver) resolve(addr transport.Address) (addrs []transport.Address, err error) {
+func (r *Resolver) resolve(addr string) (addrs []transport.Address, err error) {
 	var (
 		host, port string
 		ips        []string
 	)
 
-	host, port, err = net.SplitHostPort(addr.URL)
+	host, port, err = net.SplitHostPort(addr)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +79,7 @@ func (r *Resolver) resolve(addr transport.Address) (addrs []transport.Address, e
 		addrs = make([]transport.Address, len(ips))
 		for i, ip := range ips {
 			addrs[i] = transport.Address{
-				URL:     net.JoinHostPort(ip, port),
-				Options: addr.Options,
+				URL: net.JoinHostPort(ip, port),
 			}
 		}
 	}

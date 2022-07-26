@@ -30,9 +30,7 @@ func TestResolver_Watch(t *testing.T) {
 
 func newResolver() *Resolver {
 	return &Resolver{
-		addrs: []transport.Address{
-			{URL: "localhost:8888"},
-		},
+		addr:     "localhost:8888",
 		interval: 3 * time.Second,
 		logger:   log.Get(PkgName),
 	}
