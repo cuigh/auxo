@@ -10,8 +10,8 @@ import (
 
 func TestValue(t *testing.T) {
 	expected := time.Now()
-	value := lazy.Value{
-		New: func() (interface{}, error) {
+	value := lazy.Value[time.Time]{
+		New: func() (time.Time, error) {
 			return expected, nil
 		},
 	}
@@ -20,14 +20,13 @@ func TestValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, v)
 
-	dt := v.(time.Time)
-	assert.Equal(t, expected, dt)
+	assert.Equal(t, expected, v)
 }
 
 func BenchmarkValue(b *testing.B) {
 	expected := time.Now()
-	value := lazy.Value{
-		New: func() (interface{}, error) {
+	value := lazy.Value[time.Time]{
+		New: func() (time.Time, error) {
 			return expected, nil
 		},
 	}
@@ -38,7 +37,7 @@ func BenchmarkValue(b *testing.B) {
 		if err != nil {
 			b.Fail()
 		}
-		if dt := v.(time.Time); !dt.Equal(expected) {
+		if !v.Equal(expected) {
 			b.Fail()
 		}
 	}

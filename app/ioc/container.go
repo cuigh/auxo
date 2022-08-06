@@ -101,7 +101,7 @@ func (c *Container) Put(builder any, opts ...Option) {
 		opt(s)
 	}
 	if s.singleton {
-		s.value = &lazy.Value{
+		s.value = &lazy.Value[any]{
 			New: func() (any, error) {
 				return s.build(c)
 			},
@@ -202,7 +202,7 @@ func (c *Container) get(t reflect.Type) (any, error) {
 type service struct {
 	t     reflect.Type
 	v     reflect.Value
-	value *lazy.Value
+	value *lazy.Value[any]
 
 	// options
 	name      string

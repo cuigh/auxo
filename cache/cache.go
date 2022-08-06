@@ -16,8 +16,8 @@ const PkgName = "auxo.cache"
 var (
 	providers = make(map[string]func(opts data.Map) (Provider, error))
 	f         = new(factory)
-	def       = lazy.Value{
-		New: func() (interface{}, error) {
+	def       = lazy.Value[Cacher]{
+		New: func() (Cacher, error) {
 			c, err := GetCacher("")
 			if err != nil {
 				log.Get(PkgName).Warn("cache > initialize default Cacher failed: ", err)
@@ -45,9 +45,9 @@ func GetCacher(name string) (Cacher, error) {
 	return f.GetCacher(name)
 }
 
-func defaultCacher() *cacher {
+func defaultCacher() Cacher {
 	c, _ := def.Get()
-	return c.(*cacher)
+	return c
 }
 
 // Get returns cached value, the result is assured of not nil.
