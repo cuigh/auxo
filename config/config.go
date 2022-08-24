@@ -66,6 +66,11 @@ func AddSource(srcs ...Source) {
 	m.AddSource(srcs...)
 }
 
+// AddFileSource adds a file configuration source.
+func AddFileSource(path string) {
+	m.AddFileSource(path)
+}
+
 // AddDataSource add a config source with bytes and type.
 func AddDataSource(data []byte, ct string) {
 	m.AddDataSource(data, ct)
@@ -91,7 +96,7 @@ func UnmarshalOption(name string, v interface{}) error {
 	return m.UnmarshalOption(name, v)
 }
 
-// Exist returns the key is exist or not.
+// Exist returns the key is existed or not.
 func Exist(key string) bool {
 	return m.Get(key) != nil
 }

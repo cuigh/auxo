@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,7 +100,7 @@ func (s *dataSource) Load() (data.Map, error) {
 type fileSource string
 
 func (fs fileSource) Load() (data.Map, error) {
-	d, err := ioutil.ReadFile(string(fs))
+	d, err := os.ReadFile(string(fs))
 	if err != nil {
 		return nil, err
 	}

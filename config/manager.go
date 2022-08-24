@@ -145,6 +145,11 @@ func (m *Manager) AddSource(srcs ...Source) {
 	m.srcs = append(m.srcs, srcs...)
 }
 
+// AddFileSource adds a file configuration source.
+func (m *Manager) AddFileSource(path string) {
+	m.srcs = append(m.srcs, fileSource(path))
+}
+
 // AddDataSource add a config source with bytes and type.
 func (m *Manager) AddDataSource(data []byte, ct string) {
 	src := &dataSource{
@@ -193,7 +198,7 @@ func (m *Manager) load(force bool) error {
 	m.options = data.Map{}
 
 	m.loadFlags(false)
-	m.loadSource(&m.env)
+	_ = m.loadSource(&m.env)
 
 	// file sources
 	srcs := m.findFileSources()

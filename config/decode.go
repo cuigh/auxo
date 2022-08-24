@@ -25,7 +25,7 @@ func (m *Manager) Unmarshal(v interface{}) error {
 	return unmarshal(vv, m.Get)
 }
 
-// Unmarshal exports specific option to struct.
+// UnmarshalOption exports specific option to struct.
 func (m *Manager) UnmarshalOption(name string, v interface{}) error {
 	value := m.Get(name)
 	if value == nil {
