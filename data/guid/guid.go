@@ -6,6 +6,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -55,6 +56,11 @@ func New() (id ID) {
 // String encodes ID as base32 string.
 func (id ID) String() string {
 	return string(id.encode())
+}
+
+// Hex encodes ID as base32 string.
+func (id ID) Hex() string {
+	return hex.EncodeToString(id[:])
 }
 
 // Slice encodes ID with base32.
