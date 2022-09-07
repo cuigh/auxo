@@ -106,6 +106,9 @@ func (t *Table[T, K]) FetchByPage(ctx context.Context, pageIndex, pageSize int64
 		cur  *mongo.Cursor
 		opts = options.Find().SetSkip(pageSize * (pageIndex - 1)).SetLimit(pageSize)
 	)
+	if filter == nil {
+		filter = bson.M{}
+	}
 	if sorter != nil {
 		opts.SetSort(sorter)
 	}
@@ -122,6 +125,9 @@ func (t *Table[T, K]) FetchByPage(ctx context.Context, pageIndex, pageSize int64
 // Fetch returns all qualified records.
 func (t *Table[T, K]) Fetch(ctx context.Context, filter, sorter any) (records []*T, err error) {
 	var cur *mongo.Cursor
+	if filter == nil {
+		filter = bson.M{}
+	}
 	if sorter == nil {
 		cur, err = t.Collection.Find(ctx, filter)
 	} else {
