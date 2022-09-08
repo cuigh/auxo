@@ -167,7 +167,7 @@ func (v *value) Float64() (f float64, err error) {
 }
 
 func (v *value) String() (s string, err error) {
-	return v.cmd().String(), nil
+	return v.cmd().Result()
 }
 
 func (v *value) cmd() *redis.StringCmd {
