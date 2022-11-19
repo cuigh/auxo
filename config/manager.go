@@ -25,9 +25,8 @@ type Unmarshaler interface {
 }
 
 type Manager struct {
-	locker   sync.Mutex
-	loaded   bool
-	autoLoad bool
+	locker sync.Mutex
+	loaded bool
 
 	// flags
 	flags *flag.FlagSet
@@ -127,6 +126,9 @@ func (m *Manager) BindEnv(key string, envKey string) {
 
 // SetProfile sets active profiles. Profiles are only valid to local file sources.
 func (m *Manager) SetProfile(profiles ...string) {
+	if m.loaded {
+		panic("profile can only be set before configuration is loaded")
+	}
 	m.profiles = profiles
 }
 
