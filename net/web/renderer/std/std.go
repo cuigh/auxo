@@ -158,7 +158,7 @@ func (r *Renderer) compile() (err error) {
 			if err != nil {
 				return err
 			}
-			if !d.IsDir() {
+			if d.IsDir() {
 				return nil
 			}
 
