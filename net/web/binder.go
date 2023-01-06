@@ -3,7 +3,7 @@ package web
 import (
 	"encoding/json"
 	"encoding/xml"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -159,7 +159,7 @@ func (b *binder) getValue(ctx Context, sf *reflect.StructField) interface{} {
 				return value
 			}
 		case "query":
-			if value := b.getMapValue(ctx, sf, ctx.QueryValues(), name); value != "" {
+			if value := b.getMapValue(sf, ctx.QueryValues(), name); value != "" {
 				return value
 			}
 		case "cookie":
@@ -167,7 +167,7 @@ func (b *binder) getValue(ctx Context, sf *reflect.StructField) interface{} {
 				return cookie.Value
 			}
 		case "header":
-			if value := b.getMapValue(ctx, sf, ctx.Request().Header, name); value != nil {
+			if value := b.getMapValue(sf, ctx.Request().Header, name); value != nil {
 				return value
 			}
 		case "form":
@@ -183,22 +183,24 @@ func (b *binder) getValue(ctx Context, sf *reflect.StructField) interface{} {
 
 func (b *binder) getFormValue(ctx Context, sf *reflect.StructField, name string) interface{} {
 	if values, err := ctx.FormValues(); err == nil {
-		if value := b.getMapValue(ctx, sf, values, name); value != nil {
+		if value := b.getMapValue(sf, values, name); value != nil {
 			return value
 		}
 	}
 	return nil
 }
 
-func (b *binder) getMapValue(ctx Context, sf *reflect.StructField, m map[string][]string, name string) interface{} {
+func (b *binder) getMapValue(sf *reflect.StructField, m map[string][]string, name string) interface{} {
 	if values := m[name]; len(values) > 0 {
 		kind := sf.Type.Kind()
 		if kind == reflect.Ptr {
 			kind = sf.Type.Elem().Kind()
 		}
-		if kind != reflect.Slice && kind != reflect.Array {
-			return values[0]
+
+		if kind == reflect.Slice || kind == reflect.Array {
+			return values
 		}
+		return values[0]
 	}
 	return nil
 }
@@ -217,7 +219,7 @@ func (b *binder) getFileValue(ctx Context, name string, bindType string) interfa
 			}
 		}
 
-		if b, err := ioutil.ReadAll(f); err == nil {
+		if b, err := io.ReadAll(f); err == nil {
 			return b
 		}
 	}
