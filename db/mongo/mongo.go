@@ -51,8 +51,8 @@ type Table[T, K any] struct {
 	*mongo.Collection
 }
 
-func NewTable[T, K any](db *mongo.Database, name string) *Table[T, K] {
-	return &Table[T, K]{db.Collection(name)}
+func NewTable[T, K any](db *mongo.Database, name string, opts ...*options.CollectionOptions) *Table[T, K] {
+	return &Table[T, K]{db.Collection(name, opts...)}
 }
 
 func (t *Table[T, K]) QueryByFilter(ctx context.Context, filter any) (r *T, err error) {
