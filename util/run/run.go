@@ -105,6 +105,7 @@ type Pool struct {
 	Min, Max int32
 	Backlog  int
 	Idle     time.Duration
+	Debug    bool
 
 	state    int32
 	current  int32 // running goroutines
@@ -113,6 +114,7 @@ type Pool struct {
 	stopper  data.Chan // stop all goroutine
 	closer   data.Chan // close idle goroutine
 	canceler Canceler  // control canceler
+	logger   log.Logger
 }
 
 // Start start the pool
@@ -132,6 +134,7 @@ func (p *Pool) Start() {
 		if p.Idle <= 0 {
 			p.Idle = time.Minute
 		}
+		p.logger = log.Get(PkgPath)
 		p.jobs = make(chan func(), p.Backlog)
 		p.stopper = make(data.Chan)
 		p.closer = make(data.Chan)
@@ -236,6 +239,10 @@ func (p *Pool) short() {
 // Adjust the number of goroutines to conserve resources.
 func (p *Pool) control() {
 	p.canceler = Schedule(5*time.Second, func() {
+		if p.Debug {
+			p.logger.Infof("run > Pool: {min: %d, max: %d, backlog: %d, busy: %d, current: %d, jobs: %d}",
+				p.Min, p.Max, p.Backlog, p.busy, p.current, len(p.jobs))
+		}
 		if p.busy < p.current/2 && p.current > p.Min {
 			p.closer.TrySend()
 		}

@@ -45,6 +45,7 @@ type ServerOptions struct {
 	MaxClients        int32         `json:"max_clients" yaml:"max_clients"`
 	MaxPoolSize       int32         `json:"max_pool_size" yaml:"max_pool_size"`
 	Backlog           int32         `json:"backlog" yaml:"backlog"`
+	Debug             bool          `json:"debug" yaml:"debug"`
 }
 
 func (opts *ServerOptions) ensure() error {
@@ -62,9 +63,6 @@ func (opts *ServerOptions) ensure() error {
 	}
 	if opts.MaxClients <= 0 {
 		opts.MaxClients = 10000
-	}
-	if opts.MaxPoolSize <= 0 {
-		opts.MaxPoolSize = 1024
 	}
 	if opts.Backlog <= 0 {
 		opts.Backlog = 10000
@@ -105,7 +103,7 @@ func NewServer(opts ServerOptions) (*Server, error) {
 		opts:     opts,
 		sessions: newSessionMap(),
 		actions:  newActionSet(),
-		pool:     &run.Pool{Max: opts.MaxPoolSize, Backlog: int(opts.Backlog)},
+		pool:     &run.Pool{Max: opts.MaxPoolSize, Backlog: int(opts.Backlog), Debug: opts.Debug},
 	}
 	s.ctxPool = newContextPool(s)
 	return s, nil
