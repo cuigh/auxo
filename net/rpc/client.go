@@ -503,6 +503,7 @@ func (c *Client) notify(addrs []transport.Address) {
 	}
 
 	if updated {
+		c.logger.Debugf("rpc > update nodes to: %v", addrs)
 		c.updateNodes(addrs)
 	}
 }

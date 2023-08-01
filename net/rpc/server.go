@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	ct "context"
 	"io"
 	"net"
 	"strings"
@@ -39,6 +40,7 @@ type ServerOptions struct {
 		Name    string   `json:"name" yaml:"name"`
 		Options data.Map `json:"options" yaml:"options"`
 	} `json:"registry" yaml:"registry"`
+	CallTimeout       time.Duration `json:"call_timeout" yaml:"call_timeout"`
 	ReadTimeout       time.Duration `json:"read_timeout" yaml:"read_timeout"`
 	WriteTimeout      time.Duration `json:"write_timeout" yaml:"write_timeout"`
 	HeartbeatInterval time.Duration `json:"heartbeat_interval" yaml:"heartbeat"`
@@ -345,15 +347,15 @@ func (s *Server) handleSession(ch *Channel, sc ServerCodec) {
 
 		// If server is closing, send ErrServerClosed to client immediately.
 		if s.listening == 0 {
-			s.encode(ctx, nil, ErrServerClosed)
+			s.response(ctx, nil, ErrServerClosed)
 			continue
 		}
 
 		err = s.decodeArgs(sc, ctx)
 		if err == nil {
-			s.handleRequest(ctx, sc)
+			s.handleRequest(ctx)
 		} else {
-			s.encode(ctx, nil, err)
+			s.response(ctx, nil, err)
 		}
 	}
 }
@@ -384,7 +386,18 @@ func (s *Server) heartbeat(sn *session) bool {
 	return false
 }
 
-func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
+func (s *Server) handleRequest(c *context) {
+	// set call timeout
+	var (
+		ctx    ct.Context
+		cancel ct.CancelFunc
+	)
+	//c.req.Head.Labels.Get("ServerTimeout")  // TODO: read timeout from client
+	if s.opts.CallTimeout > 0 {
+		ctx, cancel = ct.WithTimeout(c.Context(), s.opts.CallTimeout)
+		c.SetContext(ctx)
+	}
+
 	err := s.pool.Put(func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -392,17 +405,21 @@ func (s *Server) handleRequest(ctx *context, sc ServerCodec) {
 			}
 		}()
 
+		if cancel != nil {
+			defer cancel()
+		}
+
 		// todo: move to initialization stage
-		h := ctx.action.Handler()
+		h := c.action.Handler()
 		for i := len(s.filters) - 1; i >= 0; i-- {
 			h = s.filters[i](h)
 		}
 
-		r, err := h(ctx)
-		s.encode(ctx, r, err)
+		r, err := h(c)
+		s.response(c, r, err)
 	})
 	if err != nil {
-		s.encode(ctx, nil, err)
+		s.response(c, nil, err)
 	}
 }
 
@@ -417,7 +434,7 @@ func (s *Server) decodeArgs(sc ServerCodec, ctx *context) (err error) {
 	return sc.DecodeArgs(args)
 }
 
-func (s *Server) encode(ctx *context, r interface{}, err error) {
+func (s *Server) response(ctx *context, r interface{}, err error) {
 	ctx.resp.Head.ID = ctx.req.Head.ID
 	ctx.resp.Head.Assets = ctx.req.Head.Assets
 	//ctx.resp.Head.Type = 0
@@ -430,7 +447,7 @@ func (s *Server) encode(ctx *context, r interface{}, err error) {
 	err = ctx.codec.Encode(ctx.resp)
 	s.ctxPool.Put(ctx)
 	if err != nil {
-		s.logger.Error("encode response failed: ", err)
+		s.logger.Error("response failed: ", err)
 	}
 }
 
