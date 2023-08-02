@@ -39,9 +39,9 @@ func (f *FailMode) Unmarshal(i interface{}) error {
 const (
 	// FailFast returns error immediately
 	FailFast FailMode = iota
-	// FailOver selects another server automatically
+	// FailOver selects another server node automatically
 	FailOver
-	// FailTry use current client again
+	// FailTry use current server node again
 	FailTry
 	// FailBack records failed requests, resend in the future
 	//FailBack
@@ -348,10 +348,16 @@ func (c *Client) Use(filter ...CFilter) {
 //}
 
 func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}, reply interface{}) error {
-	n, err := c.getNode()
-	if err != nil {
+	var (
+		n   *Node
+		err error
+	)
+
+	// retry 3 times to find a valid node to call
+	err = retry.Do(3, nil, func() error {
+		n, err = c.getNode()
 		return err
-	}
+	})
 
 	if c.opts.CallTimeout > 0 {
 		var cancel ct.CancelFunc
@@ -370,10 +376,12 @@ func (c *Client) Call(ctx ct.Context, service, method string, args []interface{}
 			return n.Call(ctx, service, method, args, reply)
 		})
 	} else if c.opts.Fail == FailOver {
-		for _, n := range c.nodes {
-			err = n.Call(ctx, service, method, args, reply)
-			if err == nil || StatusOf(err) > 100 {
-				return err
+		for _, node := range c.nodes {
+			if node != n {
+				err = node.Call(ctx, service, method, args, reply)
+				if err == nil || StatusOf(err) > 100 {
+					return err
+				}
 			}
 		}
 	}
@@ -399,10 +407,10 @@ func (c *Client) getNode() (n *Node, err error) {
 	}
 
 	if n.state != stateReady {
-		ctx := ct.TODO()
+		ctx := ct.Background()
 		if c.opts.DialTimeout > 0 {
 			var cancel ct.CancelFunc
-			ctx, cancel = ct.WithTimeout(ct.TODO(), c.opts.DialTimeout)
+			ctx, cancel = ct.WithTimeout(ctx, c.opts.DialTimeout)
 			defer cancel()
 		}
 		err = n.initialize(ctx)
