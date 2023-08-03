@@ -498,8 +498,8 @@ func (c *Client) notify(addrs []transport.Address) {
 	}
 
 	var updated bool
+	sort.Slice(addrs, func(i, j int) bool { return addrs[i].URL < addrs[j].URL })
 	if len(addrs) == len(c.addrs) {
-		sort.Slice(addrs, func(i, j int) bool { return addrs[i].URL < addrs[j].URL })
 		for i, addr := range c.addrs {
 			if addrs[i].URL != addr.URL {
 				updated = true
