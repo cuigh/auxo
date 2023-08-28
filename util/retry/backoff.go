@@ -26,7 +26,7 @@ func Fixed(interval time.Duration) Backoff {
 func Scheduled(intervals ...time.Duration) Backoff {
 	l := len(intervals)
 	return func(attempt int) time.Duration {
-		if attempt < l {
+		if attempt <= l {
 			return intervals[attempt-1]
 		}
 		return 0
