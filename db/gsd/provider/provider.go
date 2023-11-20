@@ -338,6 +338,7 @@ func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriter
 	case gsd.LK:
 		p.Quote(b, c.Name())
 		b.WriteString(" LIKE '", c.Value.(string), "'")
+		return
 	default:
 		if c.Value == nil {
 			p.Quote(b, c.Name())
