@@ -11,7 +11,7 @@ import (
 func TestTX_Commit(t *testing.T) {
 	db := gsd.MustOpen("test")
 	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
-		count, err := tx.Count("user").Value()
+		count, err := tx.Count(context.TODO(), "user").Value()
 		t.Log(count, err)
 		return err
 	})
@@ -22,7 +22,7 @@ func TestTX_Commit(t *testing.T) {
 func TestTX_Rollback(t *testing.T) {
 	db := gsd.MustOpen("test")
 	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
-		count, err := tx.Count("user").Value()
+		count, err := tx.Count(context.TODO(), "user").Value()
 		t.Log(count, err)
 		return err
 	})
@@ -33,7 +33,7 @@ func TestTX_Rollback(t *testing.T) {
 func TestTX_Cancel(t *testing.T) {
 	db := gsd.MustOpen("test")
 	err := db.Transact(context.TODO(), func(tx gsd.TX) error {
-		count, err := tx.Count("user").Value()
+		count, err := tx.Count(context.TODO(), "user").Value()
 		t.Log(count, err)
 		return err
 	})

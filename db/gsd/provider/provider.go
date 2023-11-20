@@ -86,8 +86,7 @@ func (p *Provider) BuildDelete(b *gsd.Builder, info *gsd.DeleteInfo) (err error)
 		return errors.New("delete action must have where clause")
 	}
 	b.WriteString(" WHERE ")
-	p.buildCriteriaSet(b, info.Where)
-	return
+	return p.buildCriteriaSet(b, info.Where)
 }
 
 func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error) {
@@ -104,13 +103,13 @@ func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error)
 		case gsd.IncValue:
 			p.Quote(b, col)
 			b.Write([]byte{'+', '?'})
-			b.Args = append(b.Args, v)
+			b.Args = append(b.Args, v.Value)
 		case gsd.DecValue:
 			p.Quote(b, col)
 			b.Write([]byte{'-', '?'})
-			b.Args = append(b.Args, v)
+			b.Args = append(b.Args, v.Value)
 		case gsd.ExprValue:
-			b.WriteString(string(v))
+			b.WriteString(v.Value)
 		default:
 			b.WriteByte('?')
 			b.Args = append(b.Args, v)
@@ -118,7 +117,7 @@ func (p *Provider) BuildUpdate(b *gsd.Builder, info *gsd.UpdateInfo) (err error)
 	}
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildCriteriaSet(b, info.Where)
+		err = p.buildCriteriaSet(b, info.Where)
 	}
 	return
 }
@@ -157,16 +156,22 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 	}
 
 	// JOIN
-	p.buildJoin(b, info)
+	if err = p.buildJoin(b, info); err != nil {
+		return
+	}
 
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildCriteriaSet(b, info.Where)
+		if err = p.buildCriteriaSet(b, info.Where); err != nil {
+			return
+		}
 	}
 
 	// GROUP BY
-	p.buildGroupBy(b, info)
+	if err = p.buildGroupBy(b, info); err != nil {
+		return
+	}
 
 	// ORDER BY
 	if len(info.Orders) > 0 {
@@ -196,12 +201,12 @@ func (p *Provider) BuildSelect(b *gsd.Builder, info *gsd.SelectInfo) (err error)
 
 	// TOTAL COUNT
 	if info.Count {
-		p.buildCount(b, info)
+		err = p.buildCount(b, info)
 	}
 	return
 }
 
-func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
+func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) (err error) {
 	// SELECT FROM
 	b.WriteString(";SELECT COUNT(0) FROM ")
 	p.Quote(b, info.Table.Name())
@@ -210,19 +215,23 @@ func (p *Provider) buildCount(b *gsd.Builder, info *gsd.SelectInfo) {
 	}
 
 	// JOIN
-	p.buildJoin(b, info)
+	if err = p.buildJoin(b, info); err != nil {
+		return
+	}
 
 	// WHERE
 	if info.Where != nil && !info.Where.Empty() {
 		b.WriteString(" WHERE ")
-		p.buildCriteriaSet(b, info.Where)
+		if err = p.buildCriteriaSet(b, info.Where); err != nil {
+			return err
+		}
 	}
 
 	// GROUP BY
-	p.buildGroupBy(b, info)
+	return p.buildGroupBy(b, info)
 }
 
-func (p *Provider) buildJoin(b *gsd.Builder, info *gsd.SelectInfo) {
+func (p *Provider) buildJoin(b *gsd.Builder, info *gsd.SelectInfo) (err error) {
 	for _, join := range info.Joins {
 		b.WriteString(" ", join.Type, " ")
 		p.Quote(b, join.Table.Name())
@@ -230,11 +239,14 @@ func (p *Provider) buildJoin(b *gsd.Builder, info *gsd.SelectInfo) {
 			b.WriteString(" AS ", join.Table.Alias())
 		}
 		b.WriteString(" ON ")
-		p.buildCriteriaSet(b, join.On)
+		if err = p.buildCriteriaSet(b, join.On); err != nil {
+			return
+		}
 	}
+	return
 }
 
-func (p *Provider) buildGroupBy(b *gsd.Builder, info *gsd.SelectInfo) {
+func (p *Provider) buildGroupBy(b *gsd.Builder, info *gsd.SelectInfo) (err error) {
 	if len(info.Groups) > 0 {
 		b.WriteString(" GROUP BY ")
 		for i, col := range info.Groups {
@@ -245,9 +257,12 @@ func (p *Provider) buildGroupBy(b *gsd.Builder, info *gsd.SelectInfo) {
 		}
 		if info.Having != nil {
 			b.WriteString(" HAVING ")
-			p.buildCriteriaSet(b, info.Having)
+			if err = p.buildCriteriaSet(b, info.Having); err != nil {
+				return
+			}
 		}
 	}
+	return
 }
 
 func (p *Provider) buildColumn(b *gsd.Builder, col gsd.Column) {
@@ -260,7 +275,7 @@ func (p *Provider) buildColumn(b *gsd.Builder, col gsd.Column) {
 	}
 }
 
-func (p *Provider) buildCriteriaSet(b *gsd.Builder, cs gsd.CriteriaSet) {
+func (p *Provider) buildCriteriaSet(b *gsd.Builder, cs gsd.CriteriaSet) (err error) {
 	switch fs := cs.(type) {
 	case *gsd.SimpleCriteriaSet:
 		for i, c := range fs.Items {
@@ -269,30 +284,45 @@ func (p *Provider) buildCriteriaSet(b *gsd.Builder, cs gsd.CriteriaSet) {
 			}
 			switch f := c.(type) {
 			case *gsd.OneColumnCriteria:
-				p.buildOneColumnCriteria(b, f)
+				if err = p.buildOneColumnCriteria(b, f); err != nil {
+					return
+				}
 			case *gsd.TwoColumnCriteria:
-				p.buildTwoColumnCriteria(b, f)
+				if err = p.buildTwoColumnCriteria(b, f); err != nil {
+					panic(err)
+				}
 			case gsd.ExprCriteria:
 				b.WriteString(string(f))
 			}
 		}
 	case *gsd.NotCriteriaSet:
 		b.WriteString("NOT(")
-		p.buildCriteriaSet(b, fs.Inner)
+		if err = p.buildCriteriaSet(b, fs.Inner); err != nil {
+			return
+		}
 		b.WriteByte(')')
 	case gsd.JoinCriteriaSet:
 		if fs.Left().Empty() {
-			p.buildCriteriaSet(b, fs.Right())
+			if err = p.buildCriteriaSet(b, fs.Right()); err != nil {
+				return
+			}
 		} else if fs.Right().Empty() {
-			p.buildCriteriaSet(b, fs.Left())
+			if err = p.buildCriteriaSet(b, fs.Left()); err != nil {
+				return
+			}
 		} else {
 			b.WriteByte('(')
-			p.buildCriteriaSet(b, fs.Left())
+			if err = p.buildCriteriaSet(b, fs.Left()); err != nil {
+				return
+			}
 			b.WriteString(") ", fs.Joiner(), " (")
-			p.buildCriteriaSet(b, fs.Right())
+			if err = p.buildCriteriaSet(b, fs.Right()); err != nil {
+				return
+			}
 			b.WriteByte(')')
 		}
 	}
+	return
 }
 
 func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriteria) (err error) {
@@ -326,13 +356,17 @@ func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriter
 	case gsd.IN:
 		p.Quote(b, c.Name())
 		b.WriteString(" IN(")
-		p.buildInValues(b, c.Value)
+		if err = p.buildInValues(b, c.Value); err != nil {
+			return
+		}
 		b.WriteByte(')')
 		return
 	case gsd.NIN:
 		p.Quote(b, c.Name())
 		b.WriteString(" NOT IN(")
-		p.buildInValues(b, c.Value)
+		if err = p.buildInValues(b, c.Value); err != nil {
+			return
+		}
 		b.WriteByte(')')
 		return
 	case gsd.LK:
@@ -355,6 +389,10 @@ func (p *Provider) buildOneColumnCriteria(b *gsd.Builder, c *gsd.OneColumnCriter
 
 func (p *Provider) buildInValues(b *gsd.Builder, i interface{}) (err error) {
 	t := reflect.TypeOf(i)
+	if t.Kind() != reflect.Slice && t.Kind() != reflect.Array {
+		return errors.Format("argument must be slice or array, got: %v", t)
+	}
+
 	si := reflects.NewSliceInfo(t)
 	ptr := reflects.SlicePtr(i)
 	length := reflects.SliceLen(i)
@@ -362,7 +400,7 @@ func (p *Provider) buildInValues(b *gsd.Builder, i interface{}) (err error) {
 		if i > 0 {
 			b.WriteByte(',')
 		}
-		switch t.Kind() {
+		switch t.Elem().Kind() {
 		case reflect.String:
 			b.WriteString("'", si.GetString(ptr, i), "'")
 		case reflect.Int:
