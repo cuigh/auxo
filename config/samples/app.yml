@@ -2,6 +2,15 @@ name: 'auxo'
 debug: true
 banner: true
 
+global:
+      mq:
+        nsq:
+          nsqd_addr:
+          - "127.0.0.1:4150"
+          max_in_flight: 5
+          concurrent: 3
+          max_attempt: 2
+          channel_name: test.nsq
 log:
   loggers:
   - level: info
@@ -9,6 +18,9 @@ log:
   - name: 'auxo.net.web'
     level: debug
     writers: text
+  - name: 'auxo.mq.nsq'
+    level: debug
+    writers: nsq
   - name: 'benchmark1'
     level: debug
     writers: drop1
@@ -32,6 +44,11 @@ log:
     format: json
     options:
       colorized: true
+  - name: nsq
+    type: nsq
+    layout: '{level: a=b},{time: 2006-01-02T15:04:05.000Z07:00},{msg},{file:short},{newline}'
+    options:
+      topic: "mq_nsq_writer"
 
 web:
   mode: develop
