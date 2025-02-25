@@ -511,12 +511,13 @@ func (c *Client) notify(addrs []transport.Address) {
 	}
 
 	if updated {
-		c.logger.Debugf("rpc > update nodes to: %v", addrs)
 		c.updateNodes(addrs)
 	}
 }
 
 func (c *Client) updateNodes(addrs []transport.Address) {
+	c.logger.Debugf("rpc > update nodes to: %v", addrs)
+
 	addrMap := make(map[string]*transport.Address)
 	for _, addr := range addrs {
 		addrMap[addr.URL] = &addr
