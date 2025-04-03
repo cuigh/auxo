@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cuigh/auxo/data"
+	"github.com/cuigh/auxo/log"
 )
 
 // todo: move to balancer pkg
@@ -49,11 +50,14 @@ func (randomBalancerBuilder) Name() string {
 }
 
 func (randomBalancerBuilder) Build(opts data.Map) Balancer {
-	return new(randomBalancer)
+	return &randomBalancer{
+		logger: log.Get(PkgName),
+	}
 }
 
 type randomBalancer struct {
-	nodes []*Node
+	nodes  []*Node
+	logger log.Logger
 }
 
 func (b *randomBalancer) Update(nodes []*Node) {
@@ -63,7 +67,9 @@ func (b *randomBalancer) Update(nodes []*Node) {
 func (b *randomBalancer) Next() (*Node, error) {
 	nodes := b.nodes
 	if l := len(nodes); l > 0 {
-		return nodes[rand.Intn(l)], nil
+		i := rand.Intn(l)
+		b.logger.Debugf("select node: %d / %d, addr: %s", i, l, nodes[i].addr)
+		return nodes[i], nil
 	}
 	return nil, ErrNodeUnavailable
 }
@@ -76,12 +82,15 @@ func (roundRobinBalancerBuilder) Name() string {
 }
 
 func (roundRobinBalancerBuilder) Build(opts data.Map) Balancer {
-	return new(roundRobinBalancer)
+	return &roundRobinBalancer{
+		logger: log.Get(PkgName),
+	}
 }
 
 type roundRobinBalancer struct {
 	nodes   []*Node
 	counter int64
+	logger  log.Logger
 }
 
 func (b *roundRobinBalancer) Update(nodes []*Node) {
@@ -93,6 +102,7 @@ func (b *roundRobinBalancer) Next() (*Node, error) {
 	nodes := b.nodes
 	if l := len(nodes); l > 0 {
 		i := atomic.AddInt64(&b.counter, 1) % int64(l)
+		b.logger.Debugf("select node: %d / %d, addr: %s", i, l, nodes[i].addr)
 		return nodes[i], nil
 	}
 	return nil, ErrNodeUnavailable
