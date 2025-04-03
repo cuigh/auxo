@@ -528,7 +528,8 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 		valid          = make(map[string]bool)
 	)
 	// keep the nodes still valid
-	for _, n := range c.nodes {
+	for i := range c.nodes {
+		n := c.nodes[i]
 		u := n.addr.URL
 		if addr, ok := addrMap[u]; ok {
 			n.addr.Options = addr.Options
@@ -539,7 +540,8 @@ func (c *Client) updateNodes(addrs []transport.Address) {
 		}
 	}
 	// add new nodes
-	for _, addr := range addrMap {
+	for _, v := range addrMap {
+		addr := v
 		if !valid[addr.URL] {
 			for i := 0; i < c.opts.Channels; i++ {
 				nodes = append(nodes, newNode(c, *addr))
