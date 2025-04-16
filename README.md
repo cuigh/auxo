@@ -42,5 +42,4 @@
 
 ## Documentation
 
-* **[English](https://cuigh.tech/auxo/)**
-* **[中文](https://cuigh.tech/auxo/zh/)**(TODO)
+* **[English](https://auxo-doc.vercel.app/)**
